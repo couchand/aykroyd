@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "akroyd",
+    "akroyd-derive",
+    "akroyd-test",
+]

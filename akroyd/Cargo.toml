@@ -1,0 +1,13 @@
+[package]
+name = "akroyd"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+derive = ["akroyd-derive"]
+
+[dependencies]
+akroyd-derive = { path = "../akroyd-derive", optional = true }
+futures-util = "0.3"
+postgres = { version = "0.19", optional = true }
+tokio-postgres = "0.7"
