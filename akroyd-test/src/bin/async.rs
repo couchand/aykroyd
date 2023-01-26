@@ -23,6 +23,10 @@ async fn async_main() {
     for customer in query(&client, &GetCustomers2).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
+
+    for customer in query(&client, &SearchCustomersByName("%m".into())).await.expect("query") {
+        println!("Got customer: {:?}", customer);
+    }
 }
 
 #[tokio::main]

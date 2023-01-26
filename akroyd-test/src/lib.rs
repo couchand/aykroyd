@@ -26,3 +26,7 @@ pub struct GetCustomers2;
 
 #[derive(Debug, FromRow)]
 pub struct Customer2(i32, String);
+
+#[derive(Query, ToRow)]
+#[query(text = "SELECT id, name FROM customers WHERE name LIKE $1", results(Customer))]
+pub struct SearchCustomersByName(pub String);

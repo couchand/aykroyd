@@ -17,6 +17,10 @@ fn sync_main() {
     for customer in client.run(&GetCustomers2).expect("query") {
         println!("Got customer: {:?}", customer);
     }
+
+    for customer in client.run(&SearchCustomersByName("%m".into())).expect("query") {
+        println!("Got customer: {:?}", customer);
+    }
 }
 
 fn main() {
