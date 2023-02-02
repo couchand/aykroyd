@@ -2,5 +2,5 @@
 members = [
     "akroyd",
     "akroyd-derive",
-    "akroyd-test",
+    "akroyd-test"
 ]

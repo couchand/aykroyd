@@ -15,9 +15,45 @@ pub trait ToRow {
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
+#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait Query: ToRow {
+    #[cfg(not(feature = "async"))]
     type Output: FromRow;
+    #[cfg(feature = "async")]
+    type Output: FromRow + Send;
+
     const TEXT: &'static str;
+
+    #[cfg(feature = "sync")]
+    fn run(&self, client: &mut postgres::Client) -> Result<Vec<Self::Output>, tokio_postgres::Error> {
+        use ::postgres::fallible_iterator::FallibleIterator;
+
+        let mut res = vec![];
+
+        let mut it = client.query_raw(Self::TEXT, self.to_row())?;
+
+        while let Some(row) = it.next()? {
+            res.push(FromRow::from_row(&row));
+        }
+
+        Ok(res)
+    }
+
+    #[cfg(feature = "async")]
+    async fn run(&self, client: &tokio_postgres::Client) -> Result<Vec<Self::Output>, tokio_postgres::Error> {
+        use futures_util::{pin_mut, TryStreamExt};
+
+        let mut res = vec![];
+
+        let it = client.query_raw(Self::TEXT, self.to_row()).await?;
+
+        pin_mut!(it);
+        while let Some(row) = it.try_next().await? {
+            res.push(FromRow::from_row(&row));
+        }
+
+        Ok(res)
+    }
 }
 
 pub async fn query<Q: Query>(

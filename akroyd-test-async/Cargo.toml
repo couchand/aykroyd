@@ -1,0 +1,14 @@
+[package]
+name = "akroyd-test-async"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+akroyd = { path = "../akroyd", features = ["async", "derive"] }
+akroyd-test = { path = "../akroyd-test" }
+
+tokio-postgres = "0.7"
+tokio = { version = "1", features = ["full"] }
+
+[workspace]
+members = ["."]

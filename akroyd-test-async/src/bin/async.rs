@@ -16,15 +16,15 @@ async fn async_main() {
         }
     });
 
-    for customer in query(&client, &GetCustomers).await.expect("query") {
+    for customer in GetCustomers.run(&client).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
 
-    for customer in query(&client, &GetCustomers2).await.expect("query") {
+    for customer in GetCustomers2.run(&client).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
 
-    for customer in query(&client, &SearchCustomersByName("%m".into())).await.expect("query") {
+    for customer in SearchCustomersByName("%m".into()).run(&client).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
 }
