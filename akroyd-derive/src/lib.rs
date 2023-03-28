@@ -110,12 +110,12 @@ pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
 #[proc_macro_derive(Query, attributes(query))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    derive_query_impl(input, quote!(::akroyd::Query), "results")
+    derive_query_impl(input, quote!(::akroyd::Query), "row")
 }
 
 #[proc_macro_derive(QueryOne, attributes(query))]
 pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    derive_query_impl(input, quote!(::akroyd::QueryOne), "result")
+    derive_query_impl(input, quote!(::akroyd::QueryOne), "row")
 }
 
 fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::TokenStream, results_attr: &str) -> proc_macro::TokenStream {

@@ -1,7 +1,7 @@
 use akroyd::*;
 
 #[derive(Query, ToRow)]
-#[query(text = "SELECT id, name FROM customers", results(Customer))]
+#[query(text = "SELECT id, name FROM customers", row(Customer))]
 pub struct GetCustomers;
 
 #[derive(Debug, FromRow)]
@@ -21,18 +21,18 @@ impl Customer {
 }
 
 #[derive(Query, ToRow)]
-#[query(file = "get_customers.sql", results(Customer2))]
+#[query(file = "get_customers.sql", row(Customer2))]
 pub struct GetCustomers2;
 
 #[derive(Debug, FromRow)]
 pub struct Customer2(i32, String);
 
 #[derive(Query, ToRow)]
-#[query(text = "SELECT name, id FROM customers WHERE name LIKE $1", results(Customer))]
+#[query(text = "SELECT name, id FROM customers WHERE name LIKE $1", row(Customer))]
 pub struct SearchCustomersByName<'a>(pub &'a str);
 
 #[derive(QueryOne, ToRow)]
-#[query(text = "SELECT id, name FROM customers WHERE id = $1", result(Customer))]
+#[query(text = "SELECT id, name FROM customers WHERE id = $1", row(Customer))]
 pub struct GetCustomer {
     id: i32,
 }
