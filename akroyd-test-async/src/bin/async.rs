@@ -12,6 +12,11 @@ async fn run_test(client: &tokio_postgres::Client) -> Result<(), tokio_postgres:
         println!("Got customer: {:?}", customer);
     }
 
+    println!("Querying all customers a third way...");
+    for customer in client.run(&GetCustomers3).await? {
+        println!("Got customer: {:?}", customer);
+    }
+
     println!("Searching for customers with name ending 'm'...");
     for customer in client.run(&SearchCustomersByName("%m")).await? {
         println!("Got customer: {:?}", customer);

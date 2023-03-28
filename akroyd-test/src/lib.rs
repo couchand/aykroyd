@@ -24,6 +24,10 @@ impl Customer {
 #[query(file = "get_customers.sql", row(Customer2))]
 pub struct GetCustomers2;
 
+#[derive(Query, ToRow)]
+#[query(text = "SELECT id, name FROM customers", row((i32, String)))]
+pub struct GetCustomers3;
+
 #[derive(Debug, FromRow)]
 pub struct Customer2(i32, String);
 
