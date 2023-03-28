@@ -57,13 +57,13 @@ impl TokioPostgresExt for tokio_postgres::Client {
     }
 }
 
-#[cfg(feature = "postgres")]
+#[cfg(feature = "sync")]
 pub trait PostgresExt {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error>;
     fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Output, tokio_postgres::Error>;
 }
 
-#[cfg(feature = "postgres")]
+#[cfg(feature = "sync")]
 impl PostgresExt for postgres::Client {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error> {
         use ::postgres::fallible_iterator::FallibleIterator;
