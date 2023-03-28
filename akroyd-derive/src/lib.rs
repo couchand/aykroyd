@@ -22,11 +22,11 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                     .unzip();
 
                 quote! {
-                    #name {
+                    Ok(#name {
                         #(
-                            #fields : row.get(#indices),
+                            #fields : row.try_get(#indices)?,
                         )*
-                    }
+                    })
                 }
             }
             syn::Fields::Unnamed(fs) => {
@@ -41,21 +41,21 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                     .collect();
 
                 quote! {
-                    #name(
+                    Ok(#name(
                         #(
-                            row.get(#indices),
+                            row.try_get(#indices)?,
                         )*
-                    )
+                    ))
                 }
             }
-            syn::Fields::Unit => quote!(#name),
+            syn::Fields::Unit => quote!(Ok(#name)),
         },
     };
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl ::akroyd::FromRow for #name {
-            fn from_row(row: &::akroyd::types::Row) -> Self {
+            fn from_row(row: &::akroyd::types::Row) -> ::std::result::Result<Self, ::akroyd::types::Error> {
                 #body
             }
         }
