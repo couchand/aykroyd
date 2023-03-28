@@ -127,71 +127,29 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
     let mut query = None;
 
     for attr in ast.attrs {
-        let ident = match attr.path.get_ident() {
-            Some(ident) => ident,
-            None => continue,
-        };
-
-        if ident == "query" {
-            match attr.parse_meta().expect("Unable to parse query attribute!") {
-                syn::Meta::List(list) => {
-                    for item in list.nested.iter() {
-                        match &item {
-                            syn::NestedMeta::Meta(syn::Meta::NameValue(pair)) => {
-                                let param = match pair.path.get_ident() {
-                                    Some(ident) => ident,
-                                    None => unreachable!("namevalue always has ident!"),
-                                };
-
-                                match param.to_string().as_ref() {
-                                    "text" => {
-                                        let lit = &pair.lit;
-                                        query = Some(quote!(#lit));
-                                    }
-                                    "file" => {
-                                        let filename = &pair.lit;
-                                        query = Some(quote!(include_str!(#filename)));
-                                    }
-                                    _ => {
-                                        panic!("Unknown Query derive parameter: {:?}", param);
-                                    }
-                                }
-                            }
-                            syn::NestedMeta::Meta(syn::Meta::List(list)) => {
-                                let param = match list.path.get_ident() {
-                                    Some(ident) => ident,
-                                    None => unreachable!("metalist always has ident!"),
-                                };
-
-                                if param == results_attr {
-                                    if list.nested.len() != 1 {
-                                        panic!(
-                                            "Expected a single result type in Query derive!"
-                                        );
-                                    }
-
-                                    match list.nested.first().unwrap() {
-                                        syn::NestedMeta::Meta(syn::Meta::Path(path)) => {
-                                            output = Some(path.clone());
-                                        }
-                                        _ => {
-                                            panic!("Expected a single result type in Query derive!");
-                                        }
-                                    }
-                                } else {
-                                    panic!("Unknown Query derive parameter: {:?}", param);
-                                }
-                            }
-                            _ => {
-                                panic!("Unsupported Query derive parameters");
-                            }
-                        }
-                    }
+        if attr.path().is_ident("query") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("text") {
+                    let value = meta.value()?;
+                    let lit: syn::LitStr = value.parse()?;
+                    query = Some(quote!(#lit));
+                    return Ok(());
                 }
-                _ => {
-                    panic!("Unsupported Query derive parameters");
+                if meta.path.is_ident("file") {
+                    let value = meta.value()?;
+                    let filename: syn::LitStr = value.parse()?;
+                    query = Some(quote!(include_str!(#filename)));
+                    return Ok(());
                 }
-            }
+                if meta.path.is_ident(results_attr) {
+                    let content;
+                    syn::parenthesized!(content in meta.input);
+                    let ty: syn::Type = content.parse()?;
+                    output = Some(ty);
+                    return Ok(());
+                }
+                Err(meta.error("unrecognized attribute"))
+            }).expect("Unable to parse query attribute!");
         }
     }
 
