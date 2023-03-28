@@ -13,10 +13,9 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 let (indices, fields): (Vec<_>, Vec<_>) = fs
                     .named
                     .iter()
-                    .enumerate()
-                    .map(|(i, f)| {
-                        let i = syn::Index::from(i);
-                        let f = &f.ident;
+                    .map(|f| {
+                        let f = f.ident.as_ref().unwrap();
+                        let i = f.to_string();
                         (quote!(#i), quote!(#f))
                     })
                     .unzip();
