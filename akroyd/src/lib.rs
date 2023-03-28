@@ -15,37 +15,27 @@ pub trait ToRow {
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
-#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait Query: ToRow {
-    #[cfg(not(feature = "async"))]
-    type Output: FromRow;
-    #[cfg(feature = "async")]
     type Output: FromRow + Send;
 
     const TEXT: &'static str;
+}
 
-    #[cfg(feature = "sync")]
-    fn run(&self, client: &mut postgres::Client) -> Result<Vec<Self::Output>, tokio_postgres::Error> {
-        use ::postgres::fallible_iterator::FallibleIterator;
+#[cfg(feature = "async")]
+#[async_trait::async_trait]
+pub trait TokioPostgresExt {
+    async fn run<Q: Query + Sync>(&self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error>;
+}
 
-        let mut res = vec![];
-
-        let mut it = client.query_raw(Self::TEXT, self.to_row())?;
-
-        while let Some(row) = it.next()? {
-            res.push(FromRow::from_row(&row));
-        }
-
-        Ok(res)
-    }
-
-    #[cfg(feature = "async")]
-    async fn run(&self, client: &tokio_postgres::Client) -> Result<Vec<Self::Output>, tokio_postgres::Error> {
+#[cfg(feature = "async")]
+#[async_trait::async_trait]
+impl TokioPostgresExt for tokio_postgres::Client {
+    async fn run<Q: Query + Sync>(&self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error> {
         use futures_util::{pin_mut, TryStreamExt};
 
         let mut res = vec![];
 
-        let it = client.query_raw(Self::TEXT, self.to_row()).await?;
+        let it = self.query_raw(Q::TEXT, query.to_row()).await?;
 
         pin_mut!(it);
         while let Some(row) = it.try_next().await? {
@@ -56,31 +46,13 @@ pub trait Query: ToRow {
     }
 }
 
-pub async fn query<Q: Query>(
-    client: &tokio_postgres::Client,
-    query: &Q,
-) -> Result<Vec<Q::Output>, tokio_postgres::Error> {
-    use futures_util::{pin_mut, TryStreamExt};
-
-    let mut res = vec![];
-
-    let it = client.query_raw(Q::TEXT, query.to_row()).await?;
-
-    pin_mut!(it);
-    while let Some(row) = it.try_next().await? {
-        res.push(FromRow::from_row(&row));
-    }
-
-    Ok(res)
-}
-
 #[cfg(feature = "postgres")]
 pub trait PostgresExt {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error>;
 }
 
 #[cfg(feature = "postgres")]
-impl PostgresExt for &mut postgres::Client {
+impl PostgresExt for postgres::Client {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error> {
         use ::postgres::fallible_iterator::FallibleIterator;
 
