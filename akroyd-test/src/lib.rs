@@ -29,7 +29,7 @@ pub struct Customer2(i32, String);
 
 #[derive(Query, ToRow)]
 #[query(text = "SELECT id, name FROM customers WHERE name LIKE $1", results(Customer))]
-pub struct SearchCustomersByName(pub String);
+pub struct SearchCustomersByName<'a>(pub &'a str);
 
 #[derive(QueryOne, ToRow)]
 #[query(text = "SELECT id, name FROM customers WHERE id = $1", result(Customer))]

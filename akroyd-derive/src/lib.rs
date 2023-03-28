@@ -67,6 +67,7 @@ pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
+    let generics = &ast.generics;
     let fields = match ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive ToRow on enum!"),
         syn::Data::Union(_) => panic!("Cannot derive ToRow on union!"),
@@ -94,7 +95,7 @@ pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
-        impl ::akroyd::ToRow for #name {
+        impl #generics ::akroyd::ToRow for #name #generics {
             fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
                 let mut res = vec![];
 
@@ -122,6 +123,7 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
+    let generics = &ast.generics;
     let mut output = None;
     let mut query = None;
 
@@ -199,7 +201,7 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
-        impl #trait_name for #name {
+        impl #generics #trait_name for #name #generics {
             type Output = #output;
             const TEXT: &'static str = #query;
         }

@@ -24,7 +24,7 @@ async fn async_main() {
         println!("Got customer: {:?}", customer);
     }
 
-    for customer in client.run(&SearchCustomersByName("%m".into())).await.expect("query") {
+    for customer in client.run(&SearchCustomersByName("%m")).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
 
