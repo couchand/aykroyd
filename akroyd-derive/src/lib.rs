@@ -110,6 +110,15 @@ pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
 #[proc_macro_derive(Query, attributes(query))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    derive_query_impl(input, quote!(::akroyd::Query), "results")
+}
+
+#[proc_macro_derive(QueryOne, attributes(query))]
+pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    derive_query_impl(input, quote!(::akroyd::QueryOne), "result")
+}
+
+fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::TokenStream, results_attr: &str) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
@@ -153,26 +162,23 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                                     None => unreachable!("metalist always has ident!"),
                                 };
 
-                                match param.to_string().as_ref() {
-                                    "results" => {
-                                        if list.nested.len() != 1 {
-                                            panic!(
-                                                "Expected a single result type in Query derive!"
-                                            );
-                                        }
+                                if param == results_attr {
+                                    if list.nested.len() != 1 {
+                                        panic!(
+                                            "Expected a single result type in Query derive!"
+                                        );
+                                    }
 
-                                        match list.nested.first().unwrap() {
-                                            syn::NestedMeta::Meta(syn::Meta::Path(path)) => {
-                                                output = Some(path.clone());
-                                            }
-                                            _ => {
-                                                panic!("Expected a single result type in Query derive!");
-                                            }
+                                    match list.nested.first().unwrap() {
+                                        syn::NestedMeta::Meta(syn::Meta::Path(path)) => {
+                                            output = Some(path.clone());
+                                        }
+                                        _ => {
+                                            panic!("Expected a single result type in Query derive!");
                                         }
                                     }
-                                    _ => {
-                                        panic!("Unknown Query derive parameter: {:?}", param);
-                                    }
+                                } else {
+                                    panic!("Unknown Query derive parameter: {:?}", param);
                                 }
                             }
                             _ => {
@@ -193,7 +199,7 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
-        impl ::akroyd::Query for #name {
+        impl #trait_name for #name {
             type Output = #output;
             const TEXT: &'static str = #query;
         }

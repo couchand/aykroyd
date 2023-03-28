@@ -30,3 +30,15 @@ pub struct Customer2(i32, String);
 #[derive(Query, ToRow)]
 #[query(text = "SELECT id, name FROM customers WHERE name LIKE $1", results(Customer))]
 pub struct SearchCustomersByName(pub String);
+
+#[derive(QueryOne, ToRow)]
+#[query(text = "SELECT id, name FROM customers WHERE id = $1", result(Customer))]
+pub struct GetCustomer {
+    id: i32,
+}
+
+impl GetCustomer {
+    pub fn by_id(id: i32) -> Self {
+        GetCustomer { id }
+    }
+}

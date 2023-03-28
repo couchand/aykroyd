@@ -21,10 +21,17 @@ pub trait Query: ToRow {
     const TEXT: &'static str;
 }
 
+pub trait QueryOne: ToRow {
+    type Output: FromRow + Send;
+
+    const TEXT: &'static str;
+}
+
 #[cfg(feature = "async")]
 #[async_trait::async_trait]
 pub trait TokioPostgresExt {
     async fn run<Q: Query + Sync>(&self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error>;
+    async fn run_one<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Q::Output, tokio_postgres::Error>;
 }
 
 #[cfg(feature = "async")]
@@ -44,11 +51,16 @@ impl TokioPostgresExt for tokio_postgres::Client {
 
         Ok(res)
     }
+
+    async fn run_one<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Q::Output, tokio_postgres::Error> {
+        Ok(FromRow::from_row(&self.query_one(Q::TEXT, &query.to_row()).await?))
+    }
 }
 
 #[cfg(feature = "postgres")]
 pub trait PostgresExt {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Output>, tokio_postgres::Error>;
+    fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Output, tokio_postgres::Error>;
 }
 
 #[cfg(feature = "postgres")]
@@ -65,6 +77,10 @@ impl PostgresExt for postgres::Client {
         }
 
         Ok(res)
+    }
+
+    fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Output, tokio_postgres::Error> {
+        Ok(FromRow::from_row(&self.query_one(Q::TEXT, &query.to_row())?))
     }
 }
 

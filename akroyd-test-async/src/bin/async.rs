@@ -27,6 +27,9 @@ async fn async_main() {
     for customer in client.run(&SearchCustomersByName("%m".into())).await.expect("query") {
         println!("Got customer: {:?}", customer);
     }
+
+    let customer = client.run_one(&GetCustomer::by_id(1)).await.expect("query");
+    println!("Got customer: {:?}", customer);
 }
 
 #[tokio::main]
