@@ -107,7 +107,6 @@ impl AsyncClient {
         let key = AsyncClient::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
-            println!("preparing {key}!");
             let key = key.clone();
             let prepared = self.client.prepare(Q::TEXT).await?;
             self.statements.insert(key, prepared);
@@ -214,7 +213,6 @@ impl Client {
         let key = Client::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
-            println!("preparing {key}!");
             let key = key.clone();
             let prepared = self.client.prepare(Q::TEXT)?;
             self.statements.insert(key, prepared);
