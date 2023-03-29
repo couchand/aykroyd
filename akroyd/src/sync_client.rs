@@ -13,6 +13,18 @@ impl From<postgres::Client> for Client {
     }
 }
 
+impl AsRef<postgres::Client> for Client {
+    fn as_ref(&self) -> &postgres::Client {
+        &self.client
+    }
+}
+
+impl AsMut<postgres::Client> for Client {
+    fn as_mut(&mut self) -> &mut postgres::Client {
+        &mut self.client
+    }
+}
+
 #[cfg(feature = "sync")]
 impl Client {
     /// Create a new `akroyd::Client` from a `postgres::Client`.

@@ -23,6 +23,18 @@ impl From<tokio_postgres::Client> for AsyncClient {
     }
 }
 
+impl AsRef<tokio_postgres::Client> for AsyncClient {
+    fn as_ref(&self) -> &tokio_postgres::Client {
+        &self.client
+    }
+}
+
+impl AsMut<tokio_postgres::Client> for AsyncClient {
+    fn as_mut(&mut self) -> &mut tokio_postgres::Client {
+        &mut self.client
+    }
+}
+
 impl AsyncClient {
     /// Create a new `akroyd::AsyncClient` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
