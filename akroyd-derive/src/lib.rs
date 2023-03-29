@@ -137,6 +137,8 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl #generics ::akroyd::Statement for #name #generics {
+            const TEXT: &'static str = #query;
+
             fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
                 let mut res = vec![];
 
@@ -151,7 +153,6 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
         #[automatically_derived]
         impl #generics #trait_name for #name #generics {
             type Row = #output;
-            const TEXT: &'static str = #query;
         }
     })
 }
@@ -214,6 +215,8 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl #generics ::akroyd::Statement for #name #generics {
+            const TEXT: &'static str = #query;
+
             fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
                 let mut res = vec![];
 
@@ -227,7 +230,6 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
         #[automatically_derived]
         impl #generics ::akroyd::Execute for #name #generics {
-            const TEXT: &'static str = #query;
         }
     })
 }
