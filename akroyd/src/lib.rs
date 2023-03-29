@@ -20,23 +20,23 @@ impl<A: for<'a> tokio_postgres::types::FromSql<'a>, B: for<'a> tokio_postgres::t
     }
 }
 
-pub trait ToRow {
+pub trait Statement {
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
-pub trait Query: ToRow {
+pub trait Query: Statement {
     type Row: FromRow + Send;
 
     const TEXT: &'static str;
 }
 
-pub trait QueryOne: ToRow {
+pub trait QueryOne: Statement {
     type Row: FromRow + Send;
 
     const TEXT: &'static str;
 }
 
-pub trait Execute: ToRow {
+pub trait Execute: Statement {
     const TEXT: &'static str;
 }
 

@@ -61,8 +61,8 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     })
 }
 
-#[proc_macro_derive(ToRow)]
-pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(Statement)]
+pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
@@ -94,7 +94,7 @@ pub fn derive_to_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
-        impl #generics ::akroyd::ToRow for #name #generics {
+        impl #generics ::akroyd::Statement for #name #generics {
             fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
                 let mut res = vec![];
 
