@@ -49,7 +49,7 @@ where T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
     Ok((client, connection))
 }
 
-#[cfg(feature = "async")]
+#[cfg(any(feature = "async", feature = "sync"))]
 type StatementKey = String; // TODO: more
 
 #[cfg(feature = "async")]
@@ -110,9 +110,6 @@ pub struct Client {
     client: postgres::Client,
     statements: std::collections::HashMap<StatementKey, tokio_postgres::Statement>,
 }
-
-#[cfg(feature = "sync")]
-type StatementKey = String; // TODO: more
 
 #[cfg(feature = "sync")]
 impl Client {
