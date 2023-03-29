@@ -41,6 +41,7 @@ pub trait QueryOne: ToRow {
 pub trait TokioPostgresExt {
     async fn run<Q: Query + Sync>(&self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error>;
     async fn run_one<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Q::Row, tokio_postgres::Error>;
+    async fn run_opt<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error>;
 }
 
 #[cfg(feature = "async")]
@@ -64,12 +65,17 @@ impl TokioPostgresExt for tokio_postgres::Client {
     async fn run_one<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
         Ok(FromRow::from_row(self.query_one(Q::TEXT, &query.to_row()).await?)?)
     }
+
+    async fn run_opt<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error> {
+        Ok(self.query_opt(Q::TEXT, &query.to_row()).await?.map(FromRow::from_row).transpose()?)
+    }
 }
 
 #[cfg(feature = "sync")]
 pub trait PostgresExt {
     fn run<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error>;
     fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error>;
+    fn run_opt<Q: QueryOne>(&mut self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error>;
 }
 
 #[cfg(feature = "sync")]
@@ -90,6 +96,10 @@ impl PostgresExt for postgres::Client {
 
     fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
         Ok(FromRow::from_row(self.query_one(Q::TEXT, &query.to_row())?)?)
+    }
+
+    fn run_opt<Q: QueryOne>(&mut self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error> {
+        Ok(self.query_opt(Q::TEXT, &query.to_row())?.map(FromRow::from_row).transpose()?)
     }
 }
 

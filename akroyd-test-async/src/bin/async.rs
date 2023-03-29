@@ -26,6 +26,10 @@ async fn run_test(client: &tokio_postgres::Client) -> Result<(), tokio_postgres:
     let customer = client.run_one(&GetCustomer::by_id(1)).await?;
     println!("Got customer: {:?}", customer);
 
+    println!("Getting customer by id 5...");
+    let customer = client.run_opt(&GetCustomer::by_id(5)).await?;
+    println!("Got customer: {:?}", customer);
+
     Ok(())
 }
 
@@ -54,6 +58,7 @@ async fn async_main() -> bool {
             false
         }
     };
+    println!("Test complete.");
 
     println!("Dropping table...");
     client.batch_execute("DROP TABLE customers;").await.expect("setup");

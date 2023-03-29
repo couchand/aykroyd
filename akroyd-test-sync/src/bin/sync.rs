@@ -26,6 +26,10 @@ fn run_test(client: &mut postgres::Client) -> Result<(), postgres::Error> {
     let customer = client.run_one(&GetCustomer::by_id(1))?;
     println!("Got customer: {:?}", customer);
 
+    println!("Getting customer by id 5...");
+    let maybe_customer = client.run_opt(&GetCustomer::by_id(5))?;
+    println!("Got customer: {:?}", maybe_customer);
+
     Ok(())
 }
 
@@ -48,6 +52,7 @@ fn sync_main() -> bool {
             false
         }
     };
+    println!("Test complete.");
 
     println!("Dropping table...");
     client.batch_execute("DROP TABLE customers;").expect("setup");
