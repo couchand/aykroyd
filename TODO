@@ -3,3 +3,4 @@ more docs
 more tuple fromrows
 maybe opt in to column order fromrow for structs with named fields
 alias/rename of columns/fields
+more verification on prepare
