@@ -45,7 +45,7 @@ impl<
     }
 }
 
-/// A trait for types that represent a statement or query.
+/// A SQL statement or query, with typed parameters.
 ///
 /// This can generally be derived automatically (for structs).  If you're deriving
 /// `Query` or `QueryOne`, an impl of this trait will also be generated.
@@ -68,7 +68,7 @@ pub trait Statement {
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
-/// A trait for types that represent a query for multiple rows.
+/// A query that may return any number of rows.
 ///
 /// This can generally be derived automatically (for structs).
 ///
@@ -91,7 +91,7 @@ pub trait Query: Statement {
     type Row: FromRow + Send;
 }
 
-/// A trait for types that represent a query that returns at most one row.
+/// A query that returns at most one row.
 ///
 /// This can generally be derived automatically (for structs).
 ///
