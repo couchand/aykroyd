@@ -1,37 +1,39 @@
-use akroyd::*;
 use akroyd_test::*;
 
-async fn run_test(client: &tokio_postgres::Client) -> Result<(), tokio_postgres::Error> {
+async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres::Error> {
+    client.prepare::<InsertCustomer>().await?;
+    let tim = "Tim";
+
     println!("Inserting test data...");
-    client.exec(&InsertCustomer { name: "Jan" }).await?;
-    client.exec(&InsertCustomer { name: "Tim" }).await?;
+    client.execute(&InsertCustomer { name: "Jan" }).await?;
+    client.execute(&InsertCustomer { name: tim }).await?;
 
     println!("Querying all customers...");
-    for customer in client.run(&GetCustomers).await? {
+    for customer in client.query(&GetCustomers).await? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Querying all customers another way...");
-    for customer in client.run(&GetCustomers2).await? {
+    for customer in client.query(&GetCustomers2).await? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Querying all customers a third way...");
-    for customer in client.run(&GetCustomers3).await? {
+    for customer in client.query(&GetCustomers3).await? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Searching for customers with name ending 'm'...");
-    for customer in client.run(&SearchCustomersByName("%m")).await? {
+    for customer in client.query(&SearchCustomersByName("%m")).await? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Getting customer by id 1...");
-    let customer = client.run_one(&GetCustomer::by_id(1)).await?;
+    let customer = client.query_one(&GetCustomer::by_id(1)).await?;
     println!("Got customer: {:?}", customer);
 
     println!("Getting customer by id 5...");
-    let customer = client.run_opt(&GetCustomer::by_id(5)).await?;
+    let customer = client.query_opt(&GetCustomer::by_id(5)).await?;
     println!("Got customer: {:?}", customer);
 
     Ok(())
@@ -39,7 +41,7 @@ async fn run_test(client: &tokio_postgres::Client) -> Result<(), tokio_postgres:
 
 async fn async_main() -> bool {
     use tokio_postgres::NoTls;
-    let (client, worker) = tokio_postgres::connect(
+    let (mut client, worker) = akroyd::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         NoTls,
     )
@@ -55,7 +57,7 @@ async fn async_main() -> bool {
     println!("Creating table...");
     client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").await.expect("setup");
 
-    let ok = match run_test(&client).await {
+    let ok = match run_test(&mut client).await {
         Ok(_) => true,
         Err(e) => {
             eprintln!("Error: {e}");
