@@ -157,7 +157,7 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
     })
 }
 
-#[proc_macro_derive(Execute, attributes(query))]
+#[proc_macro_derive(Statement, attributes(query))]
 pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
@@ -226,10 +226,6 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
                 res
             }
-        }
-
-        #[automatically_derived]
-        impl #generics ::akroyd::Execute for #name #generics {
         }
     })
 }

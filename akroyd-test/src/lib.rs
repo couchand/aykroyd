@@ -47,7 +47,7 @@ impl GetCustomer {
     }
 }
 
-#[derive(Execute)]
+#[derive(Statement)]
 #[query(text = "INSERT INTO customers (name) VALUES ($1)")]
 pub struct InsertCustomer<'a> {
     pub name: &'a str,
