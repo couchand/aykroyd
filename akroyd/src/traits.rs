@@ -1,7 +1,5 @@
-pub trait FromRow {
-    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>
-    where
-        Self: Sized;
+pub trait FromRow: Sized {
+    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>;
 }
 
 impl FromRow for () {
