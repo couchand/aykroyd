@@ -1,48 +1,45 @@
-use akroyd::*;
 use akroyd_test::*;
 
-fn run_test(client: &mut postgres::Client) -> Result<(), postgres::Error> {
+fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
     println!("Inserting test data...");
-    client.exec(&InsertCustomer { name: "Jan" })?;
-    client.exec(&InsertCustomer { name: "Tim" })?;
+    client.execute(&InsertCustomer { name: "Jan" })?;
+    client.execute(&InsertCustomer { name: "Tim" })?;
 
     println!("Querying all customers...");
-    for customer in client.run(&GetCustomers)? {
+    for customer in client.query(&GetCustomers)? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Querying all customers another way...");
-    for customer in client.run(&GetCustomers2)? {
+    for customer in client.query(&GetCustomers2)? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Querying all customers a third way...");
-    for customer in client.run(&GetCustomers3)? {
+    for customer in client.query(&GetCustomers3)? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Searching for customers with name ending 'm'...");
-    for customer in client.run(&SearchCustomersByName("%m"))? {
+    for customer in client.query(&SearchCustomersByName("%m"))? {
         println!("Got customer: {:?}", customer);
     }
 
     println!("Getting customer by id 1...");
-    let customer = client.run_one(&GetCustomer::by_id(1))?;
+    let customer = client.query_one(&GetCustomer::by_id(1))?;
     println!("Got customer: {:?}", customer);
 
     println!("Getting customer by id 5...");
-    let maybe_customer = client.run_opt(&GetCustomer::by_id(5))?;
+    let maybe_customer = client.query_opt(&GetCustomer::by_id(5))?;
     println!("Got customer: {:?}", maybe_customer);
 
     Ok(())
 }
 
 fn sync_main() -> bool {
-    use postgres::{Client, NoTls};
-
-    let mut client = Client::connect(
+    let mut client = akroyd::Client::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
-        NoTls,
+        postgres::NoTls,
     )
     .expect("db conn");
 
