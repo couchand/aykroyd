@@ -218,8 +218,4 @@ impl Client {
         let stmt = self.find_or_prepare::<Q>()?;
         Ok(self.client.execute(&stmt, &query.to_row())?)
     }
-
-    pub fn batch_execute(&mut self, statements: &str) -> Result<(), tokio_postgres::Error> {
-        self.client.batch_execute(statements)
-    }
 }

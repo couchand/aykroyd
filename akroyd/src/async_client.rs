@@ -204,8 +204,4 @@ impl AsyncClient {
         let stmt = self.find_or_prepare::<Q>().await?;
         Ok(self.client.execute(&stmt, &query.to_row()).await?)
     }
-
-    pub async fn batch_execute(&self, statements: &str) -> Result<(), tokio_postgres::Error> {
-        self.client.batch_execute(statements).await
-    }
 }

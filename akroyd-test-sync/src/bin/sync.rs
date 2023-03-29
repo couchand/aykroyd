@@ -44,7 +44,7 @@ fn sync_main() -> bool {
     .expect("db conn");
 
     println!("Creating table...");
-    client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").expect("setup");
+    client.as_mut().batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").expect("setup");
 
     let ok = match run_test(&mut client) {
         Ok(_) => true,
@@ -56,7 +56,7 @@ fn sync_main() -> bool {
     println!("Test complete.");
 
     println!("Dropping table...");
-    client.batch_execute("DROP TABLE customers;").expect("setup");
+    client.as_mut().batch_execute("DROP TABLE customers;").expect("setup");
 
     ok
 }
