@@ -60,7 +60,9 @@ impl Client {
         Q::TEXT.to_string()
     }
 
-    fn find_or_prepare<Q: Statement>(&mut self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+    fn find_or_prepare<Q: Statement>(
+        &mut self,
+    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
@@ -128,7 +130,12 @@ impl Client {
     /// ```
     pub fn query<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(self.client.query(&stmt, &query.to_row())?.into_iter().map(FromRow::from_row).collect::<Result<Vec<_>, _>>()?)
+        Ok(self
+            .client
+            .query(&stmt, &query.to_row())?
+            .into_iter()
+            .map(FromRow::from_row)
+            .collect::<Result<Vec<_>, _>>()?)
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -159,7 +166,9 @@ impl Client {
     /// ```
     pub fn query_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(FromRow::from_row(self.client.query_one(&stmt, &query.to_row())?)?)
+        Ok(FromRow::from_row(
+            self.client.query_one(&stmt, &query.to_row())?,
+        )?)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -189,9 +198,16 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne>(&mut self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error> {
+    pub fn query_opt<Q: QueryOne>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(self.client.query_opt(&stmt, &query.to_row())?.map(FromRow::from_row).transpose()?)
+        Ok(self
+            .client
+            .query_opt(&stmt, &query.to_row())?
+            .map(FromRow::from_row)
+            .transpose()?)
     }
 
     /// Executes a statement, returning the number of rows modified.

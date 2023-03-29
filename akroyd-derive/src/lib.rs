@@ -71,7 +71,11 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     derive_query_impl(input, quote!(::akroyd::QueryOne), "row")
 }
 
-fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::TokenStream, results_attr: &str) -> proc_macro::TokenStream {
+fn derive_query_impl(
+    input: proc_macro::TokenStream,
+    trait_name: proc_macro2::TokenStream,
+    results_attr: &str,
+) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
@@ -102,7 +106,8 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
                     return Ok(());
                 }
                 Err(meta.error("unrecognized attribute"))
-            }).expect("Unable to parse query attribute!");
+            })
+            .expect("Unable to parse query attribute!");
         }
     }
 
@@ -181,7 +186,8 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
                     return Ok(());
                 }
                 Err(meta.error("unrecognized attribute"))
-            }).expect("Unable to parse query attribute!");
+            })
+            .expect("Unable to parse query attribute!");
         }
     }
 

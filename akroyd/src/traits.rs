@@ -1,5 +1,7 @@
 pub trait FromRow {
-    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> where Self: Sized;
+    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>
+    where
+        Self: Sized;
 }
 
 impl FromRow for () {
@@ -8,12 +10,13 @@ impl FromRow for () {
     }
 }
 
-impl<A: for<'a> tokio_postgres::types::FromSql<'a>, B: for<'a> tokio_postgres::types::FromSql<'a>> FromRow for (A, B) {
+impl<
+        A: for<'a> tokio_postgres::types::FromSql<'a>,
+        B: for<'a> tokio_postgres::types::FromSql<'a>,
+    > FromRow for (A, B)
+{
     fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
-        Ok((
-            row.try_get(0)?,
-            row.try_get(1)?,
-        ))
+        Ok((row.try_get(0)?, row.try_get(1)?))
     }
 }
 

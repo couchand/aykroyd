@@ -9,8 +9,18 @@ pub struct AsyncClient {
 /// A convenience function which parses a connection string and connects to the database.
 ///
 /// See the documentation for `tokio_postgres::Config` for details on the connection string format.
-pub async fn connect<T>(config: &str, tls: T) -> Result<(AsyncClient, tokio_postgres::Connection<tokio_postgres::Socket, T::Stream>), tokio_postgres::Error>
-where T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
+pub async fn connect<T>(
+    config: &str,
+    tls: T,
+) -> Result<
+    (
+        AsyncClient,
+        tokio_postgres::Connection<tokio_postgres::Socket, T::Stream>,
+    ),
+    tokio_postgres::Error,
+>
+where
+    T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
 {
     let (client, connection) = tokio_postgres::connect(config, tls).await?;
     let client = AsyncClient::new(client);
@@ -46,7 +56,9 @@ impl AsyncClient {
         Q::TEXT.to_string()
     }
 
-    async fn find_or_prepare<Q: Statement>(&mut self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+    async fn find_or_prepare<Q: Statement>(
+        &mut self,
+    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = AsyncClient::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
@@ -112,9 +124,18 @@ impl AsyncClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
+    pub async fn query<Q: Query>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(self.client.query(&stmt, &query.to_row()).await?.into_iter().map(FromRow::from_row).collect::<Result<Vec<_>, _>>()?)
+        Ok(self
+            .client
+            .query(&stmt, &query.to_row())
+            .await?
+            .into_iter()
+            .map(FromRow::from_row)
+            .collect::<Result<Vec<_>, _>>()?)
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -143,9 +164,14 @@ impl AsyncClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
+    pub async fn query_one<Q: QueryOne>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(FromRow::from_row(self.client.query_one(&stmt, &query.to_row()).await?)?)
+        Ok(FromRow::from_row(
+            self.client.query_one(&stmt, &query.to_row()).await?,
+        )?)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -175,9 +201,17 @@ impl AsyncClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query_opt<Q: QueryOne>(&mut self, query: &Q) -> Result<Option<Q::Row>, tokio_postgres::Error> {
+    pub async fn query_opt<Q: QueryOne>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(self.client.query_opt(&stmt, &query.to_row()).await?.map(FromRow::from_row).transpose()?)
+        Ok(self
+            .client
+            .query_opt(&stmt, &query.to_row())
+            .await?
+            .map(FromRow::from_row)
+            .transpose()?)
     }
 
     /// Executes a statement, returning the number of rows modified.
