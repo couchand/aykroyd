@@ -17,8 +17,15 @@ where T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
     Ok((client, connection))
 }
 
+impl From<tokio_postgres::Client> for AsyncClient {
+    fn from(client: tokio_postgres::Client) -> Self {
+        Self::new(client)
+    }
+}
+
 impl AsyncClient {
-    fn new(client: tokio_postgres::Client) -> Self {
+    /// Create a new `akroyd::AsyncClient` from a `tokio_postgres::Client`.
+    pub fn new(client: tokio_postgres::Client) -> Self {
         let statements = std::collections::HashMap::new();
         AsyncClient { client, statements }
     }

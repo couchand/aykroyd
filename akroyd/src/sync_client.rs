@@ -7,8 +7,20 @@ pub struct Client {
     statements: std::collections::HashMap<StatementKey, tokio_postgres::Statement>,
 }
 
+impl From<postgres::Client> for Client {
+    fn from(client: postgres::Client) -> Self {
+        Self::new(client)
+    }
+}
+
 #[cfg(feature = "sync")]
 impl Client {
+    /// Create a new `akroyd::Client` from a `postgres::Client`.
+    pub fn new(client: postgres::Client) -> Self {
+        let statements = std::collections::HashMap::new();
+        Client { client, statements }
+    }
+
     /// A convenience function which parses a configuration string into a `Config` and then connects to the database.
     ///
     /// See the documentation for `postgres::Config` for information about the connection syntax.
@@ -29,8 +41,7 @@ impl Client {
         <T::TlsConnect as postgres::tls::TlsConnect<postgres::Socket>>::Future: Send,
     {
         let client = postgres::Client::connect(params, tls_mode)?;
-        let statements = std::collections::HashMap::new();
-        Ok(Client { client, statements })
+        Ok(Self::new(client))
     }
 
     fn statement_key<Q: Statement>() -> StatementKey {
