@@ -12,11 +12,16 @@
 //! would be wise to verify.  To do so, you'll need to connect to a live database.
 //! It is recommended to do so in a suite of automated tests which can be run
 //! against any database environment to verify that particular tier.
-#![cfg_attr(any(feature = "sync", feature = "async"), doc = r##"
+#![cfg_attr(
+    any(feature = "sync", feature = "async"),
+    doc = r##"
 
 # Example
-"##)]
-#![cfg_attr(feature = "sync", doc = r##"
+"##
+)]
+#![cfg_attr(
+    feature = "sync",
+    doc = r##"
 
 An example of the synchronous client.
 
@@ -61,8 +66,11 @@ fn try_main() -> Result<(), Error> {
     Ok(())
 }
 ```
-"##)]
-#![cfg_attr(feature = "async", doc = r##"
+"##
+)]
+#![cfg_attr(
+    feature = "async",
+    doc = r##"
 
 An example of the asynchronous client.
 
@@ -115,7 +123,8 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 ```
-"##)]
+"##
+)]
 
 #[cfg(feature = "derive")]
 pub use akroyd_derive::*;
