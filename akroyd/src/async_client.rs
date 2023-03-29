@@ -129,13 +129,12 @@ impl AsyncClient {
         query: &Q,
     ) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(self
-            .client
+        self.client
             .query(&stmt, &query.to_row())
             .await?
             .into_iter()
             .map(FromRow::from_row)
-            .collect::<Result<Vec<_>, _>>()?)
+            .collect()
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -169,9 +168,7 @@ impl AsyncClient {
         query: &Q,
     ) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(FromRow::from_row(
-            self.client.query_one(&stmt, &query.to_row()).await?,
-        )?)
+        FromRow::from_row(self.client.query_one(&stmt, &query.to_row()).await?)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -206,12 +203,11 @@ impl AsyncClient {
         query: &Q,
     ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(self
-            .client
+        self.client
             .query_opt(&stmt, &query.to_row())
             .await?
             .map(FromRow::from_row)
-            .transpose()?)
+            .transpose()
     }
 
     /// Executes a statement, returning the number of rows modified.
@@ -236,6 +232,6 @@ impl AsyncClient {
     /// ```
     pub async fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
-        Ok(self.client.execute(&stmt, &query.to_row()).await?)
+        self.client.execute(&stmt, &query.to_row()).await
     }
 }

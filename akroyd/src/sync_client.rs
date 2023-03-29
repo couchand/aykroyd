@@ -130,12 +130,11 @@ impl Client {
     /// ```
     pub fn query<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(self
-            .client
+        self.client
             .query(&stmt, &query.to_row())?
             .into_iter()
             .map(FromRow::from_row)
-            .collect::<Result<Vec<_>, _>>()?)
+            .collect()
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -166,9 +165,7 @@ impl Client {
     /// ```
     pub fn query_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(FromRow::from_row(
-            self.client.query_one(&stmt, &query.to_row())?,
-        )?)
+        FromRow::from_row(self.client.query_one(&stmt, &query.to_row())?)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -203,11 +200,10 @@ impl Client {
         query: &Q,
     ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(self
-            .client
+        self.client
             .query_opt(&stmt, &query.to_row())?
             .map(FromRow::from_row)
-            .transpose()?)
+            .transpose()
     }
 
     /// Executes a statement, returning the number of rows modified.
@@ -232,6 +228,6 @@ impl Client {
     /// ```
     pub fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
-        Ok(self.client.execute(&stmt, &query.to_row())?)
+        self.client.execute(&stmt, &query.to_row())
     }
 }
