@@ -3,6 +3,9 @@ name = "akroyd"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = []
 derive = ["akroyd-derive"]
