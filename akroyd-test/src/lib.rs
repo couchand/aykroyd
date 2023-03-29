@@ -32,7 +32,10 @@ pub struct GetCustomers3;
 pub struct Customer2(i32, String);
 
 #[derive(Query)]
-#[query(text = "SELECT name, id FROM customers WHERE name LIKE $1", row(Customer))]
+#[query(
+    text = "SELECT name, id FROM customers WHERE name LIKE $1",
+    row(Customer)
+)]
 pub struct SearchCustomersByName<'a>(pub &'a str);
 
 #[derive(QueryOne)]

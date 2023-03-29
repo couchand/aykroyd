@@ -55,7 +55,11 @@ async fn async_main() -> bool {
     });
 
     println!("Creating table...");
-    client.as_ref().batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").await.expect("setup");
+    client
+        .as_ref()
+        .batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);")
+        .await
+        .expect("setup");
 
     let ok = match run_test(&mut client).await {
         Ok(_) => true,
@@ -67,7 +71,11 @@ async fn async_main() -> bool {
     println!("Test complete.");
 
     println!("Dropping table...");
-    client.as_ref().batch_execute("DROP TABLE customers;").await.expect("setup");
+    client
+        .as_ref()
+        .batch_execute("DROP TABLE customers;")
+        .await
+        .expect("setup");
 
     ok
 }
