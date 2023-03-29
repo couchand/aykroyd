@@ -159,7 +159,7 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl #generics #trait_name for #name #generics {
-            type Output = #output;
+            type Row = #output;
             const TEXT: &'static str = #query;
         }
     })
