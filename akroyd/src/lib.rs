@@ -2,17 +2,17 @@
 pub use akroyd_derive::*;
 
 pub trait FromRow {
-    fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> where Self: Sized;
+    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> where Self: Sized;
 }
 
 impl FromRow for () {
-    fn from_row(_row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+    fn from_row(_row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
         Ok(())
     }
 }
 
 impl<A: for<'a> tokio_postgres::types::FromSql<'a>, B: for<'a> tokio_postgres::types::FromSql<'a>> FromRow for (A, B) {
-    fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
         Ok((
             row.try_get(0)?,
             row.try_get(1)?,
@@ -55,14 +55,14 @@ impl TokioPostgresExt for tokio_postgres::Client {
 
         pin_mut!(it);
         while let Some(row) = it.try_next().await? {
-            res.push(FromRow::from_row(&row)?);
+            res.push(FromRow::from_row(row)?);
         }
 
         Ok(res)
     }
 
     async fn run_one<Q: QueryOne + Sync>(&self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
-        Ok(FromRow::from_row(&self.query_one(Q::TEXT, &query.to_row()).await?)?)
+        Ok(FromRow::from_row(self.query_one(Q::TEXT, &query.to_row()).await?)?)
     }
 }
 
@@ -82,14 +82,14 @@ impl PostgresExt for postgres::Client {
         let mut it = self.query_raw(Q::TEXT, query.to_row())?;
 
         while let Some(row) = it.next()? {
-            res.push(FromRow::from_row(&row)?);
+            res.push(FromRow::from_row(row)?);
         }
 
         Ok(res)
     }
 
     fn run_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
-        Ok(FromRow::from_row(&self.query_one(Q::TEXT, &query.to_row())?)?)
+        Ok(FromRow::from_row(self.query_one(Q::TEXT, &query.to_row())?)?)
     }
 }
 

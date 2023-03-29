@@ -54,7 +54,7 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl ::akroyd::FromRow for #name {
-            fn from_row(row: &::akroyd::types::Row) -> ::std::result::Result<Self, ::akroyd::types::Error> {
+            fn from_row(row: ::akroyd::types::Row) -> ::std::result::Result<Self, ::akroyd::types::Error> {
                 #body
             }
         }
