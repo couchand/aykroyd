@@ -2,6 +2,10 @@ use akroyd::*;
 use akroyd_test::*;
 
 async fn run_test(client: &tokio_postgres::Client) -> Result<(), tokio_postgres::Error> {
+    println!("Inserting test data...");
+    client.exec(&InsertCustomer { name: "Jan" }).await?;
+    client.exec(&InsertCustomer { name: "Tim" }).await?;
+
     println!("Querying all customers...");
     for customer in client.run(&GetCustomers).await? {
         println!("Got customer: {:?}", customer);
@@ -48,8 +52,8 @@ async fn async_main() -> bool {
         }
     });
 
-    println!("Creating table & inserting data...");
-    client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT); INSERT INTO customers (id, name) VALUES (1, 'Jan'), (2, 'Tim');").await.expect("setup");
+    println!("Creating table...");
+    client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").await.expect("setup");
 
     let ok = match run_test(&client).await {
         Ok(_) => true,

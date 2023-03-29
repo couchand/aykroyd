@@ -2,6 +2,10 @@ use akroyd::*;
 use akroyd_test::*;
 
 fn run_test(client: &mut postgres::Client) -> Result<(), postgres::Error> {
+    println!("Inserting test data...");
+    client.exec(&InsertCustomer { name: "Jan" })?;
+    client.exec(&InsertCustomer { name: "Tim" })?;
+
     println!("Querying all customers...");
     for customer in client.run(&GetCustomers)? {
         println!("Got customer: {:?}", customer);
@@ -42,8 +46,8 @@ fn sync_main() -> bool {
     )
     .expect("db conn");
 
-    println!("Creating table & inserting data...");
-    client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT); INSERT INTO customers (id, name) VALUES (1, 'Jan'), (2, 'Tim');").expect("setup");
+    println!("Creating table...");
+    client.batch_execute("CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT);").expect("setup");
 
     let ok = match run_test(&mut client) {
         Ok(_) => true,

@@ -164,3 +164,41 @@ fn derive_query_impl(input: proc_macro::TokenStream, trait_name: proc_macro2::To
         }
     })
 }
+
+#[proc_macro_derive(Execute, attributes(query))]
+pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast: syn::DeriveInput = syn::parse(input).unwrap();
+
+    let name = &ast.ident;
+    let generics = &ast.generics;
+    let mut query = None;
+
+    for attr in ast.attrs {
+        if attr.path().is_ident("query") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("text") {
+                    let value = meta.value()?;
+                    let lit: syn::LitStr = value.parse()?;
+                    query = Some(quote!(#lit));
+                    return Ok(());
+                }
+                if meta.path.is_ident("file") {
+                    let value = meta.value()?;
+                    let filename: syn::LitStr = value.parse()?;
+                    query = Some(quote!(include_str!(#filename)));
+                    return Ok(());
+                }
+                Err(meta.error("unrecognized attribute"))
+            }).expect("Unable to parse query attribute!");
+        }
+    }
+
+    let query = query.expect("Unable to find query text or file attribute for Query derive!");
+
+    proc_macro::TokenStream::from(quote! {
+        #[automatically_derived]
+        impl #generics ::akroyd::Execute for #name #generics {
+            const TEXT: &'static str = #query;
+        }
+    })
+}
