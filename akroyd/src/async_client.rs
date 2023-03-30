@@ -2,23 +2,6 @@
 
 use crate::*;
 
-#[derive(Clone)]
-struct StatementCache(std::sync::Arc<std::sync::RwLock<std::collections::HashMap<StatementKey, tokio_postgres::Statement>>>);
-
-impl StatementCache {
-    fn new() -> Self {
-        StatementCache(std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())))
-    }
-
-    fn get(&self, key: &StatementKey) -> Option<tokio_postgres::Statement> {
-        self.0.read().unwrap().get(key).cloned()
-    }
-
-    fn insert(&self, key: StatementKey, statement: tokio_postgres::Statement) {
-        self.0.write().unwrap().insert(key, statement);
-    }
-}
-
 /// An asynchronous PostgreSQL client.
 pub struct Client {
     client: tokio_postgres::Client,
@@ -76,17 +59,10 @@ impl Client {
     }
 
     async fn find_or_prepare<Q: Statement>(
-        &self,
+        &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-
-        if self.statements.get(&key).is_none() {
-            let key = key.clone();
-            let prepared = self.client.prepare(Q::TEXT).await?;
-            self.statements.insert(key, prepared);
-        }
-
-        Ok(self.statements.get(&key).unwrap())
+        self.statements.ensure_async(key, || self.client.prepare(Q::TEXT)).await
     }
 
     /// Creates a new prepared statement.
@@ -305,17 +281,10 @@ impl<'a> Transaction<'a> {
     }
 
     async fn find_or_prepare<Q: Statement>(
-        &self,
+        &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-
-        if self.statements.get(&key).is_none() {
-            let key = key.clone();
-            let prepared = self.txn.prepare(Q::TEXT).await?;
-            self.statements.insert(key, prepared);
-        }
-
-        Ok(self.statements.get(&key).unwrap())
+        self.statements.ensure_async(key, || self.txn.prepare(Q::TEXT)).await
     }
 
     /// Creates a new prepared statement.
