@@ -252,6 +252,9 @@ impl Client {
         self.client.execute(&stmt, &query.to_row())
     }
 
+    /// Begins a new database transaction.
+    ///
+    /// The transaction will roll back by default - use the `commit` method to commit it.
     pub fn transaction(&mut self) -> Result<Transaction, tokio_postgres::Error> {
         let txn = self.client.transaction()?;
         let statements = self.statements.clone();
@@ -282,6 +285,11 @@ impl<'a> AsMut<postgres::Transaction<'a>> for Transaction<'a> {
 }
 
 impl<'a> Transaction<'a> {
+    /// Consumes the transaction, committing all changes made within it.
+    pub fn commit(self) -> Result<(), tokio_postgres::Error> {
+        self.txn.commit()
+    }
+
     fn find_or_prepare<Q: Statement>(
         &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
@@ -461,9 +469,5 @@ impl<'a> Transaction<'a> {
     pub fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>()?;
         self.txn.execute(&stmt, &query.to_row())
-    }
-
-    pub fn commit(self) -> Result<(), tokio_postgres::Error> {
-        self.txn.commit()
     }
 }
