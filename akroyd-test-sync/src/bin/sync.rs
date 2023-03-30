@@ -8,6 +8,13 @@ fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
     {
         let mut txn = client.transaction()?;
 
+        txn.execute(&InsertCustomer { name: "Red", id: 1 })?;
+        txn.execute(&InsertCustomer { name: "Herring", id: 42 })?;
+
+        txn.rollback()?;
+
+        let mut txn = client.transaction()?;
+
         txn.execute(&InsertCustomer { name: "Jan", id: 1 })?;
         txn.execute(&InsertCustomer { name: tim, id: 42 })?;
 

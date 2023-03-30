@@ -295,6 +295,13 @@ impl<'a> Transaction<'a> {
         self.txn.commit().await
     }
 
+    /// Rolls the transaction back, discarding all changes made within it.
+    ///
+    /// This is equivalent to `Transaction`’s `Drop` implementation, but provides any error encountered to the caller.
+    pub async fn rollback(self) -> Result<(), tokio_postgres::Error> {
+        self.txn.rollback().await
+    }
+
     async fn find_or_prepare<Q: Statement>(
         &self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
