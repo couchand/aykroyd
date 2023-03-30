@@ -269,6 +269,18 @@ pub struct Transaction<'a> {
     statements: StatementCache,
 }
 
+impl<'a> AsRef<postgres::Transaction<'a>> for Transaction<'a> {
+    fn as_ref(&self) -> &postgres::Transaction<'a> {
+        &self.txn
+    }
+}
+
+impl<'a> AsMut<postgres::Transaction<'a>> for Transaction<'a> {
+    fn as_mut(&mut self) -> &mut postgres::Transaction<'a> {
+        &mut self.txn
+    }
+}
+
 impl<'a> Transaction<'a> {
     fn find_or_prepare<Q: Statement>(
         &mut self,

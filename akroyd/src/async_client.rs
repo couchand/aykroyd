@@ -274,6 +274,18 @@ pub struct Transaction<'a> {
     statements: StatementCache,
 }
 
+impl<'a> AsRef<tokio_postgres::Transaction<'a>> for Transaction<'a> {
+    fn as_ref(&self) -> &tokio_postgres::Transaction<'a> {
+        &self.txn
+    }
+}
+
+impl<'a> AsMut<tokio_postgres::Transaction<'a>> for Transaction<'a> {
+    fn as_mut(&mut self) -> &mut tokio_postgres::Transaction<'a> {
+        &mut self.txn
+    }
+}
+
 impl<'a> Transaction<'a> {
     async fn find_or_prepare<Q: Statement>(
         &self,
