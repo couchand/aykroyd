@@ -4,3 +4,4 @@ maybe opt in to column order fromrow for structs with named fields
 more verification on prepare
 derive error reporting
 gate all doctests using derive on derive feature
+statement trait item docs
