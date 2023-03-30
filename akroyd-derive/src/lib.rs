@@ -1,6 +1,6 @@
 use quote::quote;
 
-#[proc_macro_derive(FromRow)]
+#[proc_macro_derive(FromRow, attributes(query))]
 pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
@@ -14,9 +14,15 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                     .named
                     .iter()
                     .map(|f| {
+                        let i = match parse_field_column_attr(&f.attrs) {
+                            None => {
+                                let i = f.ident.as_ref().unwrap().to_string();
+                                quote!(#i)
+                            }
+                            Some(i) => quote!(#i)
+                        };
                         let f = f.ident.as_ref().unwrap();
-                        let i = f.to_string();
-                        (quote!(#i), quote!(#f))
+                        (i, quote!(#f))
                     })
                     .unzip();
 
@@ -33,9 +39,14 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                     .unnamed
                     .iter()
                     .enumerate()
-                    .map(|(i, _)| {
-                        let i = syn::Index::from(i);
-                        quote!(#i)
+                    .map(|(i, f)| {
+                        match parse_field_column_attr(&f.attrs) {
+                            None => {
+                                let i = syn::Index::from(i);
+                                quote!(#i)
+                            }
+                            Some(i) => quote!(#i),
+                        }
                     })
                     .collect();
 
@@ -122,7 +133,7 @@ fn derive_statement_impl(ast: &syn::DeriveInput, params: &StatementParams) -> pr
                 .named
                 .iter()
                 .map(|f| {
-                    let index = parse_field_attrs(&f.attrs);
+                    let index = parse_field_param_attr(&f.attrs);
                     let f = &f.ident;
                     (index, quote!(#f))
                 })
@@ -132,7 +143,7 @@ fn derive_statement_impl(ast: &syn::DeriveInput, params: &StatementParams) -> pr
                 .iter()
                 .enumerate()
                 .map(|(i, f)| {
-                    let index = parse_field_attrs(&f.attrs);
+                    let index = parse_field_param_attr(&f.attrs);
                     let i = syn::Index::from(i);
                     (index, quote!(#i))
                 })
@@ -227,7 +238,7 @@ fn parse_struct_attrs(attrs: &[syn::Attribute]) -> StatementParams {
     params
 }
 
-fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
+fn parse_field_param_attr(attrs: &[syn::Attribute]) -> Option<usize> {
     let mut index = None;
 
     for attr in attrs {
@@ -247,6 +258,27 @@ fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
                         return Err(meta.error("Parameter must be an integer prefixed with $"));
                     }
                     index = Some(i as usize);
+                    return Ok(());
+                }
+                Err(meta.error("unrecognized attribute"))
+            })
+            .expect("Unable to parse query attribute!");
+        }
+    }
+
+    index
+}
+
+fn parse_field_column_attr(attrs: &[syn::Attribute]) -> Option<syn::Lit> {
+    let mut index = None;
+
+    for attr in attrs {
+        if attr.path().is_ident("query") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("column") {
+                    let value = meta.value()?;
+                    let lit: syn::Lit = value.parse()?;
+                    index = Some(lit);
                     return Ok(());
                 }
                 Err(meta.error("unrecognized attribute"))

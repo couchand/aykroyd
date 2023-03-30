@@ -36,6 +36,16 @@ fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
         println!("Got customer: {:?}", customer);
     }
 
+    println!("Querying all customers a fourth way...");
+    for customer in client.query(&GetCustomers4)? {
+        println!("Got customer: {:?}", customer);
+    }
+
+    println!("Querying all customers a fifth way...");
+    for customer in client.query(&GetCustomers5)? {
+        println!("Got customer: {:?}", customer);
+    }
+
     println!("Searching for customers with name ending 'm'...");
     for customer in client.query(&SearchCustomersByName("%m"))? {
         println!("Got customer: {:?}", customer);
