@@ -10,12 +10,17 @@ impl StatementCache {
         StatementCache(std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new())))
     }
 
-    fn get(&self, key: &StatementKey) -> Option<tokio_postgres::Statement> {
-        self.0.borrow().get(key).cloned()
-    }
-
-    fn insert(&self, key: StatementKey, statement: tokio_postgres::Statement) {
-        self.0.borrow_mut().insert(key, statement);
+    fn ensure<F>(&self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
+    where
+        F: FnOnce() -> Result<tokio_postgres::Statement, tokio_postgres::Error>,
+    {
+        match self.0.borrow_mut().entry(key) {
+            std::collections::hash_map::Entry::Occupied(oe) => Ok(oe.get().clone()),
+            std::collections::hash_map::Entry::Vacant(ve) => {
+                let stmt = f()?;
+                Ok(ve.insert(stmt).clone())
+            }
+        }
     }
 }
 
@@ -82,14 +87,7 @@ impl Client {
         &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-
-        if self.statements.get(&key).is_none() {
-            let key = key.clone();
-            let prepared = self.client.prepare(Q::TEXT)?;
-            self.statements.insert(key, prepared);
-        }
-
-        Ok(self.statements.get(&key).unwrap())
+        self.statements.ensure(key, || self.client.prepare(Q::TEXT))
     }
 
     /// Creates a new prepared statement.
@@ -303,14 +301,7 @@ impl<'a> Transaction<'a> {
         &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-
-        if self.statements.get(&key).is_none() {
-            let key = key.clone();
-            let prepared = self.txn.prepare(Q::TEXT)?;
-            self.statements.insert(key, prepared);
-        }
-
-        Ok(self.statements.get(&key).unwrap())
+        self.statements.ensure(key, || self.txn.prepare(Q::TEXT))
     }
 
     /// Creates a new prepared statement.
