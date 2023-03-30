@@ -236,6 +236,7 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         .collect::<Vec<_>>();
 
     for (i, index) in indexes.into_iter().enumerate() {
+        // TODO: make the error message nicer
         assert!(index > 0);
         assert!(index <= fields.len());
 
