@@ -35,15 +35,35 @@ impl FromRow for () {
     }
 }
 
-impl<
-        A: for<'a> tokio_postgres::types::FromSql<'a>,
-        B: for<'a> tokio_postgres::types::FromSql<'a>,
-    > FromRow for (A, B)
-{
-    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
-        Ok((row.try_get(0)?, row.try_get(1)?))
-    }
+macro_rules! impl_tuple_from_row {
+    (
+        $(
+            $name:ident $index:literal$(,)?
+        )+
+    ) => {
+        impl<
+            $(
+                $name: for<'a> tokio_postgres::types::FromSql<'a>,
+            )+
+        > FromRow for ($($name),+) {
+            fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+                Ok((
+                    $(
+                        row.try_get($index)?,
+                    )+
+                ))
+            }
+        }
+    };
 }
+
+impl_tuple_from_row!(A 0, B 1);
+impl_tuple_from_row!(A 0, B 1, C 2);
+impl_tuple_from_row!(A 0, B 1, C 2, D 3);
+impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4);
+impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5);
+impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6);
+impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 
 /// A SQL statement or query, with typed parameters.
 ///
