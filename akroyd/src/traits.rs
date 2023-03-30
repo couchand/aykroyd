@@ -156,7 +156,7 @@ pub trait Statement {
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
-/// A query that may return any number of rows.
+/// A marker trait for a query that may return any number of rows.
 ///
 /// This can generally be derived automatically (for structs).
 ///
@@ -207,7 +207,7 @@ pub trait Statement {
 /// ```
 pub trait Query: Statement {}
 
-/// A query that returns at most one row.
+/// A marker trait for a query that returns at most one row.
 ///
 /// This can generally be derived automatically (for structs).
 ///
