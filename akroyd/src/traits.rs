@@ -145,6 +145,36 @@ pub trait Statement {
 ///     last: String,
 /// }
 /// ```
+///
+/// For queries with more than a handful of parameters, this can get error-prone.
+/// Help ensure that the struct fields and the query text stay in sync by annotating
+/// parameter index on the fields:
+///
+/// ```rust
+/// # use akroyd::{Query, FromRow};
+/// # #[derive(FromRow)]
+/// # pub struct Customer {
+/// #     id: i32,
+/// #     first: String,
+/// #     last: String,
+/// # }
+/// #[derive(Query)]
+/// #[query(row(Customer), text = "
+///     SELECT id, first, last
+///     FROM customers
+///     WHERE first = $1 OR last = $2 OR middle = $3 OR salutation = $4
+/// ")]
+/// pub struct FuzzySearch<'a> {
+///     #[query(param = "$4")]
+///     pub salutation: &'a str,
+///     #[query(param = "$1")]
+///     pub first: &'a str,
+///     #[query(param = "$3")]
+///     pub middle: &'a str,
+///     #[query(param = "$2")]
+///     pub last: &'a str,
+/// }
+/// ```
 pub trait Query: Statement {
     type Row: FromRow + Send;
 }
@@ -166,6 +196,36 @@ pub trait Query: Statement {
 ///     id: i32,
 ///     first: String,
 ///     last: String,
+/// }
+/// ```
+///
+/// For queries with more than a handful of parameters, this can get error-prone.
+/// Help ensure that the struct fields and the query text stay in sync by annotating
+/// parameter index on the fields:
+///
+/// ```rust
+/// # use akroyd::{QueryOne, FromRow};
+/// # #[derive(FromRow)]
+/// # pub struct Customer {
+/// #     id: i32,
+/// #     first: String,
+/// #     last: String,
+/// # }
+/// #[derive(QueryOne)]
+/// #[query(row(Customer), text = "
+///     SELECT id, first, last
+///     FROM customers
+///     WHERE first = $1 AND last = $2 AND middle = $3 AND salutation = $4
+/// ")]
+/// pub struct ExactSearch<'a> {
+///     #[query(param = "$4")]
+///     pub salutation: &'a str,
+///     #[query(param = "$1")]
+///     pub first: &'a str,
+///     #[query(param = "$3")]
+///     pub middle: &'a str,
+///     #[query(param = "$2")]
+///     pub last: &'a str,
 /// }
 /// ```
 pub trait QueryOne: Statement {
