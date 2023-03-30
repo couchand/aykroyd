@@ -63,53 +63,33 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
 #[proc_macro_derive(Query, attributes(query))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    derive_query_impl(input, quote!(::akroyd::Query), "row")
+    derive_query_impl(input, quote!(::akroyd::Query))
 }
 
 #[proc_macro_derive(QueryOne, attributes(query))]
 pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    derive_query_impl(input, quote!(::akroyd::QueryOne), "row")
+    derive_query_impl(input, quote!(::akroyd::QueryOne))
 }
 
 fn derive_query_impl(
     input: proc_macro::TokenStream,
     trait_name: proc_macro2::TokenStream,
-    results_attr: &str,
 ) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let mut output = None;
-    let mut query = None;
 
-    for attr in ast.attrs {
-        if attr.path().is_ident("query") {
-            attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("text") {
-                    let value = meta.value()?;
-                    let lit: syn::LitStr = value.parse()?;
-                    query = Some(quote!(#lit));
-                    return Ok(());
-                }
-                if meta.path.is_ident("file") {
-                    let value = meta.value()?;
-                    let filename: syn::LitStr = value.parse()?;
-                    query = Some(quote!(include_str!(#filename)));
-                    return Ok(());
-                }
-                if meta.path.is_ident(results_attr) {
-                    let content;
-                    syn::parenthesized!(content in meta.input);
-                    let ty: syn::Type = content.parse()?;
-                    output = Some(ty);
-                    return Ok(());
-                }
-                Err(meta.error("unrecognized attribute"))
-            })
-            .expect("Unable to parse query attribute!");
-        }
-    }
+    let params = parse_struct_attrs(&ast.attrs);
+    let query = if let Some(text) = params.text {
+        quote!(#text)
+    } else if let Some(file) = params.file {
+        quote!(include_str!(#file))
+    } else {
+        panic!("Unable to find query text or file attribute for Query derive!");
+    };
+
+    let output = params.row.expect("Unable to find output result type attribute for Query derive!");
 
     let fields = match ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
@@ -135,9 +115,6 @@ fn derive_query_impl(
             syn::Fields::Unit => vec![],
         },
     };
-
-    let output = output.expect("Unable to find output result type attribute for Query derive!");
-    let query = query.expect("Unable to find query text or file attribute for Query derive!");
 
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
@@ -168,28 +145,15 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let mut query = None;
 
-    for attr in ast.attrs {
-        if attr.path().is_ident("query") {
-            attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("text") {
-                    let value = meta.value()?;
-                    let lit: syn::LitStr = value.parse()?;
-                    query = Some(quote!(#lit));
-                    return Ok(());
-                }
-                if meta.path.is_ident("file") {
-                    let value = meta.value()?;
-                    let filename: syn::LitStr = value.parse()?;
-                    query = Some(quote!(include_str!(#filename)));
-                    return Ok(());
-                }
-                Err(meta.error("unrecognized attribute"))
-            })
-            .expect("Unable to parse query attribute!");
-        }
-    }
+    let params = parse_struct_attrs(&ast.attrs);
+    let query = if let Some(text) = params.text {
+        quote!(#text)
+    } else if let Some(file) = params.file {
+        quote!(include_str!(#file))
+    } else {
+        panic!("Unable to find query text or file attribute for Query derive!");
+    };
 
     let fields = match ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
@@ -245,8 +209,6 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
     let fields = sorted.into_iter().map(|f| f.unwrap()).collect::<Vec<_>>();
 
-    let query = query.expect("Unable to find query text or file attribute for Query derive!");
-
     proc_macro::TokenStream::from(quote! {
         #[automatically_derived]
         impl #generics ::akroyd::Statement for #name #generics {
@@ -265,8 +227,50 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     })
 }
 
+struct StatementParams {
+    text: Option<syn::LitStr>,
+    file: Option<syn::LitStr>,
+    row: Option<syn::Type>,
+}
+
+fn parse_struct_attrs(attrs: &[syn::Attribute]) -> StatementParams {
+    let mut params = StatementParams {
+        text: None,
+        file: None,
+        row: None,
+    };
+
+    for attr in attrs {
+        if attr.path().is_ident("query") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("text") {
+                    let value = meta.value()?;
+                    params.text = Some(value.parse()?);
+                    return Ok(());
+                }
+                if meta.path.is_ident("file") {
+                    let value = meta.value()?;
+                    params.file = Some(value.parse()?);
+                    return Ok(());
+                }
+                if meta.path.is_ident("row") {
+                    let content;
+                    syn::parenthesized!(content in meta.input);
+                    params.row = Some(content.parse()?);
+                    return Ok(());
+                }
+                Err(meta.error("unrecognized attribute"))
+            })
+            .expect("Unable to parse query attribute!");
+        }
+    }
+
+    params
+}
+
 fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
     let mut index = None;
+
     for attr in attrs {
         if attr.path().is_ident("query") {
             attr.parse_nested_meta(|meta| {
@@ -291,5 +295,6 @@ fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
             .expect("Unable to parse query attribute!");
         }
     }
+
     index
 }
