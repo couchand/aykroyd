@@ -264,7 +264,7 @@ impl Client {
     /// The transaction will roll back by default - use the `commit` method to commit it.
     pub async fn transaction(&mut self) -> Result<Transaction, tokio_postgres::Error> {
         let txn = self.client.transaction().await?;
-        let statements = self.statements.clone();
+        let statements = &mut self.statements;
         Ok(Transaction { txn, statements })
     }
 }
@@ -276,7 +276,7 @@ impl Client {
 /// can be nested, with inner transactions implemented via savepoints.
 pub struct Transaction<'a> {
     txn: tokio_postgres::Transaction<'a>,
-    statements: StatementCache,
+    statements: &'a mut StatementCache,
 }
 
 impl<'a> AsRef<tokio_postgres::Transaction<'a>> for Transaction<'a> {
