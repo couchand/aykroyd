@@ -58,7 +58,7 @@ macro_rules! impl_tuple_from_row {
             $(
                 $name: for<'a> tokio_postgres::types::FromSql<'a>,
             )+
-        > FromRow for ($($name),+) {
+        > FromRow for ($($name,)+) {
             fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
                 Ok((
                     $(
@@ -70,6 +70,7 @@ macro_rules! impl_tuple_from_row {
     };
 }
 
+impl_tuple_from_row!(A 0);
 impl_tuple_from_row!(A 0, B 1);
 impl_tuple_from_row!(A 0, B 1, C 2);
 impl_tuple_from_row!(A 0, B 1, C 2, D 3);
