@@ -143,6 +143,30 @@ pub mod sync_client;
 #[cfg(any(feature = "async", feature = "sync"))]
 type StatementKey = String; // TODO: more
 
+#[cfg(feature = "sync")]
+#[derive(Clone)]
+struct StatementCache(std::collections::HashMap<StatementKey, tokio_postgres::Statement>);
+
+#[cfg(feature = "sync")]
+impl StatementCache {
+    fn new() -> Self {
+        StatementCache(std::collections::HashMap::new())
+    }
+
+    fn ensure<F>(&mut self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
+    where
+        F: FnOnce() -> Result<tokio_postgres::Statement, tokio_postgres::Error>,
+    {
+        match self.0.entry(key) {
+            std::collections::hash_map::Entry::Occupied(oe) => Ok(oe.get().clone()),
+            std::collections::hash_map::Entry::Vacant(ve) => {
+                let stmt = f()?;
+                Ok(ve.insert(stmt).clone())
+            }
+        }
+    }
+}
+
 #[doc(hidden)]
 pub mod types {
     pub use tokio_postgres::types::ToSql;
