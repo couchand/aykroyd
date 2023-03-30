@@ -49,9 +49,11 @@ pub struct Customer4(
     #[query(column = "name")] String,
 );
 
-#[derive(Query)]
+#[derive(Statement)]
 #[query(text = "SELECT id, name FROM customers", row((i32, String)))]
 pub struct GetCustomers5;
+
+impl Query for GetCustomers5 {}
 
 #[derive(Query)]
 #[query(

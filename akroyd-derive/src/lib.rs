@@ -94,12 +94,7 @@ fn derive_query_impl(
 
     let params = parse_struct_attrs(&ast.attrs);
 
-    let output = params
-        .row
-        .as_ref()
-        .expect("Unable to find output result type attribute for Query derive!");
-
-    let statement_impl = derive_statement_impl(&ast, &params, quote!(#output));
+    let statement_impl = derive_statement_impl(&ast, &params);
 
     proc_macro::TokenStream::from(quote! {
         #statement_impl
@@ -114,13 +109,12 @@ fn derive_query_impl(
 pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let params = parse_struct_attrs(&ast.attrs);
-    derive_statement_impl(&ast, &params, quote!(())).into()
+    derive_statement_impl(&ast, &params).into()
 }
 
 fn derive_statement_impl(
     ast: &syn::DeriveInput,
     params: &StatementParams,
-    output: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
@@ -131,6 +125,11 @@ fn derive_statement_impl(
         quote!(include_str!(#file))
     } else {
         panic!("Unable to find query text or file attribute for Query derive!");
+    };
+    let output = if let Some(row) = &params.row {
+        quote!(#row)
+    } else {
+        quote!(())
     };
 
     let fields = match &ast.data {
