@@ -79,6 +79,5 @@ impl GetCustomer {
 pub struct InsertCustomer<'a> {
     #[query(param = "$2")]
     pub name: &'a str,
-    #[query(param = "$1")]
     pub id: i32,
 }

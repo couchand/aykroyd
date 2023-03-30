@@ -125,7 +125,8 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 ///
 /// For queries with more than a handful of parameters, this can get error-prone.
 /// Help ensure that the struct fields and the query text stay in sync by annotating
-/// parameter index on the fields:
+/// parameter index on the fields.  Any fields not annotated will take the next
+/// available index.
 ///
 /// ```rust
 /// # use akroyd::Statement;
@@ -137,11 +138,9 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 /// pub struct InsertCustomer<'a> {
 ///     #[query(param = "$4")]
 ///     pub salutation: &'a str,
-///     #[query(param = "$1")]
 ///     pub first: &'a str,
 ///     #[query(param = "$3")]
 ///     pub middle: &'a str,
-///     #[query(param = "$2")]
 ///     pub last: &'a str,
 /// }
 /// ```
