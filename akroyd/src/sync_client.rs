@@ -3,18 +3,18 @@
 use crate::*;
 
 #[derive(Clone)]
-struct StatementCache(std::rc::Rc<std::cell::RefCell<std::collections::HashMap<StatementKey, tokio_postgres::Statement>>>);
+struct StatementCache(std::collections::HashMap<StatementKey, tokio_postgres::Statement>);
 
 impl StatementCache {
     fn new() -> Self {
-        StatementCache(std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new())))
+        StatementCache(std::collections::HashMap::new())
     }
 
-    fn ensure<F>(&self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
+    fn ensure<F>(&mut self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
     where
         F: FnOnce() -> Result<tokio_postgres::Statement, tokio_postgres::Error>,
     {
-        match self.0.borrow_mut().entry(key) {
+        match self.0.entry(key) {
             std::collections::hash_map::Entry::Occupied(oe) => Ok(oe.get().clone()),
             std::collections::hash_map::Entry::Vacant(ve) => {
                 let stmt = f()?;
