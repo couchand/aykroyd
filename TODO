@@ -1,4 +1,5 @@
-txns
+txn builder?
+generic client?
 more docs
 maybe opt in to column order fromrow for structs with named fields
 alias/rename of columns/fields
