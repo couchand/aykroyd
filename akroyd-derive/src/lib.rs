@@ -92,9 +92,7 @@ fn derive_query_impl(
     let name = &ast.ident;
     let generics = &ast.generics;
 
-    let params = parse_struct_attrs(&ast.attrs);
-
-    let statement_impl = derive_statement_impl(&ast, &params);
+    let statement_impl = derive_statement_impl(&ast);
 
     proc_macro::TokenStream::from(quote! {
         #statement_impl
@@ -108,16 +106,14 @@ fn derive_query_impl(
 #[proc_macro_derive(Statement, attributes(query))]
 pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
-    let params = parse_struct_attrs(&ast.attrs);
-    derive_statement_impl(&ast, &params).into()
+    derive_statement_impl(&ast).into()
 }
 
-fn derive_statement_impl(
-    ast: &syn::DeriveInput,
-    params: &StatementParams,
-) -> proc_macro2::TokenStream {
+fn derive_statement_impl(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
+
+    let params = parse_struct_attrs(&ast.attrs);
 
     let query = if let Some(text) = &params.text {
         quote!(#text)
