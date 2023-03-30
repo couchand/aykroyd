@@ -148,6 +148,8 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 pub trait Statement {
     const TEXT: &'static str;
 
+    type Row: FromRow + Send;
+
     fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
 }
 
@@ -200,9 +202,7 @@ pub trait Statement {
 ///     pub last: &'a str,
 /// }
 /// ```
-pub trait Query: Statement {
-    type Row: FromRow + Send;
-}
+pub trait Query: Statement {}
 
 /// A query that returns at most one row.
 ///
@@ -253,6 +253,4 @@ pub trait Query: Statement {
 ///     pub last: &'a str,
 /// }
 /// ```
-pub trait QueryOne: Statement {
-    type Row: FromRow + Send;
-}
+pub trait QueryOne: Statement {}

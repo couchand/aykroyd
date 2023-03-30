@@ -93,19 +93,19 @@ fn derive_query_impl(
     let generics = &ast.generics;
 
     let params = parse_struct_attrs(&ast.attrs);
-    let statement_impl = derive_statement_impl(&ast, &params);
 
     let output = params
         .row
+        .as_ref()
         .expect("Unable to find output result type attribute for Query derive!");
+
+    let statement_impl = derive_statement_impl(&ast, &params, quote!(#output));
 
     proc_macro::TokenStream::from(quote! {
         #statement_impl
 
         #[automatically_derived]
-        impl #generics #trait_name for #name #generics {
-            type Row = #output;
-        }
+        impl #generics #trait_name for #name #generics {}
     })
 }
 
@@ -114,12 +114,13 @@ fn derive_query_impl(
 pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let params = parse_struct_attrs(&ast.attrs);
-    derive_statement_impl(&ast, &params).into()
+    derive_statement_impl(&ast, &params, quote!(())).into()
 }
 
 fn derive_statement_impl(
     ast: &syn::DeriveInput,
     params: &StatementParams,
+    output: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
@@ -190,6 +191,8 @@ fn derive_statement_impl(
         #[automatically_derived]
         impl #generics ::akroyd::Statement for #name #generics {
             const TEXT: &'static str = #query;
+
+            type Row = #output;
 
             fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
                 let mut res = vec![];
