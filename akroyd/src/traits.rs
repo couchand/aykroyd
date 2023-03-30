@@ -2,8 +2,8 @@
 ///
 /// This can be generally derived automatically (for structs).
 ///
-/// For structs with named fields, the fields are expected to have the same
-/// name as the column in the `Row`.
+/// For structs with named fields, the names must match exactly the name of
+/// the column in a result `Row`.
 ///
 /// ```rust
 /// # use akroyd::FromRow;
@@ -15,17 +15,30 @@
 /// }
 /// ```
 ///
-/// For tuple structs, the fields are loaded from the row in order, so the
-/// query's column ordering must match the tuple struct's field order.  If you
-/// just need the results of an ad-hoc query, consider using an anonymous tuple
-/// instead.
+/// For tuple structs, the fields are taken from the row in order.  The
+/// order of the query columns must match the tuple struct fields.
 ///
 /// ```rust
 /// # use akroyd::FromRow;
 /// #[derive(FromRow)]
 /// pub struct QueryResults(i32, f32, String);
 /// ```
+///
+/// If you just need the results of an ad-hoc query, consider using an
+/// anonymous tuple instead.
+///
+/// ```rust
+/// # use akroyd::Query;
+/// # use rust_decimal::Decimal;
+/// #[derive(Query)]
+/// #[query(
+///     text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
+///     row((i32, Decimal))
+/// )]
+/// pub struct SalesByMonth;
+/// ```
 pub trait FromRow: Sized {
+    /// Build the type from a PostgreSQL result row.
     fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>;
 }
 
