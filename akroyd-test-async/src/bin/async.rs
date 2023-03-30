@@ -5,8 +5,8 @@ async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres
     let tim = "Tim";
 
     println!("Inserting test data...");
-    client.execute(&InsertCustomer { name: "Jan" }).await?;
-    client.execute(&InsertCustomer { name: tim }).await?;
+    client.execute(&InsertCustomer { name: "Jan", id: 1 }).await?;
+    client.execute(&InsertCustomer { name: tim, id: 42 }).await?;
 
     println!("Querying all customers...");
     for customer in client.query(&GetCustomers).await? {
@@ -28,8 +28,8 @@ async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres
         println!("Got customer: {:?}", customer);
     }
 
-    println!("Getting customer by id 1...");
-    let customer = client.query_one(&GetCustomer::by_id(1)).await?;
+    println!("Getting customer by id 42...");
+    let customer = client.query_one(&GetCustomer::by_id(42)).await?;
     println!("Got customer: {:?}", customer);
 
     println!("Getting customer by id 5...");

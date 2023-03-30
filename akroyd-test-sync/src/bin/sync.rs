@@ -1,9 +1,11 @@
 use akroyd_test::*;
 
 fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
+    let tim = "Tim";
+
     println!("Inserting test data...");
-    client.execute(&InsertCustomer { name: "Jan" })?;
-    client.execute(&InsertCustomer { name: "Tim" })?;
+    client.execute(&InsertCustomer { name: "Jan", id: 1 })?;
+    client.execute(&InsertCustomer { name: tim, id: 42 })?;
 
     println!("Querying all customers...");
     for customer in client.query(&GetCustomers)? {
@@ -25,8 +27,8 @@ fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
         println!("Got customer: {:?}", customer);
     }
 
-    println!("Getting customer by id 1...");
-    let customer = client.query_one(&GetCustomer::by_id(1))?;
+    println!("Getting customer by id 42...");
+    let customer = client.query_one(&GetCustomer::by_id(42))?;
     println!("Got customer: {:?}", customer);
 
     println!("Getting customer by id 5...");

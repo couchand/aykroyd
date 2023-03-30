@@ -199,22 +199,50 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
                 .named
                 .iter()
                 .map(|f| {
+                    let index = parse_field_attrs(&f.attrs);
                     let f = &f.ident;
-                    quote!(#f)
+                    (index, quote!(#f))
                 })
                 .collect(),
             syn::Fields::Unnamed(fs) => fs
                 .unnamed
                 .iter()
                 .enumerate()
-                .map(|(i, _)| {
+                .map(|(i, f)| {
+                    let index = parse_field_attrs(&f.attrs);
                     let i = syn::Index::from(i);
-                    quote!(#i)
+                    (index, quote!(#i))
                 })
                 .collect(),
             syn::Fields::Unit => vec![],
         },
     };
+
+    let mut next_index = 1;
+    let (indexes, fields): (Vec<_>, Vec<_>) = fields.into_iter()
+        .map(|(index, field)| match index {
+            Some(i) => (i, field),
+            None => {
+                let i = next_index;
+                next_index += 1;
+                (i, field)
+            }
+        })
+        .unzip();
+
+    let mut sorted = std::iter::repeat(None).take(fields.len()).collect::<Vec<_>>();
+
+    for (i, index) in indexes.into_iter().enumerate() {
+        assert!(index > 0);
+        assert!(index <= fields.len());
+
+        sorted[index - 1] = Some(fields[i].clone());
+    }
+
+    let fields = sorted
+        .into_iter()
+        .map(|f| f.unwrap())
+        .collect::<Vec<_>>();
 
     let query = query.expect("Unable to find query text or file attribute for Query derive!");
 
@@ -234,4 +262,33 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
             }
         }
     })
+}
+
+fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
+    let mut index = None;
+    for attr in attrs {
+        if attr.path().is_ident("query") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("param") {
+                    let value = meta.value()?;
+                    let lit: syn::LitStr = value.parse()?;
+                    let text = lit.value();
+                    if text.chars().next() != Some('$') {
+                        return Err(meta.error("Parameter must be an integer prefixed with $"));
+                    }
+                    let i: u8 = text.chars().skip(1).collect::<String>().parse().or(
+                        Err(meta.error("Parameter must be an integer prefixed with $"))
+                    )?;
+                    if i == 0 {
+                        return Err(meta.error("Parameter must be an integer prefixed with $"));
+                    }
+                    index = Some(i as usize);
+                    return Ok(());
+                }
+                Err(meta.error("unrecognized attribute"))
+            })
+            .expect("Unable to parse query attribute!");
+        }
+    }
+    index
 }
