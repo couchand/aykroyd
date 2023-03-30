@@ -18,7 +18,7 @@ impl StatementCache {
 }
 
 /// An asynchronous PostgreSQL client.
-pub struct AsyncClient {
+pub struct Client {
     client: tokio_postgres::Client,
     statements: StatementCache,
 }
@@ -31,7 +31,7 @@ pub async fn connect<T>(
     tls: T,
 ) -> Result<
     (
-        AsyncClient,
+        Client,
         tokio_postgres::Connection<tokio_postgres::Socket, T::Stream>,
     ),
     tokio_postgres::Error,
@@ -40,33 +40,33 @@ where
     T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
 {
     let (client, connection) = tokio_postgres::connect(config, tls).await?;
-    let client = AsyncClient::new(client);
+    let client = Client::new(client);
     Ok((client, connection))
 }
 
-impl From<tokio_postgres::Client> for AsyncClient {
+impl From<tokio_postgres::Client> for Client {
     fn from(client: tokio_postgres::Client) -> Self {
         Self::new(client)
     }
 }
 
-impl AsRef<tokio_postgres::Client> for AsyncClient {
+impl AsRef<tokio_postgres::Client> for Client {
     fn as_ref(&self) -> &tokio_postgres::Client {
         &self.client
     }
 }
 
-impl AsMut<tokio_postgres::Client> for AsyncClient {
+impl AsMut<tokio_postgres::Client> for Client {
     fn as_mut(&mut self) -> &mut tokio_postgres::Client {
         &mut self.client
     }
 }
 
-impl AsyncClient {
-    /// Create a new `AsyncClient` from a `tokio_postgres::Client`.
+impl Client {
+    /// Create a new `Client` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
         let statements = StatementCache::new();
-        AsyncClient { client, statements }
+        Client { client, statements }
     }
 
     fn statement_key<Q: Statement>() -> StatementKey {
@@ -76,7 +76,7 @@ impl AsyncClient {
     async fn find_or_prepare<Q: Statement>(
         &self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        let key = AsyncClient::statement_key::<Q>();
+        let key = Client::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
             let key = key.clone();
@@ -278,7 +278,7 @@ impl<'a> Transaction<'a> {
     async fn find_or_prepare<Q: Statement>(
         &self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        let key = AsyncClient::statement_key::<Q>();
+        let key = Client::statement_key::<Q>();
 
         if self.statements.get(&key).is_none() {
             let key = key.clone();

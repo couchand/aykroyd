@@ -1,7 +1,7 @@
 use akroyd_test::*;
-use akroyd::async_client::{connect, AsyncClient};
+use akroyd::async_client::{connect, Client};
 
-async fn run_test(client: &mut AsyncClient) -> Result<(), tokio_postgres::Error> {
+async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
     client.prepare::<InsertCustomer>().await?;
     let tim = "Tim";
 
