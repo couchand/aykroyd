@@ -1,12 +1,18 @@
 use akroyd_test::*;
 
-async fn run_test(client: &akroyd::AsyncClient) -> Result<(), tokio_postgres::Error> {
+async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres::Error> {
     client.prepare::<InsertCustomer>().await?;
     let tim = "Tim";
 
     println!("Inserting test data...");
-    client.execute(&InsertCustomer { name: "Jan", id: 1 }).await?;
-    client.execute(&InsertCustomer { name: tim, id: 42 }).await?;
+    {
+        let txn = client.transaction().await?;
+
+        txn.execute(&InsertCustomer { name: "Jan", id: 1 }).await?;
+        txn.execute(&InsertCustomer { name: tim, id: 42 }).await?;
+
+        txn.commit().await?;
+    }
 
     println!("Querying all customers...");
     for customer in client.query(&GetCustomers).await? {
@@ -41,7 +47,7 @@ async fn run_test(client: &akroyd::AsyncClient) -> Result<(), tokio_postgres::Er
 
 async fn async_main() -> bool {
     use tokio_postgres::NoTls;
-    let (client, worker) = akroyd::connect(
+    let (mut client, worker) = akroyd::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         NoTls,
     )
@@ -61,7 +67,7 @@ async fn async_main() -> bool {
         .await
         .expect("setup");
 
-    let ok = match run_test(&client).await {
+    let ok = match run_test(&mut client).await {
         Ok(_) => true,
         Err(e) => {
             eprintln!("Error: {e}");
