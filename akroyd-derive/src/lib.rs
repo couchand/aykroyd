@@ -91,10 +91,10 @@ fn derive_query_impl(
 
     let output = params.row.expect("Unable to find output result type attribute for Query derive!");
 
-    let fields = match ast.data {
+    let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
         syn::Data::Union(_) => panic!("Cannot derive Statement on union!"),
-        syn::Data::Struct(s) => match s.fields {
+        syn::Data::Struct(s) => match &s.fields {
             syn::Fields::Named(fs) => fs
                 .named
                 .iter()
@@ -140,25 +140,25 @@ fn derive_query_impl(
 }
 
 #[proc_macro_derive(Statement, attributes(query))]
-pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
     let generics = &ast.generics;
 
     let params = parse_struct_attrs(&ast.attrs);
-    let query = if let Some(text) = params.text {
+    let query = if let Some(text) = &params.text {
         quote!(#text)
-    } else if let Some(file) = params.file {
+    } else if let Some(file) = &params.file {
         quote!(include_str!(#file))
     } else {
         panic!("Unable to find query text or file attribute for Query derive!");
     };
 
-    let fields = match ast.data {
+    let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
         syn::Data::Union(_) => panic!("Cannot derive Statement on union!"),
-        syn::Data::Struct(s) => match s.fields {
+        syn::Data::Struct(s) => match &s.fields {
             syn::Fields::Named(fs) => fs
                 .named
                 .iter()
