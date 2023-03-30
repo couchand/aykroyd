@@ -1,9 +1,26 @@
 use crate::*;
 
+#[derive(Clone)]
+struct StatementCache(std::rc::Rc<std::cell::RefCell<std::collections::HashMap<StatementKey, tokio_postgres::Statement>>>);
+
+impl StatementCache {
+    fn new() -> Self {
+        StatementCache(std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new())))
+    }
+
+    fn get(&self, key: &StatementKey) -> Option<tokio_postgres::Statement> {
+        self.0.borrow().get(key).cloned()
+    }
+
+    fn insert(&self, key: StatementKey, statement: tokio_postgres::Statement) {
+        self.0.borrow_mut().insert(key, statement);
+    }
+}
+
 /// A synchronous PostgreSQL client.
 pub struct Client {
     client: postgres::Client,
-    statements: std::collections::HashMap<StatementKey, tokio_postgres::Statement>,
+    statements: StatementCache,
 }
 
 impl From<postgres::Client> for Client {
@@ -27,7 +44,7 @@ impl AsMut<postgres::Client> for Client {
 impl Client {
     /// Create a new `akroyd::Client` from a `postgres::Client`.
     pub fn new(client: postgres::Client) -> Self {
-        let statements = std::collections::HashMap::new();
+        let statements = StatementCache::new();
         Client { client, statements }
     }
 
