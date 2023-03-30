@@ -81,56 +81,12 @@ fn derive_query_impl(
     let generics = &ast.generics;
 
     let params = parse_struct_attrs(&ast.attrs);
-    let query = if let Some(text) = params.text {
-        quote!(#text)
-    } else if let Some(file) = params.file {
-        quote!(include_str!(#file))
-    } else {
-        panic!("Unable to find query text or file attribute for Query derive!");
-    };
+    let statement_impl = derive_statement_impl(&ast, &params);
 
     let output = params.row.expect("Unable to find output result type attribute for Query derive!");
 
-    let fields = match &ast.data {
-        syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
-        syn::Data::Union(_) => panic!("Cannot derive Statement on union!"),
-        syn::Data::Struct(s) => match &s.fields {
-            syn::Fields::Named(fs) => fs
-                .named
-                .iter()
-                .map(|f| {
-                    let f = &f.ident;
-                    quote!(#f)
-                })
-                .collect(),
-            syn::Fields::Unnamed(fs) => fs
-                .unnamed
-                .iter()
-                .enumerate()
-                .map(|(i, _)| {
-                    let i = syn::Index::from(i);
-                    quote!(#i)
-                })
-                .collect(),
-            syn::Fields::Unit => vec![],
-        },
-    };
-
     proc_macro::TokenStream::from(quote! {
-        #[automatically_derived]
-        impl #generics ::akroyd::Statement for #name #generics {
-            const TEXT: &'static str = #query;
-
-            fn to_row(&self) -> Vec<&(dyn ::akroyd::types::ToSql + Sync)> {
-                let mut res = vec![];
-
-                #(
-                    res.push(&self.#fields as &(dyn ::akroyd::types::ToSql + Sync));
-                )*
-
-                res
-            }
-        }
+        #statement_impl
 
         #[automatically_derived]
         impl #generics #trait_name for #name #generics {
