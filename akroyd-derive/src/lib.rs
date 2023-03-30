@@ -219,7 +219,8 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     };
 
     let mut next_index = 1;
-    let (indexes, fields): (Vec<_>, Vec<_>) = fields.into_iter()
+    let (indexes, fields): (Vec<_>, Vec<_>) = fields
+        .into_iter()
         .map(|(index, field)| match index {
             Some(i) => (i, field),
             None => {
@@ -230,7 +231,9 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         })
         .unzip();
 
-    let mut sorted = std::iter::repeat(None).take(fields.len()).collect::<Vec<_>>();
+    let mut sorted = std::iter::repeat(None)
+        .take(fields.len())
+        .collect::<Vec<_>>();
 
     for (i, index) in indexes.into_iter().enumerate() {
         assert!(index > 0);
@@ -239,10 +242,7 @@ pub fn derive_exeucte(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         sorted[index - 1] = Some(fields[i].clone());
     }
 
-    let fields = sorted
-        .into_iter()
-        .map(|f| f.unwrap())
-        .collect::<Vec<_>>();
+    let fields = sorted.into_iter().map(|f| f.unwrap()).collect::<Vec<_>>();
 
     let query = query.expect("Unable to find query text or file attribute for Query derive!");
 
@@ -276,9 +276,9 @@ fn parse_field_attrs(attrs: &[syn::Attribute]) -> Option<usize> {
                     if text.chars().next() != Some('$') {
                         return Err(meta.error("Parameter must be an integer prefixed with $"));
                     }
-                    let i: u8 = text.chars().skip(1).collect::<String>().parse().or(
-                        Err(meta.error("Parameter must be an integer prefixed with $"))
-                    )?;
+                    let i: u8 = text.chars().skip(1).collect::<String>().parse().or(Err(
+                        meta.error("Parameter must be an integer prefixed with $")
+                    ))?;
                     if i == 0 {
                         return Err(meta.error("Parameter must be an integer prefixed with $"));
                     }
