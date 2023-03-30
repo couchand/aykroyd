@@ -37,6 +37,31 @@
 /// )]
 /// pub struct SalesByMonth;
 /// ```
+///
+/// If the default mapping is not sufficient, you can control what column
+/// the field is taken from.  This is most useful for renaming columns:
+///
+/// ```rust
+/// # use akroyd::FromRow;
+/// #[derive(FromRow)]
+/// pub struct Widget {
+///     #[query(column = "type")]
+///     pub ty: String,
+/// }
+/// ```
+///
+/// You can also (somewhat questionably) assign an explicit column index.
+/// Before doing so, consider whether this is the best approach to solving
+/// your problem, as it will likely be confusing to use.
+///
+/// ```rust
+/// # use akroyd::FromRow;
+/// #[derive(FromRow)]
+/// pub struct Widget {
+///     #[query(column = 4)]
+///     pub ty: String,
+/// }
+/// ```
 pub trait FromRow: Sized {
     /// Build the type from a PostgreSQL result row.
     fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>;
