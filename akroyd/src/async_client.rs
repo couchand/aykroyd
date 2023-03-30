@@ -277,7 +277,7 @@ impl<'a> Transaction<'a> {
 
     /// Rolls the transaction back, discarding all changes made within it.
     ///
-    /// This is equivalent to `Transaction`’s `Drop` implementation, but provides any error encountered to the caller.
+    /// This is equivalent to `Transaction`'s `Drop` implementation, but provides any error encountered to the caller.
     pub async fn rollback(self) -> Result<(), tokio_postgres::Error> {
         self.txn.rollback().await
     }
