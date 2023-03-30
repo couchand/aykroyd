@@ -82,10 +82,11 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 /// A SQL statement or query, with typed parameters.
 ///
 /// This can generally be derived automatically (for structs).  If you're deriving
-/// `Query` or `QueryOne`, an impl of this trait will also be generated.
+/// `Query` or `QueryOne`, don't derive this, an implementation of this trait will
+/// be generated for you.
 ///
-/// The source order of the fields corresponds to the assignment to parameters.
-/// The first field in source order is `$1`, the second `$2`, and so on.
+/// The source order of the fields corresponds to parameter order: the first field
+/// in source order is `$1`, the second `$2`, and so on.
 ///
 /// ```rust
 /// # use akroyd::Statement;
@@ -94,6 +95,26 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 /// pub struct InsertCustomer {
 ///     first_name: String,
 ///     last_name: String,
+/// }
+/// ```
+///
+/// For queries with more than a handful of parameters, this can get error-prone.
+/// Help ensure that the struct fields and the query text stay in sync by annotating
+/// parameter index on the fields:
+///
+/// ```rust
+/// # use akroyd::Statement;
+/// #[derive(Statement)]
+/// #[query(text = "INSERT INTO customers (first, last, middle, salutation) VALUES ($1, $2, $3, $4)")]
+/// pub struct InsertCustomer<'a> {
+///     #[query(param = "$4")]
+///     pub salutation: &'a str,
+///     #[query(param = "$1")]
+///     pub first: &'a str,
+///     #[query(param = "$3")]
+///     pub middle: &'a str,
+///     #[query(param = "$2")]
+///     pub last: &'a str,
 /// }
 /// ```
 pub trait Statement {
