@@ -4,8 +4,14 @@ fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
     let tim = "Tim";
 
     println!("Inserting test data...");
-    client.execute(&InsertCustomer { name: "Jan", id: 1 })?;
-    client.execute(&InsertCustomer { name: tim, id: 42 })?;
+    {
+        let mut txn = client.transaction()?;
+
+        txn.execute(&InsertCustomer { name: "Jan", id: 1 })?;
+        txn.execute(&InsertCustomer { name: tim, id: 42 })?;
+
+        txn.commit()?;
+    }
 
     println!("Querying all customers...");
     for customer in client.query(&GetCustomers)? {
