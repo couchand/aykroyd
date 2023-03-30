@@ -1,9 +1,26 @@
 use crate::*;
 
+#[derive(Clone)]
+struct StatementCache(std::sync::Arc<std::sync::RwLock<std::collections::HashMap<StatementKey, tokio_postgres::Statement>>>);
+
+impl StatementCache {
+    fn new() -> Self {
+        StatementCache(std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())))
+    }
+
+    fn get(&self, key: &StatementKey) -> Option<tokio_postgres::Statement> {
+        self.0.read().unwrap().get(key).cloned()
+    }
+
+    fn insert(&self, key: StatementKey, statement: tokio_postgres::Statement) {
+        self.0.write().unwrap().insert(key, statement);
+    }
+}
+
 /// An asynchronous PostgreSQL client.
 pub struct AsyncClient {
     client: tokio_postgres::Client,
-    statements: std::collections::HashMap<StatementKey, tokio_postgres::Statement>,
+    statements: StatementCache,
 }
 
 /// A convenience function which parses a connection string and connects to the database.
@@ -48,7 +65,7 @@ impl AsMut<tokio_postgres::Client> for AsyncClient {
 impl AsyncClient {
     /// Create a new `akroyd::AsyncClient` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
-        let statements = std::collections::HashMap::new();
+        let statements = StatementCache::new();
         AsyncClient { client, statements }
     }
 
