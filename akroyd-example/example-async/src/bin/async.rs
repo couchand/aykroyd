@@ -7,14 +7,14 @@ async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
 
     println!("Inserting test data...");
     {
-        let txn = client.transaction().await?;
+        let mut txn = client.transaction().await?;
 
         txn.execute(&InsertCustomer { name: "Red", id: 1 }).await?;
         txn.execute(&InsertCustomer { name: "Herring", id: 42 }).await?;
 
         txn.rollback().await?;
 
-        let txn = client.transaction().await?;
+        let mut txn = client.transaction().await?;
 
         txn.execute(&InsertCustomer { name: "Jan", id: 1 }).await?;
         txn.execute(&InsertCustomer { name: tim, id: 42 }).await?;

@@ -105,14 +105,14 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Prepare the query in the database.
     /// client.prepare::<GetCustomersByFirstName>().await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare<Q: Statement>(&self) -> Result<(), tokio_postgres::Error> {
+    pub async fn prepare<Q: Statement>(&mut self) -> Result<(), tokio_postgres::Error> {
         self.find_or_prepare::<Q>().await?;
         Ok(())
     }
@@ -136,7 +136,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query and iterate over the results.
     /// for customer in client.query(&GetCustomersByFirstName("Sammy")).await? {
@@ -146,7 +146,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn query<Q: Query>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -177,7 +177,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query returning a single row.
     /// let customer = client.query_one(&GetCustomerById(42)).await?;
@@ -186,7 +186,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn query_one<Q: QueryOne>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -212,7 +212,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query, possibly returning a single row.
     /// if let Some(customer) = client.query_opt(&GetCustomerById(42)).await? {
@@ -222,7 +222,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn query_opt<Q: QueryOne>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -246,7 +246,7 @@ impl Client {
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Execute the statement, returning the number of rows modified.
     /// let rows_affected = client.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
@@ -254,7 +254,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn execute<Q: Statement>(&self, query: &Q) -> Result<u64, tokio_postgres::Error> {
+    pub async fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
         self.client.execute(&stmt, &query.to_row()).await
     }
@@ -335,14 +335,14 @@ impl<'a> Transaction<'a> {
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
-    /// let txn = client.transaction().await?;
+    /// let mut txn = client.transaction().await?;
     ///
     /// // Prepare the query in the database.
     /// txn.prepare::<GetCustomersByFirstName>().await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare<Q: Statement>(&self) -> Result<(), tokio_postgres::Error> {
+    pub async fn prepare<Q: Statement>(&mut self) -> Result<(), tokio_postgres::Error> {
         self.find_or_prepare::<Q>().await?;
         Ok(())
     }
@@ -367,7 +367,7 @@ impl<'a> Transaction<'a> {
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
-    /// let txn = client.transaction().await?;
+    /// let mut txn = client.transaction().await?;
     ///
     /// // Run the query and iterate over the results.
     /// for customer in txn.query(&GetCustomersByFirstName("Sammy")).await? {
@@ -377,7 +377,7 @@ impl<'a> Transaction<'a> {
     /// # }
     /// ```
     pub async fn query<Q: Query>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -409,7 +409,7 @@ impl<'a> Transaction<'a> {
     /// pub struct GetCustomerById(i32);
     ///
     /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
-    /// let txn = client.transaction().await?;
+    /// let mut txn = client.transaction().await?;
     ///
     /// // Run the query returning a single row.
     /// let customer = txn.query_one(&GetCustomerById(42)).await?;
@@ -418,7 +418,7 @@ impl<'a> Transaction<'a> {
     /// # }
     /// ```
     pub async fn query_one<Q: QueryOne>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -445,7 +445,7 @@ impl<'a> Transaction<'a> {
     /// pub struct GetCustomerById(i32);
     ///
     /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
-    /// let txn = client.transaction().await?;
+    /// let mut txn = client.transaction().await?;
     ///
     /// // Run the query, possibly returning a single row.
     /// if let Some(customer) = txn.query_opt(&GetCustomerById(42)).await? {
@@ -455,7 +455,7 @@ impl<'a> Transaction<'a> {
     /// # }
     /// ```
     pub async fn query_opt<Q: QueryOne>(
-        &self,
+        &mut self,
         query: &Q,
     ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -480,7 +480,7 @@ impl<'a> Transaction<'a> {
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
     /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
-    /// let txn = client.transaction().await?;
+    /// let mut txn = client.transaction().await?;
     ///
     /// // Execute the statement, returning the number of rows modified.
     /// let rows_affected = txn.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
@@ -488,7 +488,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn execute<Q: Statement>(&self, query: &Q) -> Result<u64, tokio_postgres::Error> {
+    pub async fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
         self.txn.execute(&stmt, &query.to_row()).await
     }
