@@ -1,5 +1,5 @@
-use common::*;
 use akroyd::async_client::{connect, Client};
+use common::*;
 
 async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
     client.prepare::<InsertCustomer>().await?;
@@ -10,7 +10,11 @@ async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
         let mut txn = client.transaction().await?;
 
         txn.execute(&InsertCustomer { name: "Red", id: 1 }).await?;
-        txn.execute(&InsertCustomer { name: "Herring", id: 42 }).await?;
+        txn.execute(&InsertCustomer {
+            name: "Herring",
+            id: 42,
+        })
+        .await?;
 
         txn.rollback().await?;
 

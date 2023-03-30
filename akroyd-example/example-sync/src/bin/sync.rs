@@ -1,5 +1,5 @@
-use common::*;
 use akroyd::sync_client::Client;
+use common::*;
 
 fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
     let tim = "Tim";
@@ -9,7 +9,10 @@ fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
         let mut txn = client.transaction()?;
 
         txn.execute(&InsertCustomer { name: "Red", id: 1 })?;
-        txn.execute(&InsertCustomer { name: "Herring", id: 42 })?;
+        txn.execute(&InsertCustomer {
+            name: "Herring",
+            id: 42,
+        })?;
 
         txn.rollback()?;
 

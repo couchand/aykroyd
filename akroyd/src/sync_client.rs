@@ -65,7 +65,8 @@ impl Client {
         &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-        self.statements.ensure_sync(key, || self.client.prepare(Q::TEXT))
+        self.statements
+            .ensure_sync(key, || self.client.prepare(Q::TEXT))
     }
 
     /// Creates a new prepared statement.
@@ -279,7 +280,8 @@ impl<'a> Transaction<'a> {
         &mut self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = Client::statement_key::<Q>();
-        self.statements.ensure_sync(key, || self.txn.prepare(Q::TEXT))
+        self.statements
+            .ensure_sync(key, || self.txn.prepare(Q::TEXT))
     }
 
     /// Creates a new prepared statement.

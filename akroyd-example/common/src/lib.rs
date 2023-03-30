@@ -45,10 +45,8 @@ pub struct GetCustomers4;
 
 #[derive(Debug, FromRow)]
 pub struct Customer4(
-    #[query(column = "id")]
-    i32,
-    #[query(column = "name")]
-    String,
+    #[query(column = "id")] i32,
+    #[query(column = "name")] String,
 );
 
 #[derive(Query)]

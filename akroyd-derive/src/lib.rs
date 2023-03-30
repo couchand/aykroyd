@@ -20,7 +20,7 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                                 let i = f.ident.as_ref().unwrap().to_string();
                                 quote!(#i)
                             }
-                            Some(i) => quote!(#i)
+                            Some(i) => quote!(#i),
                         };
                         let f = f.ident.as_ref().unwrap();
                         (i, quote!(#f))
@@ -40,14 +40,12 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                     .unnamed
                     .iter()
                     .enumerate()
-                    .map(|(i, f)| {
-                        match parse_field_column_attr(&f.attrs) {
-                            None => {
-                                let i = syn::Index::from(i);
-                                quote!(#i)
-                            }
-                            Some(i) => quote!(#i),
+                    .map(|(i, f)| match parse_field_column_attr(&f.attrs) {
+                        None => {
+                            let i = syn::Index::from(i);
+                            quote!(#i)
                         }
+                        Some(i) => quote!(#i),
                     })
                     .collect();
 
@@ -97,7 +95,9 @@ fn derive_query_impl(
     let params = parse_struct_attrs(&ast.attrs);
     let statement_impl = derive_statement_impl(&ast, &params);
 
-    let output = params.row.expect("Unable to find output result type attribute for Query derive!");
+    let output = params
+        .row
+        .expect("Unable to find output result type attribute for Query derive!");
 
     proc_macro::TokenStream::from(quote! {
         #statement_impl
@@ -117,7 +117,10 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     derive_statement_impl(&ast, &params).into()
 }
 
-fn derive_statement_impl(ast: &syn::DeriveInput, params: &StatementParams) -> proc_macro2::TokenStream {
+fn derive_statement_impl(
+    ast: &syn::DeriveInput,
+    params: &StatementParams,
+) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
 

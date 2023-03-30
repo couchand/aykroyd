@@ -154,7 +154,11 @@ impl StatementCache {
     }
 
     #[cfg(feature = "sync")]
-    fn ensure_sync<F>(&mut self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
+    fn ensure_sync<F>(
+        &mut self,
+        key: StatementKey,
+        f: F,
+    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
     where
         F: FnOnce() -> Result<tokio_postgres::Statement, tokio_postgres::Error>,
     {
@@ -168,7 +172,11 @@ impl StatementCache {
     }
 
     #[cfg(feature = "async")]
-    async fn ensure_async<F, Fut>(&mut self, key: StatementKey, f: F) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
+    async fn ensure_async<F, Fut>(
+        &mut self,
+        key: StatementKey,
+        f: F,
+    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<tokio_postgres::Statement, tokio_postgres::Error>>,
