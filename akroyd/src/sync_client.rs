@@ -1,3 +1,5 @@
+//! A synchronous client for the PostgreSQL database.
+
 use crate::*;
 
 #[derive(Clone)]

@@ -1,3 +1,5 @@
+//! An asynchronous, pipelined, PostgreSQL client.
+
 use crate::*;
 
 #[derive(Clone)]

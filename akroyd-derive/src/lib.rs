@@ -1,5 +1,6 @@
 use quote::quote;
 
+/// Derive macro available if akroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(FromRow, attributes(query))]
 pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -72,11 +73,13 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     })
 }
 
+/// Derive macro available if akroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(Query, attributes(query))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     derive_query_impl(input, quote!(::akroyd::Query))
 }
 
+/// Derive macro available if akroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(QueryOne, attributes(query))]
 pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     derive_query_impl(input, quote!(::akroyd::QueryOne))
@@ -106,6 +109,7 @@ fn derive_query_impl(
     })
 }
 
+/// Derive macro available if akroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(Statement, attributes(query))]
 pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
