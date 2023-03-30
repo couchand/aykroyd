@@ -74,7 +74,7 @@ impl AsyncClient {
     }
 
     async fn find_or_prepare<Q: Statement>(
-        &mut self,
+        &self,
     ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
         let key = AsyncClient::statement_key::<Q>();
 
@@ -102,14 +102,14 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Prepare the query in the database.
     /// client.prepare::<GetCustomersByFirstName>().await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare<Q: Statement>(&mut self) -> Result<(), tokio_postgres::Error> {
+    pub async fn prepare<Q: Statement>(&self) -> Result<(), tokio_postgres::Error> {
         self.find_or_prepare::<Q>().await?;
         Ok(())
     }
@@ -132,7 +132,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query and iterate over the results.
     /// for customer in client.query(&GetCustomersByFirstName("Sammy")).await? {
@@ -142,7 +142,7 @@ impl AsyncClient {
     /// # }
     /// ```
     pub async fn query<Q: Query>(
-        &mut self,
+        &self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -172,7 +172,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query returning a single row.
     /// let customer = client.query_one(&GetCustomerById(42)).await?;
@@ -181,7 +181,7 @@ impl AsyncClient {
     /// # }
     /// ```
     pub async fn query_one<Q: QueryOne>(
-        &mut self,
+        &self,
         query: &Q,
     ) -> Result<Q::Row, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -206,7 +206,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query, possibly returning a single row.
     /// if let Some(customer) = client.query_opt(&GetCustomerById(42)).await? {
@@ -216,7 +216,7 @@ impl AsyncClient {
     /// # }
     /// ```
     pub async fn query_opt<Q: QueryOne>(
-        &mut self,
+        &self,
         query: &Q,
     ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
@@ -239,7 +239,7 @@ impl AsyncClient {
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Execute the statement, returning the number of rows modified.
     /// let rows_affected = client.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
@@ -247,7 +247,7 @@ impl AsyncClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
+    pub async fn execute<Q: Statement>(&self, query: &Q) -> Result<u64, tokio_postgres::Error> {
         let stmt = self.find_or_prepare::<Q>().await?;
         self.client.execute(&stmt, &query.to_row()).await
     }
