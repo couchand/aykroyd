@@ -1,0 +1,10 @@
+[package]
+name = "example-sync"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+akroyd = { path = "../../akroyd", features = ["sync"] }
+common = { path = "../common" }
+
+postgres = "0.19"

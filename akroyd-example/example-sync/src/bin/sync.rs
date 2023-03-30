@@ -1,4 +1,4 @@
-use akroyd_test::*;
+use common::*;
 use akroyd::sync_client::Client;
 
 fn run_test(client: &mut Client) -> Result<(), postgres::Error> {

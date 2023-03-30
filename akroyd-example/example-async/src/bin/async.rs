@@ -1,4 +1,4 @@
-use akroyd_test::*;
+use common::*;
 use akroyd::async_client::{connect, Client};
 
 async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
