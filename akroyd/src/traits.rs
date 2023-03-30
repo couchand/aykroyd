@@ -105,7 +105,10 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 /// ```rust
 /// # use akroyd::Statement;
 /// #[derive(Statement)]
-/// #[query(text = "INSERT INTO customers (first, last, middle, salutation) VALUES ($1, $2, $3, $4)")]
+/// #[query(text = "
+///     INSERT INTO customers (first, last, middle, salutation)
+///     VALUES ($1, $2, $3, $4)
+/// ")]
 /// pub struct InsertCustomer<'a> {
 ///     #[query(param = "$4")]
 ///     pub salutation: &'a str,
