@@ -252,7 +252,7 @@ fn parse_field_param_attr(attrs: &[syn::Attribute]) -> Option<usize> {
                     let value = meta.value()?;
                     let lit: syn::LitStr = value.parse()?;
                     let text = lit.value();
-                    if text.chars().next() != Some('$') {
+                    if !text.starts_with('$') {
                         return Err(meta.error("Parameter must be an integer prefixed with $"));
                     }
                     let i: u8 = text.chars().skip(1).collect::<String>().parse().or(Err(

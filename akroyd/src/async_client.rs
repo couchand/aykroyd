@@ -86,7 +86,7 @@ impl Client {
             self.statements.insert(key, prepared);
         }
 
-        Ok(self.statements.get(&key).unwrap().clone())
+        Ok(self.statements.get(&key).unwrap())
     }
 
     /// Creates a new prepared statement.
@@ -315,7 +315,7 @@ impl<'a> Transaction<'a> {
             self.statements.insert(key, prepared);
         }
 
-        Ok(self.statements.get(&key).unwrap().clone())
+        Ok(self.statements.get(&key).unwrap())
     }
 
     /// Creates a new prepared statement.
