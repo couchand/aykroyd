@@ -1,6 +1,7 @@
 use akroyd_test::*;
+use akroyd::async_client::{connect, AsyncClient};
 
-async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres::Error> {
+async fn run_test(client: &mut AsyncClient) -> Result<(), tokio_postgres::Error> {
     client.prepare::<InsertCustomer>().await?;
     let tim = "Tim";
 
@@ -47,7 +48,7 @@ async fn run_test(client: &mut akroyd::AsyncClient) -> Result<(), tokio_postgres
 
 async fn async_main() -> bool {
     use tokio_postgres::NoTls;
-    let (mut client, worker) = akroyd::connect(
+    let (mut client, worker) = connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         NoTls,
     )

@@ -42,7 +42,7 @@ impl AsMut<postgres::Client> for Client {
 }
 
 impl Client {
-    /// Create a new `akroyd::Client` from a `postgres::Client`.
+    /// Create a new `Client` from a `postgres::Client`.
     pub fn new(client: postgres::Client) -> Self {
         let statements = StatementCache::new();
         Client { client, statements }
@@ -55,8 +55,9 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use postgres::NoTls;
+    /// # use akroyd::sync_client::Client;
     /// // Connect to the database.
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// # Ok(())
     /// # }
     /// ```
@@ -97,6 +98,7 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
@@ -104,7 +106,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     ///
     /// // Prepare the query in the database.
     /// client.prepare::<GetCustomersByFirstName>()?;
@@ -123,6 +125,7 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -134,7 +137,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     ///
     /// // Run the query and iterate over the results.
     /// for customer in client.query(&GetCustomersByFirstName("Sammy"))? {
@@ -159,6 +162,7 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -170,7 +174,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     ///
     /// // Run the query returning a single row.
     /// let customer = client.query_one(&GetCustomerById(42))?;
@@ -190,6 +194,7 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -201,7 +206,7 @@ impl Client {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     ///
     /// // Run the query, possibly returning a single row.
     /// if let Some(customer) = client.query_opt(&GetCustomerById(42))? {
@@ -228,12 +233,13 @@ impl Client {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Statement};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// #[derive(Statement)]
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     ///
     /// // Execute the statement, returning the number of rows modified.
     /// let rows_affected = client.execute(&UpdateCustomerName(42, "Anakin", "Skywalker"))?;
@@ -286,6 +292,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
@@ -293,7 +300,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// let mut txn = client.transaction()?;
     ///
     /// // Prepare the query in the database.
@@ -313,6 +320,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -324,7 +332,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// let mut txn = client.transaction()?;
     ///
     /// // Run the query and iterate over the results.
@@ -350,6 +358,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -361,7 +370,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// let mut txn = client.transaction()?;
     ///
     /// // Run the query returning a single row.
@@ -382,6 +391,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -393,7 +403,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// let mut txn = client.transaction()?;
     ///
     /// // Run the query, possibly returning a single row.
@@ -421,12 +431,13 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # fn main() -> Result<(), postgres::Error> {
     /// # use akroyd::{Statement};
+    /// # use akroyd::sync_client::Client;
     /// # use postgres::NoTls;
     /// #[derive(Statement)]
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let mut client = akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+    /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// let mut txn = client.transaction()?;
     ///
     /// // Execute the statement, returning the number of rows modified.

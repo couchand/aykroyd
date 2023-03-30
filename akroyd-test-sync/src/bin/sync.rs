@@ -1,6 +1,7 @@
 use akroyd_test::*;
+use akroyd::sync_client::Client;
 
-fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
+fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
     let tim = "Tim";
 
     println!("Inserting test data...");
@@ -45,7 +46,7 @@ fn run_test(client: &mut akroyd::Client) -> Result<(), postgres::Error> {
 }
 
 fn sync_main() -> bool {
-    let mut client = akroyd::Client::connect(
+    let mut client = Client::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         postgres::NoTls,
     )

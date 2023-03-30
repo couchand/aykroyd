@@ -63,7 +63,7 @@ impl AsMut<tokio_postgres::Client> for AsyncClient {
 }
 
 impl AsyncClient {
-    /// Create a new `akroyd::AsyncClient` from a `tokio_postgres::Client`.
+    /// Create a new `AsyncClient` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
         let statements = StatementCache::new();
         AsyncClient { client, statements }
@@ -95,6 +95,7 @@ impl AsyncClient {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
@@ -102,7 +103,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Prepare the query in the database.
     /// client.prepare::<GetCustomersByFirstName>().await?;
@@ -121,6 +122,7 @@ impl AsyncClient {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -132,7 +134,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query and iterate over the results.
     /// for customer in client.query(&GetCustomersByFirstName("Sammy")).await? {
@@ -161,6 +163,7 @@ impl AsyncClient {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -172,7 +175,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query returning a single row.
     /// let customer = client.query_one(&GetCustomerById(42)).await?;
@@ -195,6 +198,7 @@ impl AsyncClient {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -206,7 +210,7 @@ impl AsyncClient {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Run the query, possibly returning a single row.
     /// if let Some(customer) = client.query_opt(&GetCustomerById(42)).await? {
@@ -234,12 +238,13 @@ impl AsyncClient {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Statement};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// #[derive(Statement)]
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let (client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     ///
     /// // Execute the statement, returning the number of rows modified.
     /// let rows_affected = client.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
@@ -292,6 +297,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
@@ -299,7 +305,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     /// let txn = client.transaction().await?;
     ///
     /// // Prepare the query in the database.
@@ -319,6 +325,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Query, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -330,7 +337,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     /// let txn = client.transaction().await?;
     ///
     /// // Run the query and iterate over the results.
@@ -360,6 +367,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -371,7 +379,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     /// let txn = client.transaction().await?;
     ///
     /// // Run the query returning a single row.
@@ -395,6 +403,7 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{QueryOne, FromRow};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -406,7 +415,7 @@ impl<'a> Transaction<'a> {
     /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
     /// pub struct GetCustomerById(i32);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     /// let txn = client.transaction().await?;
     ///
     /// // Run the query, possibly returning a single row.
@@ -435,12 +444,13 @@ impl<'a> Transaction<'a> {
     /// ```no_run
     /// # async fn xmain() -> Result<(), tokio_postgres::Error> {
     /// # use akroyd::{Statement};
+    /// # use akroyd::async_client::connect;
     /// # use tokio_postgres::NoTls;
     /// #[derive(Statement)]
     /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
-    /// let (mut client, conn) = akroyd::connect("host=localhost user=postgres", NoTls).await?;
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
     /// let txn = client.transaction().await?;
     ///
     /// // Execute the statement, returning the number of rows modified.

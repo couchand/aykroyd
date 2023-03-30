@@ -27,6 +27,7 @@ An example of the synchronous client.
 
 ```no_run
 use postgres::{NoTls, Error};
+use akroyd::sync_client::Client;
 
 #[derive(akroyd::FromRow)]
 struct Customer {
@@ -49,7 +50,7 @@ struct GetAllCustomers;
 fn try_main() -> Result<(), Error> {
     // Connect to the database
     let mut client =
-        akroyd::Client::connect("host=localhost user=postgres", NoTls)?;
+        Client::connect("host=localhost user=postgres", NoTls)?;
 
     // Execute a statement, returning the number of rows modified.
     let insert_count = client.execute(&InsertCustomer {
@@ -76,6 +77,7 @@ An example of the asynchronous client.
 
 ```no_run
 use tokio_postgres::{NoTls, Error};
+use akroyd::async_client::connect;
 
 #[derive(akroyd::FromRow)]
 struct Customer {
@@ -99,7 +101,7 @@ struct GetAllCustomers;
 async fn main() -> Result<(), Error> {
     // Connect to the database
     let (mut client, conn) =
-        akroyd::connect("host=localhost user=postgres", NoTls).await?;
+        connect("host=localhost user=postgres", NoTls).await?;
 
     // As with tokio_postgres, you need to spawn a task for the connection.
     tokio::spawn(async move {
@@ -133,14 +135,10 @@ mod traits;
 pub use traits::*;
 
 #[cfg(feature = "async")]
-mod async_client;
-#[cfg(feature = "async")]
-pub use async_client::*;
+pub mod async_client;
 
 #[cfg(feature = "sync")]
-mod sync_client;
-#[cfg(feature = "sync")]
-pub use sync_client::*;
+pub mod sync_client;
 
 #[cfg(any(feature = "async", feature = "sync"))]
 type StatementKey = String; // TODO: more
