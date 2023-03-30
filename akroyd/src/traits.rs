@@ -107,8 +107,8 @@ impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
 /// A SQL statement or query, with typed parameters.
 ///
 /// This can generally be derived automatically (for structs).  If you're deriving
-/// `Query` or `QueryOne`, don't derive this, an implementation of this trait will
-/// be generated for you.
+/// [`Query`](./trait.Query.html) or [`QueryOne`](./trait.QueryOne.html), don't
+/// derive this, an implementation of this trait will be generated for you.
 ///
 /// The source order of the fields corresponds to parameter order: the first field
 /// in source order is `$1`, the second `$2`, and so on.
@@ -158,102 +158,10 @@ pub trait Statement {
 
 /// A marker trait for a query that may return any number of rows.
 ///
-/// This can generally be derived automatically (for structs).
-///
-/// The source order of the fields corresponds to the assignment to parameters.
-/// The first field in source order is `$1`, the second `$2`, and so on.
-/// ```rust
-/// # use akroyd::{Query, FromRow};
-/// #[derive(Query)]
-/// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
-/// pub struct GetCustomersByFirstName<'a>(&'a str);
-///
-/// #[derive(FromRow)]
-/// pub struct Customer {
-///     id: i32,
-///     first: String,
-///     last: String,
-/// }
-/// ```
-///
-/// For queries with more than a handful of parameters, this can get error-prone.
-/// Help ensure that the struct fields and the query text stay in sync by annotating
-/// parameter index on the fields:
-///
-/// ```rust
-/// # use akroyd::{Query, FromRow};
-/// # #[derive(FromRow)]
-/// # pub struct Customer {
-/// #     id: i32,
-/// #     first: String,
-/// #     last: String,
-/// # }
-/// #[derive(Query)]
-/// #[query(row(Customer), text = "
-///     SELECT id, first, last
-///     FROM customers
-///     WHERE first = $1 OR last = $2 OR middle = $3 OR salutation = $4
-/// ")]
-/// pub struct FuzzySearch<'a> {
-///     #[query(param = "$4")]
-///     pub salutation: &'a str,
-///     #[query(param = "$1")]
-///     pub first: &'a str,
-///     #[query(param = "$3")]
-///     pub middle: &'a str,
-///     #[query(param = "$2")]
-///     pub last: &'a str,
-/// }
-/// ```
+/// See the [`Statement`](./trait.Statement.html) trait for more details.
 pub trait Query: Statement {}
 
 /// A marker trait for a query that returns at most one row.
 ///
-/// This can generally be derived automatically (for structs).
-///
-/// The source order of the fields corresponds to the assignment to parameters.
-/// The first field in source order is `$1`, the second `$2`, and so on.
-/// ```rust
-/// # use akroyd::{QueryOne, FromRow};
-/// #[derive(QueryOne)]
-/// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
-/// pub struct GetCustomersById(i32);
-///
-/// #[derive(FromRow)]
-/// pub struct Customer {
-///     id: i32,
-///     first: String,
-///     last: String,
-/// }
-/// ```
-///
-/// For queries with more than a handful of parameters, this can get error-prone.
-/// Help ensure that the struct fields and the query text stay in sync by annotating
-/// parameter index on the fields:
-///
-/// ```rust
-/// # use akroyd::{QueryOne, FromRow};
-/// # #[derive(FromRow)]
-/// # pub struct Customer {
-/// #     id: i32,
-/// #     first: String,
-/// #     last: String,
-/// # }
-/// #[derive(QueryOne)]
-/// #[query(row(Customer), text = "
-///     SELECT id, first, last
-///     FROM customers
-///     WHERE first = $1 AND last = $2 AND middle = $3 AND salutation = $4
-/// ")]
-/// pub struct ExactSearch<'a> {
-///     #[query(param = "$4")]
-///     pub salutation: &'a str,
-///     #[query(param = "$1")]
-///     pub first: &'a str,
-///     #[query(param = "$3")]
-///     pub middle: &'a str,
-///     #[query(param = "$2")]
-///     pub last: &'a str,
-/// }
-/// ```
+/// See the [`Statement`](./trait.Statement.html) trait for more details.
 pub trait QueryOne: Statement {}
