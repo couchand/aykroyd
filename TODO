@@ -1,6 +1,5 @@
 txn builder?
 generic client?
-more docs
 maybe opt in to column order fromrow for structs with named fields
 more verification on prepare
 derive error reporting
