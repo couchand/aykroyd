@@ -1,7 +1,6 @@
 use crate::*;
 
 /// A synchronous PostgreSQL client.
-#[cfg(feature = "sync")]
 pub struct Client {
     client: postgres::Client,
     statements: std::collections::HashMap<StatementKey, tokio_postgres::Statement>,
@@ -25,7 +24,6 @@ impl AsMut<postgres::Client> for Client {
     }
 }
 
-#[cfg(feature = "sync")]
 impl Client {
     /// Create a new `akroyd::Client` from a `postgres::Client`.
     pub fn new(client: postgres::Client) -> Self {
