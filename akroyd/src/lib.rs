@@ -1,4 +1,4 @@
-//! A Rust micro-ORM for PostgreSQL.
+//! An opinionated micro-ORM for PostgreSQL.
 //!
 //! All database queries are represented by a plain Rust struct that implements
 //! [`Statement`](./trait.Statement.html) and possibly one of [`Query`](./trait.Query.html)
