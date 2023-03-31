@@ -57,6 +57,34 @@ impl std::str::FromStr for MigrationHash {
     }
 }
 
+impl postgres_types::ToSql for MigrationHash {
+    fn to_sql(
+        &self,
+        ty: &postgres_types::Type,
+        buf: &mut bytes::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        self.to_string().to_sql(ty, buf)
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <String as postgres_types::ToSql>::accepts(ty)
+    }
+
+    postgres_types::to_sql_checked!();
+}
+
+impl<'a> postgres_types::FromSql<'a> for MigrationHash {
+    fn from_sql(
+        ty: &postgres_types::Type,
+        buf: &'a [u8],
+    ) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let string = <String as postgres_types::FromSql>::from_sql(ty, buf)?;
+        string.parse().map_err(Into::into)
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <String as postgres_types::FromSql>::accepts(ty)
+    }
+}
+
 impl MigrationHash {
     pub const ZERO: MigrationHash = MigrationHash([0; 32]);
 

@@ -6,11 +6,14 @@ edition = "2021"
 [dependencies]
 akroyd = { version = "0.1", features = ["derive"], path = "../akroyd" }
 
+bytes = "1"
 chrono = "0.4"
 generic-array = "0.14"
 itertools = "0.10"
+postgres-types = "0.2"
 sha3 = "0.10"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 
 [dev-dependencies]
+akroyd = { version = "0.1", features = ["sync"], path = "../akroyd" }
 hex-literal = "0.2"
