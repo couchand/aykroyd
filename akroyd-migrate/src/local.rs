@@ -167,7 +167,15 @@ impl LocalRepo {
         self.commits.get(hash)
     }
 
+    pub fn take(&mut self, hash: &MigrationHash) -> Option<LocalCommit> {
+        self.commits.remove(hash)
+    }
+
     pub fn dir(&self) -> &std::path::Path {
         &self.dir
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &LocalCommit> {
+        self.commits.values()
     }
 }
