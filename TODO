@@ -1,5 +1,6 @@
 readme
 derive error reporting
+logging
 more verification on prepare
 txn builder?
 generic client?
