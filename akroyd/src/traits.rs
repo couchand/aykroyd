@@ -164,3 +164,19 @@ pub trait Query: Statement {}
 ///
 /// See the [`Statement`](./trait.Statement.html) trait for more details.
 pub trait QueryOne: Statement {}
+
+/// A marker trait for an enum type that is also a PostgreSQL enum.
+///
+/// Derive this trait to get the appropriate `ToSql` and `FromSql` implementations
+/// generated automatically.
+///
+/// ```rust
+/// # use akroyd::PgEnum;
+/// #[derive(Debug, PgEnum)]
+/// pub enum Mood {
+///     Sad,
+///     Ok,
+///     Happy,
+/// }
+/// ```
+pub trait PgEnum: tokio_postgres::types::ToSql + for<'a> tokio_postgres::types::FromSql<'a> {}

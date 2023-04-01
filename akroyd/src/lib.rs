@@ -193,6 +193,7 @@ impl StatementCache {
 
 #[doc(hidden)]
 pub mod types {
-    pub use tokio_postgres::types::ToSql;
+    pub use bytes::BytesMut;
+    pub use tokio_postgres::types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
     pub use tokio_postgres::{Error, Row};
 }

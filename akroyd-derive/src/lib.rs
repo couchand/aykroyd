@@ -1,37 +1,97 @@
 use quote::quote;
 
-fn derive_to_sql_from_sql() {
-    quote! {
-        impl<'a> postgres_types::FromSql<'a> for Dir {
-            fn from_sql(_: &postgres_types::Type, buf: &'a [u8]) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-                match buf {
-                    b"up" => Ok(Dir::Up),
-                    b"down" => Ok(Dir::Down),
-                    _ => Err(format!("Unknown migration_dir value {:?}", std::str::from_utf8(buf)).into()),
-                }
-            }
+/// Derive macro available if akroyd is built with `features = ["derive"]`.
+#[proc_macro_derive(PgEnum)] // TODO: attributes
+pub fn derive_pg_enum(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "migration_dir"
-            }
-        }
+    let rust_name = &ast.ident;
+    let pg_name = snake_case(&rust_name.to_string()); // TODO: something better
 
-        impl postgres_types::ToSql for Dir {
-            fn to_sql(&self, _: &postgres_types::Type, buf: &mut bytes::BytesMut) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-                match self {
-                    Dir::Up => buf.extend_from_slice(b"up"),
-                    Dir::Down => buf.extend_from_slice(b"down"),
-                }
-                Ok(postgres_types::IsNull::No)
-            }
+    let variants = match ast.data {
+        syn::Data::Enum(e) => e.variants,
+        _ => panic!("Cannot derive PgEnum on non-enum!"),
+    };
 
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "migration_dir"
-            }
+    let mut from_sql_cases = vec![];
+    let mut to_sql_cases = vec![];
 
-            postgres_types::to_sql_checked!();
-        }
+    for variant in variants {
+        let rust_variant_name = &variant.ident;
+        let pg_variant_name = syn::LitByteStr::new(
+            snake_case(&rust_variant_name.to_string()).as_bytes(), // TODO: something better
+            variant.ident.span(),
+        );
+
+        from_sql_cases.push(quote!(
+            #pg_variant_name => ::std::result::Result::Ok(#rust_name::#rust_variant_name),
+        ));
+
+        to_sql_cases.push(quote!(
+            #rust_name::#rust_variant_name => buf.extend_from_slice(#pg_variant_name),
+        ));
     }
+
+    quote! {
+        #[automatically_derived]
+        impl<'a> ::akroyd::types::FromSql<'a> for #rust_name {
+            fn from_sql(_: &::akroyd::types::Type, buf: &'a [u8]) -> ::std::result::Result<Self, ::std::boxed::Box<(dyn ::std::error::Error + Send + Sync + 'static)>> {
+                match buf {
+                    #(#from_sql_cases)*
+                    _ => ::std::result::Result::Err(format!("Unknown enum value {:?}", ::std::str::from_utf8(buf)).into()),
+                }
+            }
+
+            fn accepts(ty: &::akroyd::types::Type) -> bool {
+                ty.name() == #pg_name
+            }
+        }
+
+        #[automatically_derived]
+        impl ::akroyd::types::ToSql for #rust_name {
+            fn to_sql(&self, _: &::akroyd::types::Type, buf: &mut ::akroyd::types::BytesMut) -> ::std::result::Result<::akroyd::types::IsNull, ::std::boxed::Box<(dyn ::std::error::Error + Send + Sync + 'static)>> {
+                match self {
+                    #(#to_sql_cases)*
+                }
+                Ok(::akroyd::types::IsNull::No)
+            }
+
+            fn accepts(ty: &::akroyd::types::Type) -> bool {
+                ty.name() == #pg_name
+            }
+
+            ::akroyd::types::to_sql_checked!();
+        }
+
+        #[automatically_derived]
+        impl ::akroyd::PgEnum for #rust_name {}
+    }.into()
+}
+
+fn snake_case(s: &str) -> String {
+    if s.is_empty() {
+        return "".into();
+    }
+    let mut r = String::new();
+    r.push(s.chars().next().unwrap().to_ascii_lowercase());
+    let mut last_underscore = false;
+    r.extend(s.chars().skip(1).map(move |c| {
+        if c.is_ascii_uppercase() {
+            let mut r = String::from(if last_underscore { "" } else { "_" });
+            last_underscore = false;
+            r.push(c.to_ascii_lowercase());
+            r
+        } else if c.is_ascii_alphanumeric() {
+            last_underscore = false;
+            String::from(c)
+        } else if last_underscore {
+            String::new()
+        } else {
+            last_underscore = true;
+            String::from("_")
+        }
+    }));
+    r
 }
 
 /// Derive macro available if akroyd is built with `features = ["derive"]`.
