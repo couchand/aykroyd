@@ -1,5 +1,39 @@
 use quote::quote;
 
+fn derive_to_sql_from_sql() {
+    quote! {
+        impl<'a> postgres_types::FromSql<'a> for Dir {
+            fn from_sql(_: &postgres_types::Type, buf: &'a [u8]) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+                match buf {
+                    b"up" => Ok(Dir::Up),
+                    b"down" => Ok(Dir::Down),
+                    _ => Err(format!("Unknown migration_dir value {:?}", std::str::from_utf8(buf)).into()),
+                }
+            }
+
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "migration_dir"
+            }
+        }
+
+        impl postgres_types::ToSql for Dir {
+            fn to_sql(&self, _: &postgres_types::Type, buf: &mut bytes::BytesMut) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+                match self {
+                    Dir::Up => buf.extend_from_slice(b"up"),
+                    Dir::Down => buf.extend_from_slice(b"down"),
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "migration_dir"
+            }
+
+            postgres_types::to_sql_checked!();
+        }
+    }
+}
+
 /// Derive macro available if akroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(FromRow, attributes(query))]
 pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
