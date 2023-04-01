@@ -179,4 +179,5 @@ pub trait QueryOne: Statement {}
 ///     Happy,
 /// }
 /// ```
+#[rustfmt::skip]
 pub trait PgEnum: tokio_postgres::types::ToSql + for<'a> tokio_postgres::types::FromSql<'a> {}
