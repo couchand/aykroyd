@@ -52,40 +52,11 @@ pub struct CreateTableMigrationCommit;
 #[query(text = "CREATE TYPE migration_dir AS ENUM ('up', 'down')")]
 pub struct CreateEnumMigrationDir;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum Dir {
+#[derive(PgEnum, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+// TODO: attribute to rename
+pub enum MigrationDir {
     Up,
     Down,
-}
-
-impl<'a> postgres_types::FromSql<'a> for Dir {
-    fn from_sql(_: &postgres_types::Type, buf: &'a [u8]) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        match buf {
-            b"up" => Ok(Dir::Up),
-            b"down" => Ok(Dir::Down),
-            _ => Err(format!("Unknown migration_dir value {:?}", std::str::from_utf8(buf)).into()),
-        }
-    }
-
-    fn accepts(ty: &postgres_types::Type) -> bool {
-        ty.name() == "migration_dir"
-    }
-}
-
-impl postgres_types::ToSql for Dir {
-    fn to_sql(&self, _: &postgres_types::Type, buf: &mut bytes::BytesMut) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        match self {
-            Dir::Up => buf.extend_from_slice(b"up"),
-            Dir::Down => buf.extend_from_slice(b"down"),
-        }
-        Ok(postgres_types::IsNull::No)
-    }
-
-    fn accepts(ty: &postgres_types::Type) -> bool {
-        ty.name() == "migration_dir"
-    }
-
-    postgres_types::to_sql_checked!();
 }
 
 #[derive(Statement)]
@@ -100,7 +71,7 @@ pub struct CreateTableMigrationCurrent;
 #[derive(Debug, Clone, FromRow)]
 pub struct CurrentMigration {
     pub hash: MigrationHash,
-    pub dir: Dir,
+    pub dir: MigrationDir,
 }
 
 #[derive(Query)]
@@ -109,7 +80,7 @@ pub struct AllCurrent;
 
 #[derive(Statement)]
 #[query(text = "INSERT INTO migration_current (hash, dir) VALUES ($2, $1) ON CONFLICT (dir) DO UPDATE SET hash = excluded.hash")]
-pub struct SetCurrentMigration<'a>(pub Dir, pub &'a MigrationHash);
+pub struct SetCurrentMigration<'a>(pub MigrationDir, pub &'a MigrationHash);
 
 #[derive(Debug, Clone, FromRow)]
 pub struct DatabaseMigration {
@@ -167,8 +138,8 @@ impl DatabaseRepo {
 
         for migration in current {
             match migration.dir {
-                Dir::Up => up = Some(migration.hash),
-                Dir::Down => down = Some(migration.hash),
+                MigrationDir::Up => up = Some(migration.hash),
+                MigrationDir::Down => down = Some(migration.hash),
             }
         }
 
