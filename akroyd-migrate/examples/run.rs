@@ -34,6 +34,25 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
         }
     }
 
+    println!("Checking for existing migration_dir enum...");
+    match client.query_opt(&db::HasEnum { name: "migration_dir" })? {
+        Some(_) => {}
+        None => {
+            println!("Creating enum migration_dir...");
+            client.execute(&db::CreateEnumMigrationDir)?;
+        }
+    }
+
+    println!("Checking for existing migration_current table...");
+    match client.query_opt(&db::IsInsertable { table_name: "migration_current" })? {
+        Some((_, false)) => panic!("Table migration_current exists, but user is unable to insert!"),
+        Some((_, true)) => {}
+        None => {
+            println!("Creating table migration_current...");
+            client.execute(&db::CreateTableMigrationCurrent)?;
+        }
+    }
+
     println!("Starting transaction...");
     let mut txn = client.transaction()?;
 
@@ -53,8 +72,15 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
         }
     }
 
+    println!("Querying current db migration...");
+    let current = txn.query(&db::AllCurrent)?;
+
+    println!("{current:?}");
+
+
     for migration in local_repo.iter() {
         println!("Local migration {} not in database.", migration.up_hash);
+
         println!("  Inserting it for testing purposes...");
 
         println!("  - inserting text {}", migration.up.hash);
@@ -71,6 +97,9 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
             text_hash: &migration.up.hash,
             created_on: chrono::Utc::now(),
         })?;
+
+        println!("  - setting current to this");
+        txn.execute(&db::SetCurrentMigration(db::Dir::Up, &migration.up_hash))?;
     }
 
     println!("Committing transaction...");
