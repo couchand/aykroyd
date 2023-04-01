@@ -148,3 +148,32 @@ pub struct InsertMigrationCommit<'a> {
     pub text_hash: &'a MigrationHash,
     pub created_on: DateTime<Utc>,
 }
+
+#[derive(Debug)]
+pub struct DatabaseRepo {
+    up: MigrationHash,
+    down: Option<MigrationHash>,
+    commits: Vec<DatabaseMigration>,
+}
+
+impl DatabaseRepo {
+    /// Construct a new DatabaseRepo from the contents of the database.
+    ///
+    /// Use the queries [`AllCurrent`](./struct.AllCurrent.html) and [`AllMigrations`](./struct.AllMigrations.html)
+    /// to get these values.
+    pub fn new(current: Vec<CurrentMigration>, commits: Vec<DatabaseMigration>) -> Self {
+        let mut up = None;
+        let mut down = None;
+
+        for migration in current {
+            match migration.dir {
+                Dir::Up => up = Some(migration.hash),
+                Dir::Down => down = Some(migration.hash),
+            }
+        }
+
+        let up = up.unwrap_or(MigrationHash::ZERO);
+
+        DatabaseRepo { up, down, commits }
+    }
+}

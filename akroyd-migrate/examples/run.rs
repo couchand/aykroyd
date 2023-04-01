@@ -58,9 +58,16 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
 
     println!("Querying all migrations...");
     let migrations = txn.query(&db::AllMigrations)?;
-
     println!("{migrations:?}");
 
+    println!("Querying current db migration...");
+    let current = txn.query(&db::AllCurrent)?;
+    println!("{current:?}");
+
+    let database_repo = db::DatabaseRepo::new(current, migrations);
+    println!("{database_repo:?}");
+
+/*
     for migration in migrations {
         match local_repo.take(&migration.commit_hash) {
             None => {
@@ -71,12 +78,6 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
             }
         }
     }
-
-    println!("Querying current db migration...");
-    let current = txn.query(&db::AllCurrent)?;
-
-    println!("{current:?}");
-
 
     for migration in local_repo.iter() {
         println!("Local migration {} not in database.", migration.up_hash);
@@ -101,6 +102,7 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
         println!("  - setting current to this");
         txn.execute(&db::SetCurrentMigration(db::Dir::Up, &migration.up_hash))?;
     }
+    */
 
     println!("Committing transaction...");
     txn.commit()?;
