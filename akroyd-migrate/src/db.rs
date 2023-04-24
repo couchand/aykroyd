@@ -147,4 +147,226 @@ impl DatabaseRepo {
 
         DatabaseRepo { up, down, commits }
     }
+
+    #[cfg(feature = "sync")]
+    pub fn from_sync_client(client: &mut akroyd::sync_client::Client) -> Result<DatabaseRepo, tokio_postgres::Error> {
+        SyncBuilder::new(client)
+            .build()
+            .map_err(|e| match e {
+                BuilderError::Database(err) => err,
+                BuilderError::Protocol(_) => panic!("protocol error"),
+            })
+    }
+
+    #[cfg(feature = "async")]
+    pub async fn from_async_client(client: &mut akroyd::async_client::Client) -> Result<DatabaseRepo, tokio_postgres::Error> {
+        AsyncBuilder::new(client)
+            .build()
+            .await
+            .map_err(|e| match e {
+                BuilderError::Database(err) => err,
+                BuilderError::Protocol(_) => panic!("protocol error"),
+            })
+    }
+}
+
+pub enum Output<'a> {
+    QueryOptIsInsertable(IsInsertable<'a>),
+    QueryOptHasEnum(HasEnum<'a>),
+    ExecuteCreateTableMigrationText(CreateTableMigrationText),
+    ExecuteCreateTableMigrationCommit(CreateTableMigrationCommit),
+    ExecuteCreateEnumMigrationDir(CreateEnumMigrationDir),
+    ExecuteCreateTableMigrationCurrent(CreateTableMigrationCurrent),
+    ExecuteSetCurrentMigration(SetCurrentMigration<'a>),
+    QueryAllMigrations(AllMigrations),
+    QueryAllCurrent(AllCurrent),
+    Done(DatabaseRepo),
+}
+
+pub enum Input {
+    None,
+    ResultIsInsertable(Option<(String, bool)>),
+    ResultHasEnum(Option<(u32, String)>),
+    ResultAllMigrations(Vec<DatabaseMigration>),
+    ResultAllCurrent(Vec<CurrentMigration>),
+}
+
+enum State {
+    Init,
+    AwaitingResultIsInsertableMigrationText,
+    AwaitingResultCreateTableMigrationText,
+    AwaitingResultIsInsertableMigrationCommit,
+    AwaitingResultCreateTableMigrationCommit,
+    AwaitingResultHasEnumMigrationDir,
+    AwaitingResultCreateEnumMigrationDir,
+    AwaitingResultIsInsertableMigrationCurrent,
+    AwaitingResultCreateTableMigrationCurrent,
+    AwaitingResultAllMigrations,
+    AwaitingResultAllCurrent(Vec<DatabaseMigration>),
+    Done,
+    Error,
+}
+
+pub struct InvalidState(Input);
+
+pub struct Builder(State);
+
+impl Builder {
+    pub fn new() -> Self {
+        Builder(State::Init)
+    }
+
+    pub fn step(&mut self, input: Input) -> Result<Output, InvalidState> {
+        let mut old_state = State::Error;
+        std::mem::swap(&mut old_state, &mut self.0);
+        let (new_state, output) = match (old_state, input) {
+            (State::Init, Input::None) => (
+                State::AwaitingResultIsInsertableMigrationText,
+                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_text" })
+            ),
+            (State::AwaitingResultIsInsertableMigrationText, Input::ResultIsInsertable(None)) => (
+                State::AwaitingResultCreateTableMigrationText,
+                Output::ExecuteCreateTableMigrationText(CreateTableMigrationText),
+            ),
+            (State::AwaitingResultIsInsertableMigrationText, Input::ResultIsInsertable(Some((_, true)))) |
+                (State::AwaitingResultCreateTableMigrationText, Input::None) => (
+                State::AwaitingResultIsInsertableMigrationCommit,
+                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_commit" }),
+            ),
+            (State::AwaitingResultIsInsertableMigrationCommit, Input::ResultIsInsertable(None)) => (
+                State::AwaitingResultCreateTableMigrationCommit,
+                Output::ExecuteCreateTableMigrationCommit(CreateTableMigrationCommit),
+            ),
+            (State::AwaitingResultIsInsertableMigrationCommit, Input::ResultIsInsertable(Some((_, true)))) |
+                (State::AwaitingResultCreateTableMigrationCommit, Input::None) => (
+                State::AwaitingResultHasEnumMigrationDir,
+                Output::QueryOptHasEnum(HasEnum { name: "migration_dir" }),
+            ),
+            (State::AwaitingResultHasEnumMigrationDir, Input::ResultHasEnum(None)) => (
+                State::AwaitingResultCreateEnumMigrationDir,
+                Output::ExecuteCreateEnumMigrationDir(CreateEnumMigrationDir),
+            ),
+            (State::AwaitingResultHasEnumMigrationDir, Input::ResultHasEnum(Some(_))) |
+                (State::AwaitingResultCreateEnumMigrationDir, Input::None) => (
+                State::AwaitingResultIsInsertableMigrationCurrent,
+                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_current" }),
+            ),
+            (State::AwaitingResultIsInsertableMigrationCurrent, Input::ResultIsInsertable(None)) => (
+                State::AwaitingResultCreateTableMigrationCurrent,
+                Output::ExecuteCreateTableMigrationCurrent(CreateTableMigrationCurrent),
+            ),
+            (State::AwaitingResultIsInsertableMigrationCurrent, Input::ResultIsInsertable(Some((_, true)))) |
+                (State::AwaitingResultCreateTableMigrationCurrent, Input::None) => (
+                State::AwaitingResultAllMigrations,
+                Output::QueryAllMigrations(AllMigrations),
+            ),
+            (State::AwaitingResultAllMigrations, Input::ResultAllMigrations(migrations)) => (
+                State::AwaitingResultAllCurrent(migrations),
+                Output::QueryAllCurrent(AllCurrent),
+            ),
+            (State::AwaitingResultAllCurrent(migrations), Input::ResultAllCurrent(current)) => (
+                State::Done,
+                Output::Done(DatabaseRepo::new(current, migrations)),
+            ),
+            (_, input) => return Err(InvalidState(input)),
+        };
+
+        self.0 = new_state;
+
+        Ok(output)
+    }
+}
+
+// TODO: this error type isn't great
+pub enum BuilderError {
+    Database(tokio_postgres::Error),
+    Protocol(InvalidState),
+}
+
+impl From<tokio_postgres::Error> for BuilderError {
+    fn from(err: tokio_postgres::Error) -> Self {
+        BuilderError::Database(err)
+    }
+}
+
+impl From<InvalidState> for BuilderError {
+    fn from(err: InvalidState) -> Self {
+        BuilderError::Protocol(err)
+    }
+}
+
+#[cfg(feature = "sync")]
+struct SyncBuilder<'a>(&'a mut akroyd::sync_client::Client);
+
+#[cfg(feature = "sync")]
+impl<'a> SyncBuilder<'a> {
+    fn new(client: &'a mut akroyd::sync_client::Client) -> Self {
+        SyncBuilder(client)
+    }
+
+    fn step(&mut self, input: &Output) -> Result<Input, tokio_postgres::Error> {
+        match input {
+            Output::QueryOptIsInsertable(query) => self.0.query_opt(query).map(Input::ResultIsInsertable),
+            Output::QueryOptHasEnum(query) => self.0.query_opt(query).map(Input::ResultHasEnum),
+            Output::ExecuteCreateTableMigrationText(stmt) => self.0.execute(stmt).map(|_| Input::None),
+            Output::ExecuteCreateTableMigrationCommit(stmt) => self.0.execute(stmt).map(|_| Input::None),
+            Output::ExecuteCreateEnumMigrationDir(stmt) => self.0.execute(stmt).map(|_| Input::None),
+            Output::ExecuteCreateTableMigrationCurrent(stmt) => self.0.execute(stmt).map(|_| Input::None),
+            Output::ExecuteSetCurrentMigration(stmt) => self.0.execute(stmt).map(|_| Input::None),
+            Output::QueryAllMigrations(query) => self.0.query(query).map(Input::ResultAllMigrations),
+            Output::QueryAllCurrent(query) => self.0.query(query).map(Input::ResultAllCurrent),
+            Output::Done(_) => panic!("We should have caught the Done signal!"),
+        }
+    }
+
+    fn build(mut self) -> Result<DatabaseRepo, BuilderError> {
+        let mut builder = Builder::new();
+        let mut input = Input::None;
+
+        loop {
+            let output = builder.step(input)?;
+            if let Output::Done(repo) = output {
+                break Ok(repo);
+            }
+            input = self.step(&output)?;
+        }
+    }
+}
+
+#[cfg(feature = "async")]
+struct AsyncBuilder<'a>(&'a mut akroyd::async_client::Client);
+
+#[cfg(feature = "async")]
+impl<'a> AsyncBuilder<'a> {
+    fn new(client: &'a mut akroyd::async_client::Client) -> Self {
+        AsyncBuilder(client)
+    }
+
+    async fn step(&mut self, input: &Output<'_>) -> Result<Input, tokio_postgres::Error> {
+        match input {
+            Output::QueryOptIsInsertable(query) => self.0.query_opt(query).await.map(Input::ResultIsInsertable),
+            Output::QueryOptHasEnum(query) => self.0.query_opt(query).await.map(Input::ResultHasEnum),
+            Output::ExecuteCreateTableMigrationText(stmt) => self.0.execute(stmt).await.map(|_| Input::None),
+            Output::ExecuteCreateTableMigrationCommit(stmt) => self.0.execute(stmt).await.map(|_| Input::None),
+            Output::ExecuteCreateEnumMigrationDir(stmt) => self.0.execute(stmt).await.map(|_| Input::None),
+            Output::ExecuteCreateTableMigrationCurrent(stmt) => self.0.execute(stmt).await.map(|_| Input::None),
+            Output::ExecuteSetCurrentMigration(stmt) => self.0.execute(stmt).await.map(|_| Input::None),
+            Output::QueryAllMigrations(query) => self.0.query(query).await.map(Input::ResultAllMigrations),
+            Output::QueryAllCurrent(query) => self.0.query(query).await.map(Input::ResultAllCurrent),
+            Output::Done(_) => panic!("We should have caught the Done signal!"),
+        }
+    }
+
+    async fn build(mut self) -> Result<DatabaseRepo, BuilderError> {
+        let mut builder = Builder::new();
+        let mut input = Input::None;
+
+        loop {
+            let output = builder.step(input)?;
+            if let Output::Done(repo) = output {
+                break Ok(repo);
+            }
+            input = self.step(&output).await?;
+        }
+    }
 }
