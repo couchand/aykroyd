@@ -124,7 +124,7 @@ pub struct InsertMigrationCommit<'a> {
 pub struct DatabaseRepo {
     up: MigrationHash,
     down: Option<MigrationHash>,
-    commits: Vec<DatabaseMigration>,
+    commits: std::collections::HashMap<MigrationHash, DatabaseMigration>,
 }
 
 impl DatabaseRepo {
@@ -144,6 +144,8 @@ impl DatabaseRepo {
         }
 
         let up = up.unwrap_or(MigrationHash::ZERO);
+
+        let commits = commits.into_iter().map(|commit| (commit.commit_hash.clone(), commit)).collect();
 
         DatabaseRepo { up, down, commits }
     }
@@ -167,6 +169,22 @@ impl DatabaseRepo {
                 BuilderError::Database(err) => err,
                 BuilderError::Protocol(_) => panic!("protocol error"),
             })
+    }
+
+    pub fn get(&self, hash: &MigrationHash) -> Option<&DatabaseMigration> {
+        self.commits.get(hash)
+    }
+
+    pub fn take(&mut self, hash: &MigrationHash) -> Option<DatabaseMigration> {
+        self.commits.remove(hash)
+    }
+
+    pub fn up(&self) -> &MigrationHash {
+        &self.up
+    }
+
+    pub fn down(&self) -> Option<&MigrationHash> {
+        self.down.as_ref()
     }
 }
 
