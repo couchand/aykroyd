@@ -9,7 +9,7 @@ fn main() {
 fn try_main() -> Result<(), tokio_postgres::Error> {
     use akroyd::sync_client::Client;
 
-    let mut local_repo = local::LocalRepo::load("./migrations").unwrap();
+    let local_repo = local::LocalRepo::load("./migrations").unwrap();
     println!("{local_repo:?}");
 
     let mut client = Client::connect(
@@ -30,7 +30,7 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
 async fn main() -> Result<(), tokio_postgres::Error> {
     use akroyd::async_client::connect;
 
-    let mut local_repo = local::LocalRepo::load("./migrations").unwrap();
+    let local_repo = local::LocalRepo::load("./migrations").unwrap();
     println!("{local_repo:?}");
 
     let (mut client, conn) = connect(
