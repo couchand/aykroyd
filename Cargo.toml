@@ -3,4 +3,11 @@ members = [
     "akroyd",
     "akroyd-derive",
     "akroyd-migrate",
+    "example",
+]
+
+default-members = [
+    "akroyd",
+    "akroyd-derive",
+    "akroyd-migrate",
 ]
