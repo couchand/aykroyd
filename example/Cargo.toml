@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-"sync" = ["akroyd-migrate/sync"]
-"async" = ["akroyd-migrate/async"]
+default = ["sync"]
+sync = ["akroyd-migrate/sync"]
+async = ["akroyd-migrate/async"]
 
 [dependencies]
 akroyd = { version = "0.1", features = ["sync"], path = "../akroyd" }
