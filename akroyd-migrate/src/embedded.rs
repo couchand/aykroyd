@@ -12,7 +12,7 @@ pub struct EmbeddedMigration {
 
 impl EmbeddedMigration {
     pub fn text_hash(&self) -> MigrationHash {
-        MigrationHash::from_content(&self.text)
+        MigrationHash::from_content(self.text)
     }
 
     pub fn hash(&self) -> Result<MigrationHash, Error> {
@@ -24,7 +24,7 @@ impl EmbeddedMigration {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 }
 
@@ -129,6 +129,12 @@ impl EmbeddedRepoBuilder {
         code.push_str("}\n");
 
         std::fs::write(out_file, code)
+    }
+}
+
+impl Default for EmbeddedRepoBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

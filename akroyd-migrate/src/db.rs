@@ -295,6 +295,12 @@ impl Builder {
     }
 }
 
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // TODO: this error type isn't great
 pub enum BuilderError {
     Database(tokio_postgres::Error),
