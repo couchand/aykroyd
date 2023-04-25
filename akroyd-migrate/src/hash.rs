@@ -88,6 +88,10 @@ impl<'a> postgres_types::FromSql<'a> for MigrationHash {
 impl MigrationHash {
     pub const ZERO: MigrationHash = MigrationHash([0; 32]);
 
+    pub fn is_zero(&self) -> bool {
+        self == &MigrationHash::ZERO
+    }
+
     pub fn from_content<S: AsRef<str>>(string: S) -> MigrationHash {
         let mut hasher = Sha3_256::new();
 

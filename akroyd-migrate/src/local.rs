@@ -163,6 +163,10 @@ impl LocalRepo {
         Ok(LocalRepo { dir, commits })
     }
 
+    pub fn contains(&self, hash: &MigrationHash) -> bool {
+        self.commits.contains_key(hash)
+    }
+
     pub fn get(&self, hash: &MigrationHash) -> Option<&LocalCommit> {
         self.commits.get(hash)
     }
