@@ -3,8 +3,15 @@ name = "example"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+"sync" = ["akroyd-migrate/sync"]
+"async" = ["akroyd-migrate/async"]
+
 [dependencies]
+akroyd = { version = "0.1", features = ["sync"], path = "../akroyd" }
 akroyd-migrate = { path = "../akroyd-migrate" }
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 
 [build-dependencies]
 akroyd-migrate = { path = "../akroyd-migrate" }
