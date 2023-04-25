@@ -6,7 +6,7 @@ fn main() {
 }
 
 fn try_main() -> Result<(), tokio_postgres::Error> {
-    let mut local_repo = local::LocalRepo::load("./migrations").unwrap();
+    let local_repo = local::LocalRepo::load("./migrations").unwrap();
     println!("{local_repo:?}");
 
     let mut client = Client::connect(

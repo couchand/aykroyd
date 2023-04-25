@@ -1,3 +1,4 @@
+#[cfg(any(feature = "async", feature = "sync"))]
 use akroyd_migrate::*;
 
 #[cfg(all(not(feature = "async"), not(feature = "sync")))]
