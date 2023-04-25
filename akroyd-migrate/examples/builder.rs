@@ -1,5 +1,8 @@
 use akroyd_migrate::*;
 
+#[cfg(all(not(feature = "async"), not(feature = "sync")))]
+fn main() {}
+
 #[cfg(feature = "sync")]
 fn main() {
     try_main().unwrap()
