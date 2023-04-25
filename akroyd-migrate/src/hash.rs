@@ -39,9 +39,6 @@ impl std::str::FromStr for MigrationHash {
             return Err(Error::invalid_hash("not ascii"));
         }
 
-        println!("parsing:");
-        println!("  - {s}");
-
         let mut bytes = [0u8; 32];
 
         for (i, hex) in s.trim().as_bytes().chunks(2).enumerate() {
@@ -108,37 +105,26 @@ impl MigrationHash {
         deps: &[MigrationHash],
         hash: Option<&MigrationHash>,
     ) -> MigrationHash {
-        println!("new hash");
-
         let mut hasher = Sha3_256::new();
 
-        println!("  deps:");
         hasher.update(b"DEPS");
 
         for dep in deps {
-            println!("  - {dep}");
             hasher.update(dep);
         }
 
-        println!("  hash:");
         hasher.update(b"HASH");
 
         match hash {
             Some(hash) => {
-                println!("  - {hash}");
                 hasher.update(hash);
             }
             None => {
-                println!("  - None");
                 hasher.update(b"NONE");
             }
         }
 
-        println!("  result:");
-        let result = MigrationHash(hasher.finalize().into());
-
-        println!("  - {result}");
-        result
+        MigrationHash(hasher.finalize().into())
     }
 }
 

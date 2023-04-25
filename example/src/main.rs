@@ -11,8 +11,9 @@ fn main() {
 fn try_main() -> Result<(), tokio_postgres::Error> {
     use akroyd::sync_client::Client;
 
+    println!("Loading embedded migrations...");
     let embedded_repo = akroyd_migrate::embedded::EmbeddedRepo::load(&MIGRATIONS).unwrap();
-    println!("{:?}", embedded_repo);
+    println!("{embedded_repo:?}");
 
     let mut client = Client::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
@@ -32,8 +33,9 @@ fn try_main() -> Result<(), tokio_postgres::Error> {
 async fn main() -> Result<(), tokio_postgres::Error> {
     use akroyd::async_client::connect;
 
+    println!("Loading embedded migrations...");
     let embedded_repo = akroyd_migrate::embedded::EmbeddedRepo::load(&MIGRATIONS).unwrap();
-    println!("{:?}", embedded_repo);
+    println!("{embedded_repo:?}");
 
     let (mut client, conn) = connect(
         "host=localhost user=akroyd_test password=akroyd_test",
