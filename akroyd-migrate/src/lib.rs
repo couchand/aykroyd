@@ -1,6 +1,8 @@
 pub mod db;
 pub mod embedded;
+pub mod fs;
 pub mod hash;
+pub mod hash2;
 pub mod local;
 
 #[derive(Debug)]
