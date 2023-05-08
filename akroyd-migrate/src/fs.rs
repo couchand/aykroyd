@@ -232,7 +232,7 @@ impl FsMigration {
         std::fs::write(self.hash_path(), hash.to_string())
     }
 
-    fn hash(&self) -> Result<MigrationHash, std::io::Error> {
+    pub fn hash(&self) -> Result<MigrationHash, std::io::Error> {
         std::fs::read_to_string(self.hash_path())?
             .parse()
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))
@@ -246,7 +246,7 @@ impl FsMigration {
         std::fs::write(self.commit_path(), commit.to_string())
     }
 
-    fn commit(&self) -> Result<CommitHash, std::io::Error> {
+    pub fn commit(&self) -> Result<CommitHash, std::io::Error> {
         std::fs::read_to_string(self.commit_path())?
             .parse()
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))
@@ -301,8 +301,8 @@ impl FsMigration {
                 return Ok(());
             }
         }
-        let parent_commit = parent.map(|m| m.commit()).transpose()?;
-        let commit = CommitHash::new(parent_commit, self.hash()?);
+        let parent_commit = parent.map(|m| m.commit()).transpose()?.unwrap_or_default();
+        let commit = CommitHash::from_parent_and_hash(&parent_commit, &self.hash()?);
         self.set_commit(commit)
     }
 
@@ -318,7 +318,7 @@ impl FsMigration {
             }
         }
         
-        let hash = MigrationHash::new(self.name(), &self.migration_text()?.unwrap_or_default());
+        let hash = MigrationHash::from_name_and_text(self.name(), &self.migration_text()?.unwrap_or_default());
         self.set_hash(hash)
     }
 }

@@ -4,6 +4,7 @@ pub mod fs;
 pub mod hash;
 pub mod hash2;
 pub mod local;
+pub mod plan;
 
 #[derive(Debug)]
 pub struct Error {

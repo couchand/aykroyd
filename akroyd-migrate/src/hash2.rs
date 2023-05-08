@@ -4,7 +4,7 @@ use crate::Error;
 pub struct MigrationHash([u8; 32]);
 
 impl MigrationHash {
-    pub fn new(name: &str, text: &str) -> Self {
+    pub fn from_name_and_text(name: &str, text: &str) -> Self {
         use sha3::{Digest, Sha3_256};
 
         let mut hasher = Sha3_256::new();
@@ -26,6 +26,16 @@ impl MigrationHash {
 impl std::fmt::Display for MigrationHash {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl std::fmt::Debug for MigrationHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for byte in self.0.iter().take(4) {
             write!(f, "{:02x}", byte)?;
         }
 
@@ -60,13 +70,11 @@ fn hash_from_str(s: &str) -> Result<[u8; 32], crate::Error> {
     Ok(bytes)
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq, Eq, Hash)]
 pub struct CommitHash([u8; 32]);
 
 impl CommitHash {
-    pub fn new(parent: Option<CommitHash>, hash: MigrationHash) -> CommitHash {
-        let parent = parent.unwrap_or_default();
-
+    pub fn from_parent_and_hash(parent: &CommitHash, hash: &MigrationHash) -> CommitHash {
         use sha3::{Digest, Sha3_256};
 
         let mut hasher = Sha3_256::new();
@@ -83,11 +91,25 @@ impl CommitHash {
     pub fn as_bytes(&self) -> &[u8] {
         &self.0[..]
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.as_bytes().iter().all(|b| *b == 0)
+    }
 }
 
 impl std::fmt::Display for CommitHash {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl std::fmt::Debug for CommitHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for byte in self.0.iter().take(4) {
             write!(f, "{:02x}", byte)?;
         }
 
