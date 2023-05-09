@@ -26,6 +26,23 @@ fn try_main() -> Result<(), Error> {
     println!("Plan: {plan:?}");
 
     if !plan.is_empty() {
+        if !plan.is_fast_forward() {
+            loop {
+                println!("Plan is not a fast-forward merge, continue (y/n)?");
+
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line).unwrap();
+                match line.trim() {
+                    "y" | "Y" => break,
+                    "n" | "N" => {
+                        eprintln!("Refusing to apply non-fast-forward plan.");
+                        std::process::exit(-1);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         println!("Applying....");
 
         db_repo.apply(&plan).unwrap();

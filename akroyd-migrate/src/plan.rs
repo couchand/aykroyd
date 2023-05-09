@@ -19,6 +19,10 @@ impl Plan {
         heads_eq
     }
 
+    pub fn is_fast_forward(&self) -> bool {
+        self.rollbacks.is_empty()
+    }
+
     pub fn verify(&self) -> Result<(), String> {
         let mut head = self.db_head.clone();
         for (i, rollback) in self.rollbacks.iter().enumerate() {

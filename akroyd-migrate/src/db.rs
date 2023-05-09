@@ -183,6 +183,9 @@ impl<'a> DatabaseRepo<'a> {
     }
 
     fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
+        // TODO: configurable logging
+        println!("Rolling back {}...", step.target);
+
         self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
 
         self.txn.execute(&DeleteMigrationCommit {
@@ -193,6 +196,9 @@ impl<'a> DatabaseRepo<'a> {
     }
 
     fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), tokio_postgres::Error> {
+        // TODO: configurable logging
+        println!("Applying {}...", step.name);
+
         self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
 
         self.txn.execute(&InsertMigrationText {
