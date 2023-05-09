@@ -62,7 +62,7 @@ impl Plan {
                     break;
                 }
 
-                let commit = db.commit(&head).ok_or_else(|| PlanError::MissingCommit(head))?;
+                let commit = db.commit(&head).ok_or_else(|| PlanError::MissingCommit(RepoSource::Database, head))?;
                 head = commit.parent();
 
                 let hash = commit.migration_hash();
@@ -71,7 +71,7 @@ impl Plan {
                     Some(rollback) => {
                         rollbacks.push(RollbackStep {
                             target: hash,
-                            source: RollbackSource::Database,
+                            source: RepoSource::Database,
                             text: rollback,
                             parent: commit.parent(),
                         });
@@ -81,7 +81,7 @@ impl Plan {
                             Some(rollback) => {
                                 rollbacks.push(RollbackStep {
                                     target: hash,
-                                    source: RollbackSource::Local,
+                                    source: RepoSource::Local,
                                     text: rollback,
                                     parent: commit.parent(),
                                 });
@@ -99,7 +99,7 @@ impl Plan {
         let mut head = local_head.clone();
 
         while head != merge_base {
-            let commit = local.commit(&head).ok_or_else(|| PlanError::MissingCommit(head))?;
+            let commit = local.commit(&head).ok_or_else(|| PlanError::MissingCommit(RepoSource::Local, head))?;
             head = commit.parent();
             migrations.push(MigrationStep {
                 parent: commit.parent(),
@@ -123,14 +123,24 @@ impl Plan {
 
 #[derive(Debug)]
 pub enum PlanError {
-    MissingCommit(CommitHash),
+    MissingCommit(RepoSource, CommitHash),
     MissingRollback(MigrationHash),
+}
+
+impl std::fmt::Display for PlanError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PlanError::MissingCommit(RepoSource::Database, commit) => write!(f, "Unable to find commit in database: {commit}"),
+            PlanError::MissingCommit(RepoSource::Local, commit) => write!(f, "Unable to find commit locally: {commit}"),
+            PlanError::MissingRollback(hash) => write!(f, "Unable to find rollback for migration: {hash}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct RollbackStep {
     pub target: MigrationHash,
-    pub source: RollbackSource,
+    pub source: RepoSource,
     pub text: String,
     pub parent: CommitHash,
 }
@@ -142,7 +152,7 @@ impl RollbackStep {
 }
 
 #[derive(Debug, Clone)]
-pub enum RollbackSource {
+pub enum RepoSource {
     Database,
     Local,
 }

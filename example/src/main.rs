@@ -52,27 +52,3 @@ fn try_main() -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Debug)]
-enum Error {
-    Check(fs::CheckError),
-    Plan(plan::PlanError),
-    Db(tokio_postgres::Error),
-}
-
-impl From<fs::CheckError> for Error {
-    fn from(err: fs::CheckError) -> Self {
-        Error::Check(err)
-    }
-}
-
-impl From<plan::PlanError> for Error {
-    fn from(err: plan::PlanError) -> Self {
-        Error::Plan(err)
-    }
-}
-
-impl From<tokio_postgres::Error> for Error {
-    fn from(err: tokio_postgres::Error) -> Self {
-        Error::Db(err)
-    }
-}
