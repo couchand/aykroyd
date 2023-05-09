@@ -85,11 +85,28 @@ pub struct DatabaseMigration {
 )]
 pub struct AllMigrations;
 
+#[derive(Debug, Clone, FromRow)]
+pub struct DatabaseRollback {
+    pub hash: MigrationHash,
+    pub text: String,
+}
+
+#[derive(Query)]
+#[query(text = "SELECT hash, text FROM rollback_text2", row(DatabaseRollback))]
+pub struct AllRollbacks;
+
 #[derive(Statement)]
 #[query(text = "INSERT INTO migration_text2 (hash, name, text) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")]
 pub struct InsertMigrationText<'a> {
     pub hash: &'a MigrationHash,
     pub name: &'a str,
+    pub text: &'a str,
+}
+
+#[derive(Statement)]
+#[query(text = "INSERT INTO rollback_text2 (hash, text) VALUES ($1, $2) ON CONFLICT (hash) DO UPDATE SET text = excluded.text")]
+pub struct InsertRollbackText<'a> {
+    pub hash: &'a MigrationHash,
     pub text: &'a str,
 }
 
@@ -102,10 +119,17 @@ pub struct InsertMigrationCommit<'a> {
     pub created_on: DateTime<Utc>,
 }
 
+#[derive(Statement)]
+#[query(text = "DELETE FROM migration_commit2 WHERE commit = $1")]
+pub struct DeleteMigrationCommit<'a> {
+    pub commit: &'a CommitHash,
+}
+
 pub struct DatabaseRepo<'a> {
     txn: akroyd::sync_client::Transaction<'a>,
     head: Option<CommitHash>,
     migrations: Option<Vec<DatabaseMigration>>,
+    rollbacks: Option<Vec<DatabaseRollback>>,
 }
 
 impl<'a> DatabaseRepo<'a> {
@@ -139,7 +163,8 @@ impl<'a> DatabaseRepo<'a> {
 
         let head = None;
         let migrations = None;
-        Ok(DatabaseRepo { txn, head, migrations })
+        let rollbacks = None;
+        Ok(DatabaseRepo { txn, head, migrations, rollbacks })
     }
 
     /// Apply the given plan to the database.
@@ -158,11 +183,17 @@ impl<'a> DatabaseRepo<'a> {
     }
 
     fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
-        todo!("apply rollback {step:?}")
+        self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
+
+        self.txn.execute(&DeleteMigrationCommit {
+            commit: &step.commit(),
+        })?;
+
+        Ok(())
     }
 
     fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), tokio_postgres::Error> {
-        self.txn.as_mut().execute(&step.text, &[])?;
+        self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
 
         self.txn.execute(&InsertMigrationText {
             hash: &step.hash(),
@@ -177,7 +208,12 @@ impl<'a> DatabaseRepo<'a> {
             created_on: Utc::now(),
         })?;
 
-        // TODO: insert rollback text
+        if let Some(rollback) = step.rollback.as_ref() {
+            self.txn.execute(&InsertRollbackText {
+                hash: &step.hash(),
+                text: rollback,
+            })?;
+        }
 
         Ok(())
     }
@@ -232,7 +268,18 @@ impl<'a> Repo for DatabaseRepo<'a> {
     }
 
     fn rollback(&mut self, hash: &MigrationHash) -> Option<String> {
-        todo!("implement rollback query for {hash:?}")
+        if self.rollbacks.is_none() {
+            let rollbacks = self.txn.query(&AllRollbacks).unwrap(); // TODO
+
+            self.rollbacks = Some(rollbacks);
+        }
+
+        self.rollbacks
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|r| r.hash == *hash)
+            .map(|r| r.text.to_string())
     }
 }
 

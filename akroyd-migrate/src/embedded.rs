@@ -9,6 +9,7 @@ pub struct EmbeddedMigration {
     pub parent: &'static str,
     pub name: &'static str,
     pub text: &'static str,
+    pub rollback: Option<&'static str>,
 }
 
 impl EmbeddedMigration {
@@ -45,7 +46,7 @@ impl EmbeddedRepo {
                     parent: migration.parent(),
                     name: migration.name.to_string(),
                     migration_text: migration.text.to_string(),
-                    rollback_text: None, // TODO
+                    rollback_text: migration.rollback.map(|s| s.to_string()),
                 }
             })
             .collect();
@@ -112,6 +113,10 @@ impl EmbeddedRepoBuilder {
 
             code.push_str("            text: ");
             code.push_str(&format!("{:?}", migration.migration_text));
+            code.push_str(",\n");
+
+            code.push_str("            rollback: ");
+            code.push_str(&format!("{:?}", migration.rollback_text));
             code.push_str(",\n");
 
             code.push_str("        },\n");
