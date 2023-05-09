@@ -1,6 +1,7 @@
 //! Database access and migrations in the database.
 
 use crate::hash2::{CommitHash, MigrationHash};
+use crate::plan::{MigrationStep, Plan, RollbackStep};
 use crate::traits::{Commit, Repo};
 
 use akroyd::*;
@@ -136,10 +137,49 @@ impl<'a> DatabaseRepo<'a> {
             _ => {}
         }
 
-
         let head = None;
         let migrations = None;
         Ok(DatabaseRepo { txn, head, migrations })
+    }
+
+    /// Apply the given plan to the database.
+    pub fn apply(mut self, plan: &Plan) -> Result<(), tokio_postgres::Error> {
+        assert!(self.head() == plan.db_head);
+
+        for rollback in &plan.rollbacks {
+            self.apply_rollback(rollback)?;
+        }
+
+        for migration in &plan.migrations {
+            self.apply_migration(migration)?;
+        }
+
+        self.txn.commit()
+    }
+
+    fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
+        todo!("apply rollback {step:?}")
+    }
+
+    fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), tokio_postgres::Error> {
+        self.txn.as_mut().execute(&step.text, &[])?;
+
+        self.txn.execute(&InsertMigrationText {
+            hash: &step.hash(),
+            name: &step.name,
+            text: &step.text,
+        })?;
+
+        self.txn.execute(&InsertMigrationCommit {
+            commit: &step.commit(),
+            parent: if step.parent.is_zero() { None } else { Some(&step.parent) },
+            hash: &step.hash(),
+            created_on: Utc::now(),
+        })?;
+
+        // TODO: insert rollback text
+
+        Ok(())
     }
 }
 

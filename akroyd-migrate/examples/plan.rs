@@ -21,6 +21,12 @@ fn try_main() -> Result<(), Error> {
     let plan = plan::Plan::from_db_and_local(&mut db_repo, &mut local_repo)?;
     println!("Plan: {plan:?}");
 
+    println!("Applying....");
+
+    db_repo.apply(&plan).unwrap();
+
+    println!("Done.");
+
     Ok(())
 }
 
