@@ -305,17 +305,36 @@ impl FsMigration {
     pub fn check_commit(&mut self, parent: Option<FsMigration>) -> Result<(), std::io::Error> {
         use std::os::linux::fs::MetadataExt;
         if self.commit_path().exists() {
-            let hash_change = self.hash_path().metadata()?.st_mtime();
+            let hash_s = self.hash_path().metadata()?.st_mtime();
+            let hash_ns = self.hash_path().metadata()?.st_mtime_nsec();
             let parent_change = if let Some(parent) = &parent {
-                let name_change = self.parent_path().metadata()?.st_mtime();
-                let commit_change = parent.commit_path().metadata()?.st_mtime();
-                Some(name_change.max(commit_change))
+                let name_s = self.parent_path().metadata()?.st_mtime();
+                let name_ns = self.parent_path().metadata()?.st_mtime_nsec();
+                let commit_s = parent.commit_path().metadata()?.st_mtime();
+                let commit_ns = parent.commit_path().metadata()?.st_mtime_nsec();
+                if name_s > commit_s {
+                    Some((name_s, name_ns))
+                } else if commit_s > name_s {
+                    Some((commit_s, commit_ns))
+                } else if name_ns > commit_ns {
+                    Some((name_s, name_ns))
+                } else {
+                    Some((commit_s, commit_ns))
+                }
             } else {
                 None
             };
-            let commit_change = self.commit_path().metadata()?.st_mtime();
+            let commit_s = self.commit_path().metadata()?.st_mtime();
+            let commit_ns = self.commit_path().metadata()?.st_mtime_nsec();
 
-            if commit_change >= hash_change && parent_change.map(|change| commit_change >= change).unwrap_or_default() {
+            let commit_after_hash = commit_s > hash_s || (commit_s == hash_s && commit_ns > hash_ns);
+            let commit_after_parent = parent_change
+                .map(|(parent_s, parent_ns)| {
+                    commit_s > parent_s || (commit_s == parent_s && commit_ns > parent_ns)
+                })
+                .unwrap_or_default();
+
+            if commit_after_hash && commit_after_parent {
                 return Ok(());
             }
         }
@@ -351,15 +370,40 @@ impl FsMigration {
 mod test {
     use super::*;
 
-    fn tmp_dir() -> std::path::PathBuf {
-        let now = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_nanos();
-        let dir = std::env::temp_dir().join("akroyd-tests").join(format!("tst{now}"));
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
+    struct TmpDir(std::path::PathBuf);
+
+    impl Drop for TmpDir {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.0).unwrap()
+        }
+    }
+
+    impl std::ops::Deref for TmpDir {
+        type Target = std::path::Path;
+        fn deref(&self) -> &std::path::Path {
+            &self.0
+        }
+    }
+
+    impl AsRef<std::path::Path> for TmpDir {
+        fn as_ref(&self) -> &std::path::Path {
+            &self.0
+        }
+    }
+
+    macro_rules! tmp_dir {
+        () => {
+            {
+                let now = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_nanos();
+                let dir = std::env::temp_dir().join("akroyd-tests").join(format!("tst{now}-{}", line!()));
+                std::fs::create_dir_all(&dir).unwrap();
+                TmpDir(dir)
+            }
+        }
     }
 
     fn test_hash(name: &str, text: &str) {
-        let dir = tmp_dir();
+        let dir = tmp_dir!();
 
         let migration_dir = dir.join(name);
         std::fs::create_dir(&migration_dir).unwrap();
@@ -367,7 +411,7 @@ mod test {
         let migration_text = migration_dir.join("up.sql");
         std::fs::write(migration_text, text).unwrap();
 
-        let mut repo = FsRepo::new(dir);
+        let mut repo = FsRepo::new(&dir);
         repo.check().unwrap();
 
         let migration = repo.migration(name).unwrap().unwrap();
@@ -391,7 +435,7 @@ mod test {
     }
 
     fn test_hash_update(name: &str, text: &str) {
-        let dir = tmp_dir();
+        let dir = tmp_dir!();
 
         let migration_dir = dir.join(name);
         std::fs::create_dir_all(&migration_dir).unwrap();
@@ -428,7 +472,7 @@ mod test {
     }
 
     fn test_hash_rename(name: &str, text: &str) {
-        let dir = tmp_dir();
+        let dir = tmp_dir!();
 
         let migration_dir = dir.join("ORIGINAL-NAME");
         std::fs::create_dir_all(&migration_dir).unwrap();
@@ -465,7 +509,7 @@ mod test {
     }
 
     fn test_commit(commits: Vec<(&str, &str)>) {
-        let dir = tmp_dir();
+        let dir = tmp_dir!();
 
         let mut parent_name = "";
         let mut parent = CommitHash::default();
@@ -491,7 +535,7 @@ mod test {
         }
         assert_eq!(expecteds.len(), commits.len());
 
-        let mut repo = FsRepo::new(dir);
+        let mut repo = FsRepo::new(&dir);
         repo.check().unwrap();
 
         for (name, expected) in expecteds {
@@ -521,6 +565,95 @@ mod test {
             ),
         ]);
         test_commit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+            (
+                "create-table-emails",
+                "CREATE TABLE emails (id SERIAL PRIMARY KEY, user_id INT REFERENCES users)",
+            ),
+            (
+                "add-email-column",
+                "ALTER TABLE emails ADD email TEXT; UPDATE emails LEFT JOIN users ON user_id = users.id SET emails.email = users.name; ALTER COLUMN emails.email SET NOT NULL;",
+            ),
+        ]);
+    }
+
+    fn test_commit_edit(commits: Vec<(&str, &str)>) {
+        let dir = tmp_dir!();
+
+        let mut parent_name = "";
+        let mut parent = CommitHash::default();
+        let mut expecteds = vec![];
+
+        let mut first = true;
+
+        for (name, text) in &commits {
+            let migration_dir = dir.join(name);
+            std::fs::create_dir(&migration_dir).unwrap();
+
+            let migration_text = migration_dir.join("up.sql");
+            let text_to_save = if first {
+                first = false;
+                "INITIAL SQL TEXT"
+            } else {
+                text
+            };
+            std::fs::write(migration_text, text_to_save).unwrap();
+
+            let parent_file = migration_dir.join(".parent");
+            std::fs::write(parent_file, parent_name).unwrap();
+
+            let hash = MigrationHash::from_name_and_text(name, text);
+            let commit = CommitHash::from_parent_and_hash(&parent, &hash);
+
+            expecteds.push((name, commit.clone()));
+
+            parent = commit;
+            parent_name = name;
+        }
+        assert_eq!(expecteds.len(), commits.len());
+
+        let mut repo = FsRepo::new(&dir);
+        repo.check().unwrap();
+
+        std::thread::sleep(std::time::Duration::from_millis(1));
+
+        let (name, text) = &commits[0];
+        let migration_dir = dir.join(name);
+        let migration_text = migration_dir.join("up.sql");
+        std::fs::write(migration_text, text).unwrap();
+
+        repo.check().unwrap();
+
+        for (name, expected) in expecteds {
+            let migration = repo.migration(name).unwrap().unwrap();
+            let actual = migration.commit().unwrap();
+
+            assert_eq!(actual.to_string(), expected.to_string());
+        }
+    }
+
+    #[test]
+    fn commit_edit() {
+        test_commit_edit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+        ]);
+        test_commit_edit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+            (
+                "create-table-emails",
+                "CREATE TABLE emails (id SERIAL PRIMARY KEY, user INT REFERENCES users)",
+            ),
+        ]);
+        test_commit_edit(vec![
             (
                 "create-table-users",
                 "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
