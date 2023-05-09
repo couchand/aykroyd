@@ -92,6 +92,8 @@ impl MigrationHash {
     pub fn from_content<S: AsRef<str>>(string: S) -> MigrationHash {
         let mut hasher = Sha3_256::new();
 
+        // TODO: need to add something first
+        // for second-preimage resistance
         hasher.update(string.as_ref().as_bytes());
 
         MigrationHash(hasher.finalize().into())

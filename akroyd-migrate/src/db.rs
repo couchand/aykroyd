@@ -225,7 +225,7 @@ enum State {
     Error,
 }
 
-pub struct InvalidState(Input);
+pub struct InvalidState(State, Input);
 
 pub struct Builder(State);
 
@@ -240,58 +240,61 @@ impl Builder {
         let (new_state, output) = match (old_state, input) {
             (State::Init, Input::None) => (
                 State::AwaitingResultIsInsertableMigrationText,
-                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_text" })
+                Ok(Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_text" })),
             ),
             (State::AwaitingResultIsInsertableMigrationText, Input::ResultIsInsertable(None)) => (
                 State::AwaitingResultCreateTableMigrationText,
-                Output::ExecuteCreateTableMigrationText(CreateTableMigrationText),
+                Ok(Output::ExecuteCreateTableMigrationText(CreateTableMigrationText)),
             ),
-            (State::AwaitingResultIsInsertableMigrationText, Input::ResultIsInsertable(Some((_, true)))) |
+            (State::AwaitingResultIsInsertableMigrationText, Input::ResultIsInsertable(Some((_, true)))) | // TODO: what about false?
                 (State::AwaitingResultCreateTableMigrationText, Input::None) => (
                 State::AwaitingResultIsInsertableMigrationCommit,
-                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_commit" }),
+                Ok(Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_commit" })),
             ),
             (State::AwaitingResultIsInsertableMigrationCommit, Input::ResultIsInsertable(None)) => (
                 State::AwaitingResultCreateTableMigrationCommit,
-                Output::ExecuteCreateTableMigrationCommit(CreateTableMigrationCommit),
+                Ok(Output::ExecuteCreateTableMigrationCommit(CreateTableMigrationCommit)),
             ),
-            (State::AwaitingResultIsInsertableMigrationCommit, Input::ResultIsInsertable(Some((_, true)))) |
+            (State::AwaitingResultIsInsertableMigrationCommit, Input::ResultIsInsertable(Some((_, true)))) | // TODO: what about false?
                 (State::AwaitingResultCreateTableMigrationCommit, Input::None) => (
                 State::AwaitingResultHasEnumMigrationDir,
-                Output::QueryOptHasEnum(HasEnum { name: "migration_dir" }),
+                Ok(Output::QueryOptHasEnum(HasEnum { name: "migration_dir" })),
             ),
             (State::AwaitingResultHasEnumMigrationDir, Input::ResultHasEnum(None)) => (
                 State::AwaitingResultCreateEnumMigrationDir,
-                Output::ExecuteCreateEnumMigrationDir(CreateEnumMigrationDir),
+                Ok(Output::ExecuteCreateEnumMigrationDir(CreateEnumMigrationDir)),
             ),
             (State::AwaitingResultHasEnumMigrationDir, Input::ResultHasEnum(Some(_))) |
                 (State::AwaitingResultCreateEnumMigrationDir, Input::None) => (
                 State::AwaitingResultIsInsertableMigrationCurrent,
-                Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_current" }),
+                Ok(Output::QueryOptIsInsertable(IsInsertable { table_name: "migration_current" })),
             ),
             (State::AwaitingResultIsInsertableMigrationCurrent, Input::ResultIsInsertable(None)) => (
                 State::AwaitingResultCreateTableMigrationCurrent,
-                Output::ExecuteCreateTableMigrationCurrent(CreateTableMigrationCurrent),
+                Ok(Output::ExecuteCreateTableMigrationCurrent(CreateTableMigrationCurrent)),
             ),
-            (State::AwaitingResultIsInsertableMigrationCurrent, Input::ResultIsInsertable(Some((_, true)))) |
+            (State::AwaitingResultIsInsertableMigrationCurrent, Input::ResultIsInsertable(Some((_, true)))) | // TODO: what about false?
                 (State::AwaitingResultCreateTableMigrationCurrent, Input::None) => (
                 State::AwaitingResultAllMigrations,
-                Output::QueryAllMigrations(AllMigrations),
+                Ok(Output::QueryAllMigrations(AllMigrations)),
             ),
             (State::AwaitingResultAllMigrations, Input::ResultAllMigrations(migrations)) => (
                 State::AwaitingResultAllCurrent(migrations),
-                Output::QueryAllCurrent(AllCurrent),
+                Ok(Output::QueryAllCurrent(AllCurrent)),
             ),
             (State::AwaitingResultAllCurrent(migrations), Input::ResultAllCurrent(current)) => (
                 State::Done,
-                Output::Done(DatabaseRepo::new(current, migrations)),
+                Ok(Output::Done(DatabaseRepo::new(current, migrations))),
             ),
-            (_, input) => return Err(InvalidState(input)),
+            (old_state, input) => (
+                State::Error,
+                Err(InvalidState(old_state, input)),
+            ),
         };
 
         self.0 = new_state;
 
-        Ok(output)
+        output
     }
 }
 
