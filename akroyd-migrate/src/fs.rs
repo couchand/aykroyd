@@ -327,11 +327,17 @@ impl FsMigration {
     pub fn check_hash(&mut self) -> Result<(), std::io::Error> {
         use std::os::linux::fs::MetadataExt;
         if self.hash_path().exists() {
-            let name_change = self.migration_dir.metadata()?.st_ctime();
-            let text_change = self.migration_text_path().metadata()?.st_mtime();
-            let hash_change = self.hash_path().metadata()?.st_mtime();
+            let name_s = self.migration_dir.metadata()?.st_ctime();
+            let name_ns = self.migration_dir.metadata()?.st_ctime_nsec();
+            let text_s = self.migration_text_path().metadata()?.st_mtime();
+            let text_ns = self.migration_text_path().metadata()?.st_mtime_nsec();
+            let hash_s = self.hash_path().metadata()?.st_mtime();
+            let hash_ns = self.hash_path().metadata()?.st_mtime_nsec();
 
-            if hash_change >= name_change && hash_change >= text_change {
+            let hash_after_name = hash_s > name_s || (hash_s == name_s && hash_ns > name_ns);
+            let hash_after_text = hash_s > text_s || (hash_s == text_s && hash_ns > text_ns);
+
+            if hash_after_name && hash_after_text {
                 return Ok(());
             }
         }
@@ -396,7 +402,7 @@ mod test {
         let mut repo = FsRepo::new(&dir);
         repo.check().unwrap();
 
-        std::thread::sleep(std::time::Duration::from_secs(1)); // TODO: ns
+        std::thread::sleep(std::time::Duration::from_millis(1));
         std::fs::write(&migration_text, text).unwrap();
 
         repo.check().unwrap();
@@ -433,7 +439,7 @@ mod test {
         let mut repo = FsRepo::new(&dir);
         repo.check().unwrap();
 
-        std::thread::sleep(std::time::Duration::from_secs(1)); // TODO: ns
+        std::thread::sleep(std::time::Duration::from_millis(1));
         std::fs::rename(migration_dir, dir.join(name)).unwrap();
 
         repo.check().unwrap();
