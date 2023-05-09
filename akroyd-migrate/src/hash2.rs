@@ -51,6 +51,36 @@ impl std::str::FromStr for MigrationHash {
     }
 }
 
+impl postgres_types::ToSql for MigrationHash {
+    fn to_sql(
+        &self,
+        ty: &postgres_types::Type,
+        buf: &mut bytes::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        self.as_bytes().to_sql(ty, buf)
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <Vec<u8> as postgres_types::ToSql>::accepts(ty)
+    }
+
+    postgres_types::to_sql_checked!();
+}
+
+impl<'a> postgres_types::FromSql<'a> for MigrationHash {
+    fn from_sql(
+        ty: &postgres_types::Type,
+        buf: &'a [u8],
+    ) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let bytes = <Vec<u8> as postgres_types::FromSql>::from_sql(ty, buf)?;
+        let mut arr = [0; 32];
+        arr.copy_from_slice(&bytes);
+        Ok(MigrationHash(arr))
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <Vec<u8> as postgres_types::FromSql>::accepts(ty)
+    }
+}
+
 fn hash_from_str(s: &str) -> Result<[u8; 32], crate::Error> {
     if !s.is_ascii() {
         return Err(Error::invalid_hash("not ascii"));
@@ -122,5 +152,35 @@ impl std::str::FromStr for CommitHash {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         hash_from_str(s).map(CommitHash)
+    }
+}
+
+impl postgres_types::ToSql for CommitHash {
+    fn to_sql(
+        &self,
+        ty: &postgres_types::Type,
+        buf: &mut bytes::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        self.as_bytes().to_sql(ty, buf)
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <Vec<u8> as postgres_types::ToSql>::accepts(ty)
+    }
+
+    postgres_types::to_sql_checked!();
+}
+
+impl<'a> postgres_types::FromSql<'a> for CommitHash {
+    fn from_sql(
+        ty: &postgres_types::Type,
+        buf: &'a [u8],
+    ) -> Result<Self, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let bytes = <Vec<u8> as postgres_types::FromSql>::from_sql(ty, buf)?;
+        let mut arr = [0; 32];
+        arr.copy_from_slice(&bytes);
+        Ok(CommitHash(arr))
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        <Vec<u8> as postgres_types::FromSql>::accepts(ty)
     }
 }

@@ -1,3 +1,4 @@
+use akroyd::sync_client::Client;
 use akroyd_migrate::*;
 
 fn main() {
@@ -9,7 +10,12 @@ fn try_main() -> Result<(), Error> {
     let mut local_repo = fs_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
-    let mut db_repo = plan::DbRepo;
+    let mut client = Client::connect(
+        "host=localhost user=akroyd_test password=akroyd_test",
+        tokio_postgres::NoTls,
+    )?;
+
+    let mut db_repo = db2::DatabaseRepo::new(&mut client)?;
     println!("DB: {db_repo:?}");
 
     let plan = plan::Plan::from_db_and_local(&mut db_repo, &mut local_repo)?;
@@ -22,6 +28,7 @@ fn try_main() -> Result<(), Error> {
 enum Error {
     Check(fs::CheckError),
     Plan(plan::PlanError),
+    Db(tokio_postgres::Error),
 }
 
 impl From<fs::CheckError> for Error {
@@ -33,5 +40,11 @@ impl From<fs::CheckError> for Error {
 impl From<plan::PlanError> for Error {
     fn from(err: plan::PlanError) -> Self {
         Error::Plan(err)
+    }
+}
+
+impl From<tokio_postgres::Error> for Error {
+    fn from(err: tokio_postgres::Error) -> Self {
+        Error::Db(err)
     }
 }

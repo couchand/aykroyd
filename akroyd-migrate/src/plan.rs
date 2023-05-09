@@ -1,67 +1,6 @@
+use crate::db2::DatabaseRepo;
 use crate::hash2::{CommitHash, MigrationHash};
 use crate::traits::{Repo, Commit};
-
-#[derive(Debug)]
-pub struct DbRepo;
-
-impl Repo for DbRepo {
-    type Commit = DbCommit;
-
-    fn head(&self) -> CommitHash {
-        "1234567890123456789012345678901234567890123456789012345678900000".parse().unwrap()
-    }
-
-    fn commit(&self, commit: &CommitHash) -> Option<DbCommit> {
-        let hash1 = "1234567890123456789012345678901234567890123456789012345678900000".parse().unwrap();
-        if *commit == hash1 {
-            Some(DbCommit)
-        } else {
-            None
-        }
-    }
-
-    fn rollback(&self, hash: &MigrationHash) -> Option<String> {
-        let hash1 = "1234567890123456789012345678901234567890123456789012345678901234".parse().unwrap();
-        if *hash == hash1 {
-            Some("DROP TABLE emails".into())
-        } else {
-            None
-        }
-    }
-}
-
-impl DbRepo {
-    fn apply(&mut self, plan: &Plan) {
-        plan.verify().unwrap();
-
-        todo!()
-    }
-}
-
-#[derive(Debug)]
-pub struct DbCommit;
-
-impl Commit for DbCommit {
-    fn commit_hash(&self) -> CommitHash {
-        todo!()
-    }
-
-    fn parent(&self) -> CommitHash {
-        "45f27016543e7ecf16eb52ab920f7ba91f87bf2863c39578f10b6c8722cebffa".parse().unwrap()
-    }
-
-    fn migration_name(&self) -> String {
-        todo!()
-    }
-
-    fn migration_text(&self) -> String {
-        todo!()
-    }
-
-    fn migration_hash(&self) -> MigrationHash {
-        "1234567890123456789012345678901234567890123456789012345678901234".parse().unwrap()
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Plan {
@@ -97,7 +36,7 @@ impl Plan {
         Ok(())
     }
 
-    pub fn from_db_and_local<Local: Repo>(db: &mut DbRepo, local: &mut Local) -> Result<Self, PlanError> {
+    pub fn from_db_and_local<Local: Repo>(db: &mut DatabaseRepo, local: &mut Local) -> Result<Self, PlanError> {
         let db_head = db.head();
         let local_head = local.head();
 
