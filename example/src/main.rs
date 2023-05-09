@@ -1,3 +1,4 @@
+use akroyd::sync_client::Client;
 use akroyd_migrate::*;
 
 static MIGRATIONS: embedded::EmbeddedRepo = include_migrations!();
@@ -8,8 +9,6 @@ fn main() {
 
 #[cfg(feature = "full")]
 fn try_main() -> Result<(), Error> {
-    use akroyd::sync_client::Client;
-
     println!("Loading embedded migrations...");
     let mut local_repo = MIGRATIONS.load();
     println!("{local_repo:?}");
@@ -55,8 +54,6 @@ fn try_main() -> Result<(), Error> {
 
 #[cfg(feature = "lite")]
 fn try_main() -> Result<(), Error> {
-    use akroyd::sync_client::Client;
-
     let mut client = Client::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         tokio_postgres::NoTls,
