@@ -1,67 +1,56 @@
 //! Embedded migrations are the ones within your released app to migrate the production database.
 
-use crate::Error;
-use crate::hash::MigrationHash;
+use crate::fs::FsRepo;
+use crate::hash::{CommitHash, MigrationHash};
+use crate::local::{LocalCommit, LocalRepo};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EmbeddedMigration {
+    pub parent: &'static str,
     pub name: &'static str,
-    pub deps: &'static [&'static str],
     pub text: &'static str,
 }
 
 impl EmbeddedMigration {
-    pub fn text_hash(&self) -> MigrationHash {
-        MigrationHash::from_content(self.text)
+    pub fn hash(&self) -> MigrationHash {
+        MigrationHash::from_name_and_text(self.name, self.text)
     }
 
-    pub fn hash(&self) -> Result<MigrationHash, Error> {
-        Ok(MigrationHash::from_deps_and_hash(&self.deps()?, &self.text_hash()))
+    pub fn parent(&self) -> CommitHash {
+        if self.parent.is_empty() {
+            CommitHash::default()
+        } else {
+            self.parent.parse().unwrap()
+        }
     }
 
-    pub fn deps(&self) -> Result<Vec<MigrationHash>, Error> {
-        self.deps.iter().map(|dep| dep.parse()).collect()
-    }
-
-    pub fn name(&self) -> &str {
-        self.name
+    pub fn commit(&self) -> CommitHash {
+        CommitHash::from_parent_and_hash(&self.parent(), &self.hash())
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct EmbeddedMigrations {
+pub struct EmbeddedRepo {
+    pub head: &'static str,
     pub migrations: &'static [EmbeddedMigration],
 }
 
-#[derive(Debug)]
-pub struct EmbeddedRepo {
-    commits: std::collections::HashMap<MigrationHash, EmbeddedMigration>,
-}
-
 impl EmbeddedRepo {
-    pub fn load(embedded: &EmbeddedMigrations) -> Result<EmbeddedRepo, Error> {
-        let commits = embedded.migrations
+    pub fn load(&self) -> LocalRepo {
+        let head = self.head.parse().unwrap();
+        let commits = self.migrations
             .iter()
-            .map(|migration| migration.hash().map(|hash| (hash, *migration)))
-            .collect::<Result<_, _>>()?;
+            .map(|migration| {
+                LocalCommit {
+                    parent: migration.parent(),
+                    name: migration.name.to_string(),
+                    migration_text: migration.text.to_string(),
+                    rollback_text: None, // TODO
+                }
+            })
+            .collect();
 
-        Ok(EmbeddedRepo { commits })
-    }
-
-    pub fn contains(&self, hash: &MigrationHash) -> bool {
-        self.commits.contains_key(hash)
-    }
-
-    pub fn get(&self, hash: &MigrationHash) -> Option<&EmbeddedMigration> {
-        self.commits.get(hash)
-    }
-
-    pub fn take(&mut self, hash: &MigrationHash) -> Option<EmbeddedMigration> {
-        self.commits.remove(hash)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &EmbeddedMigration> {
-        self.commits.values()
+        LocalRepo { head, commits }
     }
 }
 
@@ -98,28 +87,31 @@ impl EmbeddedRepoBuilder {
         let out_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).join(
             self.output.unwrap_or_else(|| std::path::PathBuf::from("akroyd-migrations.rs"))
         );
-        let repo = crate::local::LocalRepo::load(&repo_dir).unwrap();
+        let repo = FsRepo::new(&repo_dir).into_local().unwrap();
 
         let mut code = String::new();
 
-        code.push_str("::akroyd_migrate::embedded::EmbeddedMigrations {\n");
+        code.push_str("::akroyd_migrate::embedded::EmbeddedRepo {\n");
+
+        code.push_str("    head: ");
+        code.push_str(&format!("{:?}", repo.head.to_string()));
+        code.push_str(",\n");
+
         code.push_str("    migrations: &[\n");
 
-        for migration in repo.iter() {
+        for migration in &repo.commits {
             code.push_str("        ::akroyd_migrate::embedded::EmbeddedMigration {\n");
 
-            code.push_str("            name: ");
-            code.push_str(&format!("{:?}", migration.dir.file_name().unwrap()));
+            code.push_str("            parent: ");
+            code.push_str(&format!("{:?}", migration.parent.to_string()));
             code.push_str(",\n");
 
-            code.push_str("            deps: &[");
-            for dep in &migration.up_deps {
-                code.push_str(&format!("{:?}", dep.to_string()));
-            }
-            code.push_str("],\n");
+            code.push_str("            name: ");
+            code.push_str(&format!("{:?}", migration.name));
+            code.push_str(",\n");
 
             code.push_str("            text: ");
-            code.push_str(&format!("{:?}", migration.up.text));
+            code.push_str(&format!("{:?}", migration.migration_text));
             code.push_str(",\n");
 
             code.push_str("        },\n");
@@ -136,4 +128,17 @@ impl Default for EmbeddedRepoBuilder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[macro_export]
+macro_rules! include_migrations {
+    (
+    ) => {
+        include!(concat!(env!("OUT_DIR"), "/akroyd-migrations.rs"));
+    };
+    (
+        $filename:literal
+    ) => {
+        include!(concat!(env!("OUT_DIR"), "/", $filename));
+    };
 }

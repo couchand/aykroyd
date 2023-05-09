@@ -1,5 +1,5 @@
-use crate::hash2::{CommitHash, MigrationHash};
-use crate::local2::{LocalRepo, LocalCommit};
+use crate::hash::{CommitHash, MigrationHash};
+use crate::local::{LocalRepo, LocalCommit};
 
 pub struct FsRepo {
     migrations_dir: std::path::PathBuf,

@@ -1,4 +1,4 @@
-use crate::hash2::{CommitHash, MigrationHash};
+use crate::hash::{CommitHash, MigrationHash};
 
 pub trait Repo {
     type Commit: Commit;

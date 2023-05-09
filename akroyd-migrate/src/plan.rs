@@ -1,5 +1,5 @@
-use crate::db2::DatabaseRepo;
-use crate::hash2::{CommitHash, MigrationHash};
+use crate::db::DatabaseRepo;
+use crate::hash::{CommitHash, MigrationHash};
 use crate::traits::{Repo, Commit};
 
 #[derive(Debug, Clone)]

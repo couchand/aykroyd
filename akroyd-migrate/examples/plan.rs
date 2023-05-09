@@ -15,7 +15,7 @@ fn try_main() -> Result<(), Error> {
         tokio_postgres::NoTls,
     )?;
 
-    let mut db_repo = db2::DatabaseRepo::new(&mut client)?;
+    let mut db_repo = db::DatabaseRepo::new(&mut client)?;
     println!("DB: {db_repo:?}");
 
     let plan = plan::Plan::from_db_and_local(&mut db_repo, &mut local_repo)?;
