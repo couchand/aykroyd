@@ -1,8 +1,10 @@
 //! Database access and migrations in the database.
 
 use crate::hash::{CommitHash, MigrationHash};
+use crate::local::LocalRepo;
 use crate::plan::{MigrationStep, Plan, RollbackStep};
 use crate::traits::{Commit, Repo};
+use crate::Error;
 
 use akroyd::*;
 use chrono::{DateTime, Utc};
@@ -167,6 +169,17 @@ impl<'a> DatabaseRepo<'a> {
         Ok(DatabaseRepo { txn, head, migrations, rollbacks })
     }
 
+    /// Fast-forward the database to the given LocalRepo, if possible.
+    pub fn fast_forward_to(mut self, local_repo: &mut LocalRepo) -> Result<(), Error> {
+        let plan = Plan::from_db_and_local(&mut self, local_repo)?;
+
+        if !plan.is_empty() && plan.is_fast_forward() {
+            self.apply(&plan)?;
+        }
+
+        Ok(())
+    }
+
     /// Apply the given plan to the database.
     pub fn apply(mut self, plan: &Plan) -> Result<(), tokio_postgres::Error> {
         assert!(self.head() == plan.db_head);
@@ -229,6 +242,10 @@ impl<'a> std::fmt::Debug for DatabaseRepo<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "DatabaseRepo")
     }
+}
+
+pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<(), Error> {
+    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
 }
 
 impl<'a> Repo for DatabaseRepo<'a> {

@@ -6,6 +6,7 @@ fn main() {
     try_main().unwrap()
 }
 
+#[cfg(feature = "full")]
 fn try_main() -> Result<(), Error> {
     use akroyd::sync_client::Client;
 
@@ -52,3 +53,18 @@ fn try_main() -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(feature = "lite")]
+fn try_main() -> Result<(), Error> {
+    use akroyd::sync_client::Client;
+
+    let mut client = Client::connect(
+        "host=localhost user=akroyd_test password=akroyd_test",
+        tokio_postgres::NoTls,
+    )?;
+
+    println!("Migrating database...");
+    db::fast_forward_migrate(&mut client, MIGRATIONS.load()).unwrap();
+
+    println!("Done.");
+    Ok(())
+}

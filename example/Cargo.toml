@@ -3,6 +3,10 @@ name = "example"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+full = []
+lite = []
+
 [dependencies]
 akroyd = { version = "0.1", features = ["sync"], path = "../akroyd" }
 akroyd-migrate = { path = "../akroyd-migrate" }
