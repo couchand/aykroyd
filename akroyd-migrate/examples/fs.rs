@@ -5,11 +5,11 @@ fn main() {
 }
 
 fn try_main() -> Result<(), fs::CheckError> {
-    let mut fs_repo = fs::FsRepo::new("./migrations");
+    let fs_repo = fs::FsRepo::new("./migrations");
 
-    fs_repo.check()?;
+    let local_repo = fs_repo.into_local()?;
 
-    println!("{fs_repo:?}");
+    println!("{local_repo:?}");
 
     Ok(())
 }

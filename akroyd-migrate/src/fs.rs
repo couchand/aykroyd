@@ -1,4 +1,5 @@
 use crate::hash2::{CommitHash, MigrationHash};
+use crate::local2::{LocalRepo, LocalCommit};
 
 pub struct FsRepo {
     migrations_dir: std::path::PathBuf,
@@ -80,6 +81,39 @@ impl FsRepo {
         migration.set_parent_name(&head_name)?;
         self.set_head_name(migration.name())?;
         Ok(())
+    }
+
+    pub fn into_local(mut self) -> Result<LocalRepo, CheckError> {
+        // n.b. this check validates each unwrap below
+        // TODO: parse, don't validate
+        self.check()?;
+
+        let head = self.migration(self.head_name().unwrap())
+            .map_err(CheckError::Io)?
+            .unwrap()
+            .commit()
+            .map_err(CheckError::Io)?;
+
+        let commits = self.migrations()
+            .map_err(CheckError::Io)?
+            .into_iter()
+            .filter(|migration| migration.is_committed().unwrap())
+            .map(|migration| {
+                let parent = if let Some(parent_name) = migration.parent_name()? {
+                    let parent = self.migration(parent_name)?.unwrap();
+                    parent.commit()?
+                } else {
+                    CommitHash::default()
+                };
+                let name = migration.name().to_string();
+                let migration_text = migration.migration_text()?.unwrap_or_default();
+                let rollback_text = migration.rollback_text()?;
+                Ok(LocalCommit { parent, name, migration_text, rollback_text })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(CheckError::Io)?;
+
+        Ok(LocalRepo { head, commits })
     }
 
     pub fn check(&mut self) -> Result<(), CheckError> {
