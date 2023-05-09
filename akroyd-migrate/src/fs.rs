@@ -5,29 +5,6 @@ pub struct FsRepo {
     migrations_dir: std::path::PathBuf,
 }
 
-// TODO: this is a bad idea
-impl std::fmt::Debug for FsRepo {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut migrations = vec![];
-        for migration in self.migrations().unwrap() {
-            migrations.push(format!(
-                "{name} - {commit} - {hash}\n    {text}",
-                name = migration.name(),
-                commit = migration.commit().unwrap(),
-                hash = migration.hash().unwrap(),
-                text = migration.migration_text().unwrap().unwrap_or_default().replace('\n', "\n    "),
-            ));
-        }
-        writeln!(
-            f,
-            "{dir}/\n  HEAD: {head}\n  - {migrations}",
-            dir = self.migrations_dir.display(),
-            head = self.head_name().as_ref().map(AsRef::as_ref).unwrap_or("<no commits>"),
-            migrations = migrations.join("\n  - "),
-        )
-    }
-}
-
 impl FsRepo {
     pub fn new<P: AsRef<std::path::Path>>(migrations_dir: P) -> Self {
         let migrations_dir = migrations_dir.as_ref().into();
