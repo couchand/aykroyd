@@ -1,6 +1,7 @@
 pub mod db;
 pub mod db2;
 pub mod embedded;
+pub mod embedded2;
 pub mod fs;
 pub mod hash;
 pub mod hash2;

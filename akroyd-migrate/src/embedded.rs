@@ -137,16 +137,3 @@ impl Default for EmbeddedRepoBuilder {
         Self::new()
     }
 }
-
-#[macro_export]
-macro_rules! include_migrations {
-    (
-    ) => {
-        include!(concat!(env!("OUT_DIR"), "/akroyd-migrations.rs"));
-    };
-    (
-        $filename:literal
-    ) => {
-        include!(concat!(env!("OUT_DIR"), "/", $filename));
-    };
-}

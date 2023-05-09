@@ -74,7 +74,6 @@ impl FsRepo {
         let commits = self.migrations()
             .map_err(CheckError::Io)?
             .into_iter()
-            .filter(|migration| migration.is_committed().unwrap())
             .map(|migration| {
                 let parent = if let Some(parent_name) = migration.parent_name()? {
                     let parent = self.migration(parent_name)?.unwrap();

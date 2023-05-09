@@ -12,6 +12,13 @@ pub struct Plan {
 }
 
 impl Plan {
+    pub fn is_empty(&self) -> bool {
+        let heads_eq = self.local_head == self.db_head;
+        let vec_empty = self.rollbacks.is_empty() && self.migrations.is_empty();
+        assert_eq!(heads_eq, vec_empty);
+        heads_eq
+    }
+
     pub fn verify(&self) -> Result<(), String> {
         let mut head = self.db_head.clone();
         for (i, rollback) in self.rollbacks.iter().enumerate() {
@@ -40,7 +47,7 @@ impl Plan {
         let db_head = db.head();
         let local_head = local.head();
 
-        let (merge_base, rollbacks) = if local.commit(&db_head).is_some() {
+        let (merge_base, rollbacks) = if db_head.is_zero() || local.commit(&db_head).is_some() {
             (db_head.clone(), vec![])
         } else {
             let mut rollbacks = vec![];
