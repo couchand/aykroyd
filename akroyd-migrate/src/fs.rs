@@ -98,6 +98,13 @@ impl FsRepo {
             migration.check_hash()?;
         }
 
+        if let Some(head_name) = self.head_name() {
+            let head_path = self.migrations_dir.join(head_name);
+            if !head_path.try_exists().map_err(CheckError::Io)? {
+                std::fs::remove_file(self.head_path()).map_err(CheckError::Io)?;
+            }
+        }
+
         if self.head_name().is_none() {
             self.guess_head()?;
         }
@@ -323,7 +330,7 @@ impl FsMigration {
             let name_change = self.migration_dir.metadata()?.st_ctime();
             let text_change = self.migration_text_path().metadata()?.st_mtime();
             let hash_change = self.hash_path().metadata()?.st_mtime();
-            
+
             if hash_change >= name_change && hash_change >= text_change {
                 return Ok(());
             }
@@ -331,5 +338,195 @@ impl FsMigration {
         
         let hash = MigrationHash::from_name_and_text(self.name(), &self.migration_text()?.unwrap_or_default());
         self.set_hash(hash)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn tmp_dir() -> std::path::PathBuf {
+        let now = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_nanos();
+        let dir = std::env::temp_dir().join("akroyd-tests").join(format!("tst{now}"));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn test_hash(name: &str, text: &str) {
+        let dir = tmp_dir();
+
+        let migration_dir = dir.join(name);
+        std::fs::create_dir(&migration_dir).unwrap();
+
+        let migration_text = migration_dir.join("up.sql");
+        std::fs::write(migration_text, text).unwrap();
+
+        let mut repo = FsRepo::new(dir);
+        repo.check().unwrap();
+
+        let migration = repo.migration(name).unwrap().unwrap();
+        let actual = migration.hash().unwrap();
+
+        let expected = MigrationHash::from_name_and_text(name, text);
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn hash_simple() {
+        test_hash(
+            "create-table-users",
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+        );
+        test_hash(
+            "create-table-users",
+            "CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  name TEXT\n)",
+        );
+    }
+
+    fn test_hash_update(name: &str, text: &str) {
+        let dir = tmp_dir();
+
+        let migration_dir = dir.join(name);
+        std::fs::create_dir_all(&migration_dir).unwrap();
+
+        let migration_text = migration_dir.join("up.sql");
+        std::fs::write(&migration_text, "ORIGINAL SQL TEXT").unwrap();
+
+        let mut repo = FsRepo::new(&dir);
+        repo.check().unwrap();
+
+        std::thread::sleep(std::time::Duration::from_secs(1)); // TODO: ns
+        std::fs::write(&migration_text, text).unwrap();
+
+        repo.check().unwrap();
+
+        let migration = repo.migration(name).unwrap().unwrap();
+        let actual = migration.hash().unwrap();
+
+        let expected = MigrationHash::from_name_and_text(name, text);
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn hash_updates() {
+        test_hash_update(
+            "create-table-users",
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+        );
+        test_hash_update(
+            "create-table-users",
+            "CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  name TEXT\n)",
+        );
+    }
+
+    fn test_hash_rename(name: &str, text: &str) {
+        let dir = tmp_dir();
+
+        let migration_dir = dir.join("ORIGINAL-NAME");
+        std::fs::create_dir_all(&migration_dir).unwrap();
+
+        let migration_text = migration_dir.join("up.sql");
+        std::fs::write(&migration_text, text).unwrap();
+
+        let mut repo = FsRepo::new(&dir);
+        repo.check().unwrap();
+
+        std::thread::sleep(std::time::Duration::from_secs(1)); // TODO: ns
+        std::fs::rename(migration_dir, dir.join(name)).unwrap();
+
+        repo.check().unwrap();
+
+        let migration = repo.migration(name).unwrap().unwrap();
+        let actual = migration.hash().unwrap();
+
+        let expected = MigrationHash::from_name_and_text(name, text);
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn hash_renames() {
+        test_hash_rename(
+            "create-table-users",
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+        );
+        test_hash_rename(
+            "create-table-users",
+            "CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  name TEXT\n)",
+        );
+    }
+
+    fn test_commit(commits: Vec<(&str, &str)>) {
+        let dir = tmp_dir();
+
+        let mut parent_name = "";
+        let mut parent = CommitHash::default();
+        let mut expecteds = vec![];
+
+        for (name, text) in &commits {
+            let migration_dir = dir.join(name);
+            std::fs::create_dir(&migration_dir).unwrap();
+
+            let migration_text = migration_dir.join("up.sql");
+            std::fs::write(migration_text, text).unwrap();
+
+            let parent_file = migration_dir.join(".parent");
+            std::fs::write(parent_file, parent_name).unwrap();
+
+            let hash = MigrationHash::from_name_and_text(name, text);
+            let commit = CommitHash::from_parent_and_hash(&parent, &hash);
+
+            expecteds.push((name, commit.clone()));
+
+            parent = commit;
+            parent_name = name;
+        }
+        assert_eq!(expecteds.len(), commits.len());
+
+        let mut repo = FsRepo::new(dir);
+        repo.check().unwrap();
+
+        for (name, expected) in expecteds {
+            let migration = repo.migration(name).unwrap().unwrap();
+            let actual = migration.commit().unwrap();
+
+            assert_eq!(actual.to_string(), expected.to_string());
+        }
+    }
+
+    #[test]
+    fn commit_simple() {
+        test_commit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+        ]);
+        test_commit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+            (
+                "create-table-emails",
+                "CREATE TABLE emails (id SERIAL PRIMARY KEY, user INT REFERENCES users)",
+            ),
+        ]);
+        test_commit(vec![
+            (
+                "create-table-users",
+                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+            ),
+            (
+                "create-table-emails",
+                "CREATE TABLE emails (id SERIAL PRIMARY KEY, user_id INT REFERENCES users)",
+            ),
+            (
+                "add-email-column",
+                "ALTER TABLE emails ADD email TEXT; UPDATE emails LEFT JOIN users ON user_id = users.id SET emails.email = users.name; ALTER COLUMN emails.email SET NOT NULL;",
+            ),
+        ]);
     }
 }
