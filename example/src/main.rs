@@ -46,9 +46,12 @@ fn try_main() -> Result<(), Error> {
         println!("Applying....");
 
         db_repo.apply(&plan).unwrap();
+
+        println!("Done.");
+    } else {
+        println!("Nothing to do.");
     }
 
-    println!("Done.");
     Ok(())
 }
 

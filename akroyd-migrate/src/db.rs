@@ -9,121 +9,50 @@ use crate::Error;
 use akroyd::*;
 use chrono::{DateTime, Utc};
 
-#[derive(QueryOne)]
-#[query(row((String, bool)), text = "
-SELECT table_name, is_insertable_into::BOOL
-FROM information_schema.tables
-WHERE table_name = $1
-")]
-pub struct IsInsertable<'a> {
-    pub table_name: &'a str,
-}
-
 #[derive(Statement)]
 #[query(text = "
-CREATE TABLE migration_text2 (
-    hash BYTEA PRIMARY KEY,
-    name TEXT NOT NULL,
-    text TEXT NOT NULL
-)
-")]
-pub struct CreateTableMigrationText;
-
-#[derive(Statement)]
-#[query(text = "
-CREATE TABLE rollback_text2 (
-    hash BYTEA PRIMARY KEY,
-    text TEXT NOT NULL
-)
-")]
-pub struct CreateTableRollbackText;
-
-#[derive(Statement)]
-#[query(text = "
-CREATE TABLE migration_commit2 (
+CREATE TABLE IF NOT EXISTS migrations (
     commit BYTEA PRIMARY KEY,
-    parent BYTEA REFERENCES migration_commit2,
-    hash BYTEA NOT NULL REFERENCES migration_text2,
+    parent BYTEA REFERENCES migrations,
+    hash BYTEA NOT NULL,
+    name TEXT NOT NULL,
+    text TEXT NOT NULL,
+    rollback TEXT,
     created_on TIMESTAMPTZ NOT NULL
 )
 ")]
-pub struct CreateTableMigrationCommit;
-
-#[derive(Debug, Clone, FromRow)]
-pub struct Head {
-    pub commit: CommitHash,
-}
-
-#[derive(QueryOne)]
-#[query(
-    text = "
-        SELECT c1.commit AS commit
-        FROM migration_commit2 c1
-        LEFT JOIN migration_commit2 c2 ON c1.commit = c2.parent
-        WHERE c2.commit IS NULL
-    ",
-    row(Head),
-)]
-pub struct QueryHead;
+pub struct CreateTableMigrations;
 
 #[derive(Debug, Clone, FromRow)]
 pub struct DatabaseMigration {
     pub commit: CommitHash,
     pub parent: Option<CommitHash>,
     pub hash: MigrationHash,
-    pub name: Option<String>,
-    pub text: Option<String>,
+    pub name: String,
+    pub text: String,
+    pub rollback: Option<String>,
     pub created_on: DateTime<Utc>,
 }
 
 #[derive(Query)]
-#[query(
-    text = "
-        SELECT commit, parent, migration_commit2.hash AS hash, migration_text2.name AS name, migration_text2.text AS text, created_on
-        FROM migration_commit2
-        LEFT JOIN migration_text2 ON migration_commit2.hash = migration_text2.hash
-    ",
-    row(DatabaseMigration)
-)]
+#[query(row(DatabaseMigration), text = "SELECT commit, parent, hash, name, text, rollback, created_on FROM migrations")]
 pub struct AllMigrations;
 
-#[derive(Debug, Clone, FromRow)]
-pub struct DatabaseRollback {
-    pub hash: MigrationHash,
-    pub text: String,
-}
-
-#[derive(Query)]
-#[query(text = "SELECT hash, text FROM rollback_text2", row(DatabaseRollback))]
-pub struct AllRollbacks;
-
 #[derive(Statement)]
-#[query(text = "INSERT INTO migration_text2 (hash, name, text) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")]
-pub struct InsertMigrationText<'a> {
-    pub hash: &'a MigrationHash,
-    pub name: &'a str,
-    pub text: &'a str,
-}
-
-#[derive(Statement)]
-#[query(text = "INSERT INTO rollback_text2 (hash, text) VALUES ($1, $2) ON CONFLICT (hash) DO UPDATE SET text = excluded.text")]
-pub struct InsertRollbackText<'a> {
-    pub hash: &'a MigrationHash,
-    pub text: &'a str,
-}
-
-#[derive(Statement)]
-#[query(text = "INSERT INTO migration_commit2 (commit, parent, hash, created_on) VALUES ($1, $2, $3, $4)")]
-pub struct InsertMigrationCommit<'a> {
+#[query(text = "INSERT INTO migrations (commit, parent, hash, name, text, rollback, created_on) VALUES ($1, $2, $3, $4, $5, $6, $7)")]
+pub struct InsertMigration<'a> {
     pub commit: &'a CommitHash,
     pub parent: Option<&'a CommitHash>,
     pub hash: &'a MigrationHash,
+    pub name: &'a str,
+    pub text: &'a str,
+    pub rollback: Option<&'a str>,
     pub created_on: DateTime<Utc>,
 }
 
 #[derive(Statement)]
-#[query(text = "DELETE FROM migration_commit2 WHERE commit = $1")]
-pub struct DeleteMigrationCommit<'a> {
+#[query(text = "DELETE FROM migrations WHERE commit = $1")]
+pub struct DeleteMigration<'a> {
     pub commit: &'a CommitHash,
 }
 
@@ -131,7 +60,6 @@ pub struct DatabaseRepo<'a> {
     txn: akroyd::sync_client::Transaction<'a>,
     head: Option<CommitHash>,
     migrations: Option<Vec<DatabaseMigration>>,
-    rollbacks: Option<Vec<DatabaseRollback>>,
 }
 
 impl<'a> DatabaseRepo<'a> {
@@ -139,34 +67,11 @@ impl<'a> DatabaseRepo<'a> {
     pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, tokio_postgres::Error> {
         let mut txn = client.transaction()?;
 
-        match txn.query_opt(&IsInsertable { table_name: "migration_text2" })? {
-            None => {
-                txn.execute(&CreateTableMigrationText)?;
-            }
-            Some((_, false)) => panic!("DB config issue!"),
-            _ => {}
-        }
-
-        match txn.query_opt(&IsInsertable { table_name: "rollback_text2" })? {
-            None => {
-                txn.execute(&CreateTableRollbackText)?;
-            }
-            Some((_, false)) => panic!("DB config issue!"),
-            _ => {}
-        }
-
-        match txn.query_opt(&IsInsertable { table_name: "migration_commit2" })? {
-            None => {
-                txn.execute(&CreateTableMigrationCommit)?;
-            }
-            Some((_, false)) => panic!("DB config issue!"),
-            _ => {}
-        }
+        txn.execute(&CreateTableMigrations)?;
 
         let head = None;
         let migrations = None;
-        let rollbacks = None;
-        Ok(DatabaseRepo { txn, head, migrations, rollbacks })
+        Ok(DatabaseRepo { txn, head, migrations })
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
@@ -201,7 +106,7 @@ impl<'a> DatabaseRepo<'a> {
 
         self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
 
-        self.txn.execute(&DeleteMigrationCommit {
+        self.txn.execute(&DeleteMigration {
             commit: &step.commit(),
         })?;
 
@@ -214,25 +119,15 @@ impl<'a> DatabaseRepo<'a> {
 
         self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
 
-        self.txn.execute(&InsertMigrationText {
-            hash: &step.hash(),
-            name: &step.name,
-            text: &step.text,
-        })?;
-
-        self.txn.execute(&InsertMigrationCommit {
+        self.txn.execute(&InsertMigration {
             commit: &step.commit(),
             parent: if step.parent.is_zero() { None } else { Some(&step.parent) },
             hash: &step.hash(),
+            name: &step.name,
+            text: &step.text,
+            rollback: step.rollback.as_ref().map(AsRef::as_ref),
             created_on: Utc::now(),
         })?;
-
-        if let Some(rollback) = step.rollback.as_ref() {
-            self.txn.execute(&InsertRollbackText {
-                hash: &step.hash(),
-                text: rollback,
-            })?;
-        }
 
         Ok(())
     }
@@ -255,7 +150,17 @@ impl<'a> Repo for DatabaseRepo<'a> {
             return commit.clone();
         }
 
-        if let Some(migrations) = self.migrations.as_ref() {
+        if self.migrations.is_none() {
+            let migrations = self.txn.query(&AllMigrations).unwrap(); // TODO
+
+            self.migrations = Some(migrations);
+        }
+
+        let migrations = self.migrations.as_ref().unwrap();
+
+        let head = if migrations.is_empty() {
+            CommitHash::default()
+        } else {
             let mut commits = migrations.iter().map(|m| &m.commit).collect::<Vec<_>>();
             for migration in migrations {
                 if let Some(parent) = migration.parent.as_ref() {
@@ -263,16 +168,10 @@ impl<'a> Repo for DatabaseRepo<'a> {
                 }
             }
             assert_eq!(commits.len(), 1);
-            self.head = Some(commits[0].clone());
-            return commits[0].clone();
-        }
-
-        let head = match self.txn.query_opt(&QueryHead).unwrap() { // TODO
-            Some(head) => head.commit,
-            None => CommitHash::default(),
+            commits[0].clone()
         };
         self.head = Some(head.clone());
-        head
+        return head;
     }
 
     fn commit(&mut self, commit: &CommitHash) -> Option<Self::Commit> {
@@ -291,18 +190,18 @@ impl<'a> Repo for DatabaseRepo<'a> {
     }
 
     fn rollback(&mut self, hash: &MigrationHash) -> Option<String> {
-        if self.rollbacks.is_none() {
-            let rollbacks = self.txn.query(&AllRollbacks).unwrap(); // TODO
+        if self.migrations.is_none() {
+            let migrations = self.txn.query(&AllMigrations).unwrap(); // TODO
 
-            self.rollbacks = Some(rollbacks);
+            self.migrations = Some(migrations);
         }
 
-        self.rollbacks
+        self.migrations
             .as_ref()
             .unwrap()
             .iter()
             .find(|r| r.hash == *hash)
-            .map(|r| r.text.to_string())
+            .and_then(|r| r.rollback.clone())
     }
 }
 
@@ -316,11 +215,11 @@ impl Commit for DatabaseMigration {
     }
 
     fn migration_name(&self) -> String {
-        self.name.clone().unwrap_or_default()
+        self.name.clone()
     }
 
     fn migration_text(&self) -> String {
-        self.text.clone().unwrap_or_default()
+        self.text.clone()
     }
 
     fn migration_hash(&self) -> MigrationHash {
