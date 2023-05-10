@@ -34,7 +34,7 @@ impl Plan {
             head = rollback.parent.clone();
         }
         if head != self.merge_base {
-            return Err(format!("Merge base not reached!"));
+            return Err("Merge base not reached!".into());
         }
         for (i, migration) in self.migrations.iter().enumerate() {
             if migration.parent != head {
@@ -43,7 +43,7 @@ impl Plan {
             head = migration.commit();
         }
         if head != self.local_head {
-            return Err(format!("Local head not reached!"));
+            return Err("Local head not reached!".into());
         }
 
         Ok(())
@@ -69,7 +69,7 @@ impl Plan {
 
                 let commit = db
                     .commit(&head)
-                    .ok_or_else(|| PlanError::MissingCommit(RepoSource::Database, head))?;
+                    .ok_or(PlanError::MissingCommit(RepoSource::Database, head))?;
                 head = commit.parent();
 
                 let hash = commit.migration_hash();
@@ -106,7 +106,7 @@ impl Plan {
         while head != merge_base {
             let commit = local
                 .commit(&head)
-                .ok_or_else(|| PlanError::MissingCommit(RepoSource::Local, head))?;
+                .ok_or(PlanError::MissingCommit(RepoSource::Local, head))?;
             head = commit.parent();
             migrations.push(MigrationStep {
                 parent: commit.parent(),

@@ -141,7 +141,7 @@ impl FsRepo {
                         None => None,
                         Some(parent_name) => self.migration(&parent_name)?.map(Some).ok_or(
                             CheckError::UnknownMigration {
-                                name: parent_name.into(),
+                                name: parent_name,
                                 child: migration_name.clone(),
                             },
                         )?,
@@ -506,7 +506,7 @@ mod test {
         std::fs::create_dir_all(&migration_dir).unwrap();
 
         let migration_text = migration_dir.join("up.sql");
-        std::fs::write(&migration_text, text).unwrap();
+        std::fs::write(migration_text, text).unwrap();
 
         let mut repo = FsRepo::new(&dir);
         repo.check().unwrap();

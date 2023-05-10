@@ -84,7 +84,7 @@ impl<Txn> DbRepo<Txn> {
             let mut commits = migrations.iter().map(|m| &m.commit).collect::<Vec<_>>();
             for migration in &migrations {
                 if let Some(parent) = migration.parent.as_ref() {
-                    commits = commits.into_iter().filter(|c| *c != parent).collect();
+                    commits.retain(|c| *c != parent);
                 }
             }
             if commits.len() != 1 {
