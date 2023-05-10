@@ -1,13 +1,15 @@
+#[cfg(feature = "sync")]
 use akroyd::sync_client::Client;
 use akroyd_migrate::*;
 
 static MIGRATIONS: embedded::EmbeddedRepo = include_migrations!();
 
+#[cfg(feature = "sync")]
 fn main() {
     try_main().unwrap()
 }
 
-#[cfg(feature = "full")]
+#[cfg(all(feature = "full", feature = "sync"))]
 fn try_main() -> Result<(), Error> {
     println!("Loading embedded migrations...");
     let mut local_repo = MIGRATIONS.load();
@@ -19,7 +21,7 @@ fn try_main() -> Result<(), Error> {
     )?;
 
     println!("Loading from database...");
-    let mut db_repo = db::DatabaseRepo::new(&mut client).unwrap();
+    let mut db_repo = db::DatabaseRepo::from_client(&mut client).unwrap();
     println!("{db_repo:?}");
 
     let plan = plan::Plan::from_db_and_local(&mut db_repo, &mut local_repo)?;
@@ -55,7 +57,7 @@ fn try_main() -> Result<(), Error> {
     Ok(())
 }
 
-#[cfg(feature = "lite")]
+#[cfg(all(feature = "lite", feature = "sync"))]
 fn try_main() -> Result<(), Error> {
     let mut client = Client::connect(
         "host=localhost user=akroyd_test password=akroyd_test",
