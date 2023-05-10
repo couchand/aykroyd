@@ -3,6 +3,7 @@ members = [
     "akroyd",
     "akroyd-derive",
     "akroyd-migrate",
+    "bb8-akroyd",
     "example",
 ]
 
