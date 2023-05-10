@@ -58,8 +58,8 @@ pub struct DeleteMigration<'a> {
 
 pub struct DatabaseRepo<'a> {
     txn: akroyd::sync_client::Transaction<'a>,
-    head: Option<CommitHash>,
-    migrations: Option<Vec<DatabaseMigration>>,
+    head: CommitHash,
+    migrations: Vec<DatabaseMigration>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,13 +70,28 @@ pub enum MergeStatus {
 
 impl<'a> DatabaseRepo<'a> {
     /// Construct a new DatabaseRepo wrapping the provided client.
-    pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, tokio_postgres::Error> {
+    pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, Error> {
         let mut txn = client.transaction()?;
 
         txn.execute(&CreateTableMigrations)?;
+        let migrations = txn.query(&AllMigrations)?;
 
-        let head = None;
-        let migrations = None;
+        let head = if migrations.is_empty() {
+            CommitHash::default()
+        } else {
+            let mut commits = migrations.iter().map(|m| &m.commit).collect::<Vec<_>>();
+            for migration in &migrations {
+                if let Some(parent) = migration.parent.as_ref() {
+                    commits = commits.into_iter().filter(|c| *c != parent).collect();
+                }
+            }
+            if commits.len() != 1 {
+                let commits = commits.into_iter().map(ToString::to_string).collect::<Vec<_>>();
+                return Err(Error::multiple_heads(&commits.join(", ")));
+            }
+            commits[0].clone()
+        };
+
         Ok(DatabaseRepo { txn, head, migrations })
     }
 
@@ -155,62 +170,26 @@ pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_
     DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
 }
 
+#[cfg(feature = "async")]
+pub fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<(), Error> {
+    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
+}
+
 impl<'a> Repo for DatabaseRepo<'a> {
     type Commit = DatabaseMigration;
-    fn head(&mut self) -> CommitHash {
-        if let Some(commit) = self.head.as_ref() {
-            return commit.clone();
-        }
-
-        if self.migrations.is_none() {
-            let migrations = self.txn.query(&AllMigrations).unwrap(); // TODO
-
-            self.migrations = Some(migrations);
-        }
-
-        let migrations = self.migrations.as_ref().unwrap();
-
-        let head = if migrations.is_empty() {
-            CommitHash::default()
-        } else {
-            let mut commits = migrations.iter().map(|m| &m.commit).collect::<Vec<_>>();
-            for migration in migrations {
-                if let Some(parent) = migration.parent.as_ref() {
-                    commits = commits.into_iter().filter(|c| *c != parent).collect();
-                }
-            }
-            assert_eq!(commits.len(), 1);
-            commits[0].clone()
-        };
-        self.head = Some(head.clone());
-        return head;
+    fn head(&self) -> CommitHash {
+        self.head.clone()
     }
 
-    fn commit(&mut self, commit: &CommitHash) -> Option<Self::Commit> {
-        if self.migrations.is_none() {
-            let migrations = self.txn.query(&AllMigrations).unwrap(); // TODO
-
-            self.migrations = Some(migrations);
-        }
-
+    fn commit(&self, commit: &CommitHash) -> Option<Self::Commit> {
         self.migrations
-            .as_ref()
-            .unwrap()
             .iter()
             .find(|c| c.commit == *commit)
             .cloned()
     }
 
-    fn rollback(&mut self, hash: &MigrationHash) -> Option<String> {
-        if self.migrations.is_none() {
-            let migrations = self.txn.query(&AllMigrations).unwrap(); // TODO
-
-            self.migrations = Some(migrations);
-        }
-
+    fn rollback(&self, hash: &MigrationHash) -> Option<String> {
         self.migrations
-            .as_ref()
-            .unwrap()
             .iter()
             .find(|r| r.hash == *hash)
             .and_then(|r| r.rollback.clone())

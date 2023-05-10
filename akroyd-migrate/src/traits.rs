@@ -2,9 +2,9 @@ use crate::hash::{CommitHash, MigrationHash};
 
 pub trait Repo {
     type Commit: Commit;
-    fn head(&mut self) -> CommitHash;
-    fn commit(&mut self, commit: &CommitHash) -> Option<Self::Commit>;
-    fn rollback(&mut self, hash: &MigrationHash) -> Option<String>;
+    fn head(&self) -> CommitHash;
+    fn commit(&self, commit: &CommitHash) -> Option<Self::Commit>;
+    fn rollback(&self, hash: &MigrationHash) -> Option<String>;
 }
 
 pub trait Commit {

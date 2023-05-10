@@ -9,18 +9,18 @@ pub struct LocalRepo {
 
 impl Repo for LocalRepo {
     type Commit = LocalCommit;
-    fn head(&mut self) -> CommitHash {
+    fn head(&self) -> CommitHash {
         self.head.clone()
     }
 
-    fn commit(&mut self, commit: &CommitHash) -> Option<Self::Commit> {
+    fn commit(&self, commit: &CommitHash) -> Option<Self::Commit> {
         self.commits
             .iter()
             .find(|c| c.commit_hash() == *commit)
             .cloned()
     }
 
-    fn rollback(&mut self, hash: &MigrationHash) -> Option<String> {
+    fn rollback(&self, hash: &MigrationHash) -> Option<String> {
         self.commits
             .iter()
             .find(|c| c.migration_hash() == *hash)

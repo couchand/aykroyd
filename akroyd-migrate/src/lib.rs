@@ -20,6 +20,7 @@ impl std::fmt::Display for Error {
             ErrorKind::Planning => write!(f, "planning error: {detail}"),
             ErrorKind::Db => write!(f, "db error: {detail}"),
             ErrorKind::Divergence => write!(f, "unable to fast-forward: {detail}"),
+            ErrorKind::MultipleHeads => write!(f, "multiple heads: {detail}"),
         }
     }
 }
@@ -40,6 +41,13 @@ impl Error {
             detail: Some(detail.into()),
         }
     }
+
+    fn multiple_heads(detail: &str) -> Self {
+        Error {
+            kind: ErrorKind::MultipleHeads,
+            detail: Some(detail.into()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -48,6 +56,7 @@ enum ErrorKind {
     Planning,
     Db,
     Divergence,
+    MultipleHeads,
 }
 
 impl From<plan::PlanError> for Error {
