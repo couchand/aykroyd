@@ -46,7 +46,7 @@ impl Plan {
         Ok(())
     }
 
-    pub fn from_db_and_local<Database: Repo, Local: Repo>(db: &mut Database, local: &mut Local) -> Result<Self, PlanError> {
+    pub fn from_db_and_local<Database: Repo, Local: Repo>(db: &Database, local: &Local) -> Result<Self, PlanError> {
         let db_head = db.head();
         let local_head = local.head();
 

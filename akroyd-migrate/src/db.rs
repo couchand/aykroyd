@@ -2,7 +2,9 @@
 
 use crate::hash::{CommitHash, MigrationHash};
 use crate::local::LocalRepo;
-use crate::plan::{MigrationStep, Plan, RollbackStep};
+use crate::plan::Plan;
+#[cfg(any(feature = "sync", feature = "async"))]
+use crate::plan::{MigrationStep, RollbackStep};
 use crate::traits::{Commit, Repo};
 use crate::Error;
 
@@ -56,6 +58,7 @@ pub struct DeleteMigration<'a> {
     pub commit: &'a CommitHash,
 }
 
+#[cfg_attr(all(not(feature = "sync"), not(feature = "async")), allow(dead_code))]
 pub struct DatabaseRepo<Txn> {
     txn: Txn,
     head: CommitHash,
@@ -68,14 +71,8 @@ pub enum MergeStatus {
     Done,
 }
 
-impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
-    /// Construct a new DatabaseRepo wrapping the provided client.
-    pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, Error> {
-        let mut txn = client.transaction()?;
-
-        txn.execute(&CreateTableMigrations)?;
-        let migrations = txn.query(&AllMigrations)?;
-
+impl<Txn> DatabaseRepo<Txn> {
+    pub fn new(txn: Txn, migrations: Vec<DatabaseMigration>) -> Result<Self, Error> {
         let head = if migrations.is_empty() {
             CommitHash::default()
         } else {
@@ -94,26 +91,46 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
 
         Ok(DatabaseRepo { txn, head, migrations })
     }
+}
 
-    /// Fast-forward the database to the given LocalRepo, if possible.
-    pub fn fast_forward_to(mut self, local_repo: &mut LocalRepo) -> Result<MergeStatus, Error> {
-        let plan = Plan::from_db_and_local(&mut self, local_repo)?;
-
-        if plan.is_empty() {
-            return Ok(MergeStatus::NothingToDo);
-        }
+impl<Txn> DatabaseRepo<Txn> where Self: Repo {
+    pub fn fast_forward_plan(&self, local_repo: &LocalRepo) -> Result<Plan, Error> {
+        let plan = Plan::from_db_and_local(self, local_repo)?;
 
         if !plan.is_fast_forward() {
             return Err(Error::divergence(&format!("refusing to run {} rollbacks", plan.rollbacks.len())));
         }
 
-        self.apply(&plan)?;
+        Ok(plan)
+    }
+}
 
+#[cfg(feature = "sync")]
+impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
+    /// Construct a new DatabaseRepo wrapping the provided client.
+    pub fn from_client(client: &'a mut akroyd::sync_client::Client) -> Result<Self, Error> {
+        let mut txn = client.transaction()?;
+
+        txn.execute(&CreateTableMigrations)?;
+        let migrations = txn.query(&AllMigrations)?;
+
+        DatabaseRepo::new(txn, migrations)
+    }
+
+    /// Fast-forward the database to the given LocalRepo, if possible.
+    pub fn fast_forward_to(self, local_repo: &mut LocalRepo) -> Result<MergeStatus, Error> {
+        let plan = self.fast_forward_plan(local_repo)?;
+
+        if plan.is_empty() {
+            return Ok(MergeStatus::NothingToDo);
+        }
+
+        self.apply(&plan)?;
         Ok(MergeStatus::Done)
     }
 
     /// Apply the given plan to the database.
-    pub fn apply(mut self, plan: &Plan) -> Result<(), tokio_postgres::Error> {
+    pub fn apply(mut self, plan: &Plan) -> Result<(), Error> {
         assert!(self.head() == plan.db_head);
 
         for rollback in &plan.rollbacks {
@@ -124,7 +141,9 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
             self.apply_migration(migration)?;
         }
 
-        self.txn.commit()
+        self.txn.commit()?;
+
+        Ok(())
     }
 
     fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
@@ -166,13 +185,14 @@ impl<Txn> std::fmt::Debug for DatabaseRepo<Txn> {
     }
 }
 
+#[cfg(feature = "sync")]
 pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
+    DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo)
 }
 
 #[cfg(feature = "async")]
 pub async fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo).await
+    DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo).await
 }
 
 impl<Txn> Repo for DatabaseRepo<Txn> {

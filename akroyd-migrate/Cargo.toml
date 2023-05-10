@@ -3,8 +3,12 @@ name = "akroyd-migrate"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+sync = ["akroyd/sync"]
+async = ["akroyd/async"]
+
 [dependencies]
-akroyd = { version = "0.1", features = ["derive", "sync"], path = "../akroyd" }
+akroyd = { version = "0.1", features = ["derive"], path = "../akroyd" }
 
 bytes = "1"
 chrono = "0.4"
