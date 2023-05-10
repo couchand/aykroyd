@@ -19,6 +19,7 @@ impl std::fmt::Display for Error {
             ErrorKind::InvalidHash => write!(f, "invalid hash: {detail}"),
             ErrorKind::Planning => write!(f, "planning error: {detail}"),
             ErrorKind::Db => write!(f, "db error: {detail}"),
+            ErrorKind::Divergence => write!(f, "unable to fast-forward: {detail}"),
         }
     }
 }
@@ -32,6 +33,13 @@ impl Error {
             detail: Some(detail.into()),
         }
     }
+
+    fn divergence(detail: &str) -> Self {
+        Error {
+            kind: ErrorKind::Divergence,
+            detail: Some(detail.into()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -39,6 +47,7 @@ enum ErrorKind {
     InvalidHash,
     Planning,
     Db,
+    Divergence,
 }
 
 impl From<plan::PlanError> for Error {

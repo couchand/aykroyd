@@ -62,6 +62,12 @@ pub struct DatabaseRepo<'a> {
     migrations: Option<Vec<DatabaseMigration>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MergeStatus {
+    NothingToDo,
+    Done,
+}
+
 impl<'a> DatabaseRepo<'a> {
     /// Construct a new DatabaseRepo wrapping the provided client.
     pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, tokio_postgres::Error> {
@@ -75,14 +81,20 @@ impl<'a> DatabaseRepo<'a> {
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
-    pub fn fast_forward_to(mut self, local_repo: &mut LocalRepo) -> Result<(), Error> {
+    pub fn fast_forward_to(mut self, local_repo: &mut LocalRepo) -> Result<MergeStatus, Error> {
         let plan = Plan::from_db_and_local(&mut self, local_repo)?;
 
-        if !plan.is_empty() && plan.is_fast_forward() {
-            self.apply(&plan)?;
+        if plan.is_empty() {
+            return Ok(MergeStatus::NothingToDo);
         }
 
-        Ok(())
+        if !plan.is_fast_forward() {
+            return Err(Error::divergence(&format!("refusing to run {} rollbacks", plan.rollbacks.len())));
+        }
+
+        self.apply(&plan)?;
+
+        Ok(MergeStatus::Done)
     }
 
     /// Apply the given plan to the database.
@@ -139,7 +151,7 @@ impl<'a> std::fmt::Debug for DatabaseRepo<'a> {
     }
 }
 
-pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<(), Error> {
+pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
     DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
 }
 

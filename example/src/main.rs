@@ -63,8 +63,10 @@ fn try_main() -> Result<(), Error> {
     )?;
 
     println!("Migrating database...");
-    db::fast_forward_migrate(&mut client, MIGRATIONS.load()).unwrap();
+    match db::fast_forward_migrate(&mut client, MIGRATIONS.load()).unwrap() {
+        akroyd_migrate::db::MergeStatus::NothingToDo => println!("Nothing to do."),
+        akroyd_migrate::db::MergeStatus::Done => println!("Done."),
+    }
 
-    println!("Done.");
     Ok(())
 }
