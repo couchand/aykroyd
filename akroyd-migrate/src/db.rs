@@ -129,6 +129,10 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
         Ok(MergeStatus::Done)
     }
 
+    pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
+        DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo)
+    }
+
     /// Apply the given plan to the database.
     pub fn apply(mut self, plan: &Plan) -> Result<(), Error> {
         assert!(self.head() == plan.db_head);
@@ -203,6 +207,10 @@ impl<'a> DatabaseRepo<akroyd::async_client::Transaction<'a>> {
         Ok(MergeStatus::Done)
     }
 
+    pub async fn fast_forward_migrate(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
+        DatabaseRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
+    }
+
     /// Apply the given plan to the database.
     pub async fn apply(mut self, plan: &Plan) -> Result<(), Error> {
         assert!(self.head() == plan.db_head);
@@ -257,16 +265,6 @@ impl<Txn> std::fmt::Debug for DatabaseRepo<Txn> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "DatabaseRepo")
     }
-}
-
-#[cfg(feature = "sync")]
-pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-    DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo)
-}
-
-#[cfg(feature = "async")]
-pub async fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-    DatabaseRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
 }
 
 impl<Txn> Repo for DatabaseRepo<Txn> {
