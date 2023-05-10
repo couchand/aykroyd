@@ -1,4 +1,3 @@
-use crate::db::DatabaseRepo;
 use crate::hash::{CommitHash, MigrationHash};
 use crate::traits::{Repo, Commit};
 
@@ -47,7 +46,7 @@ impl Plan {
         Ok(())
     }
 
-    pub fn from_db_and_local<Local: Repo>(db: &mut DatabaseRepo, local: &mut Local) -> Result<Self, PlanError> {
+    pub fn from_db_and_local<Database: Repo, Local: Repo>(db: &mut Database, local: &mut Local) -> Result<Self, PlanError> {
         let db_head = db.head();
         let local_head = local.head();
 

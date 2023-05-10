@@ -56,8 +56,8 @@ pub struct DeleteMigration<'a> {
     pub commit: &'a CommitHash,
 }
 
-pub struct DatabaseRepo<'a> {
-    txn: akroyd::sync_client::Transaction<'a>,
+pub struct DatabaseRepo<Txn> {
+    txn: Txn,
     head: CommitHash,
     migrations: Vec<DatabaseMigration>,
 }
@@ -68,7 +68,7 @@ pub enum MergeStatus {
     Done,
 }
 
-impl<'a> DatabaseRepo<'a> {
+impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
     /// Construct a new DatabaseRepo wrapping the provided client.
     pub fn new(client: &'a mut akroyd::sync_client::Client) -> Result<Self, Error> {
         let mut txn = client.transaction()?;
@@ -160,7 +160,7 @@ impl<'a> DatabaseRepo<'a> {
     }
 }
 
-impl<'a> std::fmt::Debug for DatabaseRepo<'a> {
+impl<Txn> std::fmt::Debug for DatabaseRepo<Txn> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "DatabaseRepo")
     }
@@ -171,11 +171,11 @@ pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_
 }
 
 #[cfg(feature = "async")]
-pub fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<(), Error> {
-    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo)
+pub async fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
+    DatabaseRepo::new(client)?.fast_forward_to(&mut local_repo).await
 }
 
-impl<'a> Repo for DatabaseRepo<'a> {
+impl<Txn> Repo for DatabaseRepo<Txn> {
     type Commit = DatabaseMigration;
     fn head(&self) -> CommitHash {
         self.head.clone()
