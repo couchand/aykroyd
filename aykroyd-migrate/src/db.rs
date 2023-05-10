@@ -175,7 +175,7 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
         // TODO: configurable logging
         println!("Rolling back {}...", step.target);
 
-        self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
+        self.txn.as_mut().batch_execute(&step.text)?; // TODO: the errors from this should be handled differently
 
         self.txn.execute(&DeleteMigration {
             commit: &step.commit(),
@@ -188,7 +188,7 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
         // TODO: configurable logging
         println!("Applying {}...", step.name);
 
-        self.txn.as_mut().execute(&step.text, &[])?; // TODO: the errors from this should be handled differently
+        self.txn.as_mut().batch_execute(&step.text)?; // TODO: the errors from this should be handled differently
 
         self.txn.execute(&InsertMigration {
             commit: &step.commit(),
@@ -265,7 +265,7 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
         // TODO: configurable logging
         println!("Rolling back {}...", step.target);
 
-        self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
+        self.txn.as_mut().batch_execute(&step.text).await?; // TODO: the errors from this should be handled differently
 
         self.txn
             .execute(&DeleteMigration {
@@ -280,7 +280,7 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
         // TODO: configurable logging
         println!("Applying {}...", step.name);
 
-        self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
+        self.txn.as_mut().batch_execute(&step.text).await?; // TODO: the errors from this should be handled differently
 
         self.txn
             .execute(&InsertMigration {
