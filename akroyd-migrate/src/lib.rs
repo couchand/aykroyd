@@ -18,7 +18,8 @@ impl std::fmt::Display for Error {
         match &self.kind {
             ErrorKind::InvalidHash => write!(f, "invalid hash: {detail}"),
             ErrorKind::Planning => write!(f, "planning error: {detail}"),
-            ErrorKind::Db => write!(f, "db error: {detail}"),
+            ErrorKind::Db => write!(f, "db repo error: {detail}"),
+            ErrorKind::Fs => write!(f, "fs repo error: {detail}"),
             ErrorKind::Divergence => write!(f, "unable to fast-forward: {detail}"),
             ErrorKind::MultipleHeads => write!(f, "multiple heads: {detail}"),
         }
@@ -55,6 +56,7 @@ enum ErrorKind {
     InvalidHash,
     Planning,
     Db,
+    Fs,
     Divergence,
     MultipleHeads,
 }
@@ -72,6 +74,15 @@ impl From<tokio_postgres::Error> for Error {
     fn from(err: tokio_postgres::Error) -> Self {
         Error {
             kind: ErrorKind::Db,
+            detail: Some(err.to_string()),
+        }
+    }
+}
+
+impl From<fs::CheckError> for Error {
+    fn from(err: fs::CheckError) -> Self {
+        Error {
+            kind: ErrorKind::Fs,
             detail: Some(err.to_string()),
         }
     }

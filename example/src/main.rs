@@ -23,7 +23,7 @@ fn try_main() -> Result<(), Error> {
     )?;
 
     println!("Loading from database...");
-    let db_repo = db::DatabaseRepo::from_client(&mut client)?;
+    let db_repo = db::DbRepo::from_client(&mut client)?;
     println!("{db_repo:?}");
 
     let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
@@ -67,7 +67,7 @@ fn try_main() -> Result<(), Error> {
     )?;
 
     println!("Migrating database...");
-    match db::DatabaseRepo::fast_forward_migrate(&mut client, MIGRATIONS.load())? {
+    match db::DbRepo::fast_forward_migrate(&mut client, MIGRATIONS.load())? {
         db::MergeStatus::NothingToDo => println!("Nothing to do."),
         db::MergeStatus::Done => println!("Done."),
     }
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Error> {
     });
 
     println!("Migrating database...");
-    match db::DatabaseRepo::fast_forward_migrate(&mut client, MIGRATIONS.load()).await? {
+    match db::DbRepo::fast_forward_migrate(&mut client, MIGRATIONS.load()).await? {
         db::MergeStatus::NothingToDo => println!("Nothing to do."),
         db::MergeStatus::Done => println!("Done."),
     }
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Error> {
     println!("{local_repo:?}");
 
     println!("Loading from database...");
-    let db_repo = db::DatabaseRepo::from_client(&mut client).await?;
+    let db_repo = db::DbRepo::from_client(&mut client).await?;
     println!("{db_repo:?}");
 
     let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;

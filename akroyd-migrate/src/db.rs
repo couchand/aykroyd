@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS migrations (
 pub struct CreateTableMigrations;
 
 #[derive(Debug, Clone, FromRow)]
-pub struct DatabaseMigration {
+pub struct DbMigration {
     pub commit: CommitHash,
     pub parent: Option<CommitHash>,
     pub hash: MigrationHash,
@@ -37,7 +37,7 @@ pub struct DatabaseMigration {
 }
 
 #[derive(Query)]
-#[query(row(DatabaseMigration), text = "SELECT commit, parent, hash, name, text, rollback, created_on FROM migrations")]
+#[query(row(DbMigration), text = "SELECT commit, parent, hash, name, text, rollback, created_on FROM migrations")]
 pub struct AllMigrations;
 
 #[derive(Statement)]
@@ -59,10 +59,10 @@ pub struct DeleteMigration<'a> {
 }
 
 #[cfg_attr(all(not(feature = "sync"), not(feature = "async")), allow(dead_code))]
-pub struct DatabaseRepo<Txn> {
+pub struct DbRepo<Txn> {
     txn: Txn,
     head: CommitHash,
-    migrations: Vec<DatabaseMigration>,
+    migrations: Vec<DbMigration>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,8 +71,8 @@ pub enum MergeStatus {
     Done,
 }
 
-impl<Txn> DatabaseRepo<Txn> {
-    pub fn new(txn: Txn, migrations: Vec<DatabaseMigration>) -> Result<Self, Error> {
+impl<Txn> DbRepo<Txn> {
+    pub fn new(txn: Txn, migrations: Vec<DbMigration>) -> Result<Self, Error> {
         let head = if migrations.is_empty() {
             CommitHash::default()
         } else {
@@ -89,11 +89,11 @@ impl<Txn> DatabaseRepo<Txn> {
             commits[0].clone()
         };
 
-        Ok(DatabaseRepo { txn, head, migrations })
+        Ok(DbRepo { txn, head, migrations })
     }
 }
 
-impl<Txn> DatabaseRepo<Txn> where Self: Repo {
+impl<Txn> DbRepo<Txn> where Self: Repo {
     pub fn fast_forward_plan(&self, local_repo: &LocalRepo) -> Result<Plan, Error> {
         let plan = Plan::from_db_and_local(self, local_repo)?;
 
@@ -106,15 +106,15 @@ impl<Txn> DatabaseRepo<Txn> where Self: Repo {
 }
 
 #[cfg(feature = "sync")]
-impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
-    /// Construct a new DatabaseRepo wrapping the provided client.
+impl<'a> DbRepo<akroyd::sync_client::Transaction<'a>> {
+    /// Construct a new DbRepo wrapping the provided client.
     pub fn from_client(client: &'a mut akroyd::sync_client::Client) -> Result<Self, Error> {
         let mut txn = client.transaction()?;
 
         txn.execute(&CreateTableMigrations)?;
         let migrations = txn.query(&AllMigrations)?;
 
-        DatabaseRepo::new(txn, migrations)
+        DbRepo::new(txn, migrations)
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
@@ -130,7 +130,7 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
     }
 
     pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-        DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo)
+        DbRepo::from_client(client)?.fast_forward_to(&mut local_repo)
     }
 
     /// Apply the given plan to the database.
@@ -184,15 +184,15 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
 }
 
 #[cfg(feature = "async")]
-impl<'a> DatabaseRepo<akroyd::async_client::Transaction<'a>> {
-    /// Construct a new DatabaseRepo wrapping the provided client.
-    pub async fn from_client(client: &'a mut akroyd::async_client::Client) -> Result<DatabaseRepo<akroyd::async_client::Transaction<'a>>, Error> {
+impl<'a> DbRepo<akroyd::async_client::Transaction<'a>> {
+    /// Construct a new DbRepo wrapping the provided client.
+    pub async fn from_client(client: &'a mut akroyd::async_client::Client) -> Result<DbRepo<akroyd::async_client::Transaction<'a>>, Error> {
         let mut txn = client.transaction().await?;
 
         txn.execute(&CreateTableMigrations).await?;
         let migrations = txn.query(&AllMigrations).await?;
 
-        DatabaseRepo::new(txn, migrations)
+        DbRepo::new(txn, migrations)
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
@@ -208,7 +208,7 @@ impl<'a> DatabaseRepo<akroyd::async_client::Transaction<'a>> {
     }
 
     pub async fn fast_forward_migrate(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-        DatabaseRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
+        DbRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
     }
 
     /// Apply the given plan to the database.
@@ -261,14 +261,14 @@ impl<'a> DatabaseRepo<akroyd::async_client::Transaction<'a>> {
     }
 }
 
-impl<Txn> std::fmt::Debug for DatabaseRepo<Txn> {
+impl<Txn> std::fmt::Debug for DbRepo<Txn> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "DatabaseRepo")
+        write!(f, "DbRepo")
     }
 }
 
-impl<Txn> Repo for DatabaseRepo<Txn> {
-    type Commit = DatabaseMigration;
+impl<Txn> Repo for DbRepo<Txn> {
+    type Commit = DbMigration;
     fn head(&self) -> CommitHash {
         self.head.clone()
     }
@@ -288,7 +288,7 @@ impl<Txn> Repo for DatabaseRepo<Txn> {
     }
 }
 
-impl Commit for DatabaseMigration {
+impl Commit for DbMigration {
     fn commit_hash(&self) -> CommitHash {
         self.commit.clone()
     }

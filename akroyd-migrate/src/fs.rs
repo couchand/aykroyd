@@ -203,6 +203,15 @@ impl From<std::io::Error> for CheckError {
     }
 }
 
+impl std::fmt::Display for CheckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            CheckError::Io(err) => write!(f, "unhandled i/o error: {err}"),
+            CheckError::UnknownMigration { name, child } => write!(f, "missing migration {name} parent of {child}"),
+        }
+    }
+}
+
 pub struct FsMigration {
     migration_dir: std::path::PathBuf,
 }

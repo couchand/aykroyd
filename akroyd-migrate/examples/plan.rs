@@ -1,13 +1,18 @@
+#[cfg(feature = "async")]
+use akroyd::async_client::connect;
+#[cfg(feature = "sync")]
 use akroyd::sync_client::Client;
 use akroyd_migrate::*;
 
+#[cfg(feature = "sync")]
 fn main() {
     try_main().unwrap()
 }
 
+#[cfg(feature = "sync")]
 fn try_main() -> Result<(), Error> {
     let fs_repo = fs::FsRepo::new("./migrations");
-    let mut local_repo = fs_repo.into_local()?;
+    let local_repo = fs_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
     let mut client = Client::connect(
@@ -15,42 +20,50 @@ fn try_main() -> Result<(), Error> {
         tokio_postgres::NoTls,
     )?;
 
-    let mut db_repo = db::DatabaseRepo::new(&mut client)?;
+    let db_repo = db::DbRepo::from_client(&mut client)?;
     println!("DB: {db_repo:?}");
 
-    let plan = plan::Plan::from_db_and_local(&mut db_repo, &mut local_repo)?;
+    let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
     println!("Plan: {plan:?}");
 
     println!("Applying....");
 
-    db_repo.apply(&plan).unwrap();
+    db_repo.apply(&plan)?;
 
     println!("Done.");
 
     Ok(())
 }
 
-#[derive(Debug)]
-enum Error {
-    Check(fs::CheckError),
-    Plan(plan::PlanError),
-    Db(tokio_postgres::Error),
-}
+#[cfg(all(feature = "async"))]
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    let (mut client, connection) = connect(
+        "host=localhost user=akroyd_test password=akroyd_test",
+        tokio_postgres::NoTls,
+    ).await?;
 
-impl From<fs::CheckError> for Error {
-    fn from(err: fs::CheckError) -> Self {
-        Error::Check(err)
-    }
-}
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
 
-impl From<plan::PlanError> for Error {
-    fn from(err: plan::PlanError) -> Self {
-        Error::Plan(err)
-    }
-}
+    let fs_repo = fs::FsRepo::new("./migrations");
+    let local_repo = fs_repo.into_local()?;
+    println!("Local: {local_repo:?}");
 
-impl From<tokio_postgres::Error> for Error {
-    fn from(err: tokio_postgres::Error) -> Self {
-        Error::Db(err)
-    }
+    let db_repo = db::DbRepo::from_client(&mut client).await?;
+    println!("DB: {db_repo:?}");
+
+    let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
+    println!("Plan: {plan:?}");
+
+    println!("Applying....");
+
+    db_repo.apply(&plan).await?;
+
+    println!("Done.");
+
+    Ok(())
 }
