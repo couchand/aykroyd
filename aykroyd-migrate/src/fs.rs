@@ -72,12 +72,16 @@ impl FsRepo {
         // OTOH: being able to work with a half-validated structure (e.g. in guess_head) is useful
         self.check()?;
 
-        let head = self
-            .migration(self.head_name().unwrap())
-            .map_err(CheckError::Io)?
-            .unwrap()
-            .commit()
-            .map_err(CheckError::Io)?;
+        let head = match self.head_name() {
+            None => CommitHash::default(),
+            Some(head_name) => {
+                self.migration(head_name)
+                    .map_err(CheckError::Io)?
+                    .unwrap()
+                    .commit()
+                    .map_err(CheckError::Io)?
+            }
+        };
 
         let commits = self
             .migrations()
