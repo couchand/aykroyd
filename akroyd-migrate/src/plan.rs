@@ -1,5 +1,5 @@
 use crate::hash::{CommitHash, MigrationHash};
-use crate::traits::{Repo, Commit};
+use crate::traits::{Commit, Repo};
 
 #[derive(Debug, Clone)]
 pub struct Plan {
@@ -26,7 +26,10 @@ impl Plan {
         let mut head = self.db_head.clone();
         for (i, rollback) in self.rollbacks.iter().enumerate() {
             if rollback.commit() != head {
-                return Err(format!("Rollback {i} (from {:?}) does not cleanly apply!", rollback.source));
+                return Err(format!(
+                    "Rollback {i} (from {:?}) does not cleanly apply!",
+                    rollback.source
+                ));
             }
             head = rollback.parent.clone();
         }
@@ -46,7 +49,10 @@ impl Plan {
         Ok(())
     }
 
-    pub fn from_db_and_local<Database: Repo, Local: Repo>(db: &Database, local: &Local) -> Result<Self, PlanError> {
+    pub fn from_db_and_local<Database: Repo, Local: Repo>(
+        db: &Database,
+        local: &Local,
+    ) -> Result<Self, PlanError> {
         let db_head = db.head();
         let local_head = local.head();
 
@@ -61,7 +67,9 @@ impl Plan {
                     break;
                 }
 
-                let commit = db.commit(&head).ok_or_else(|| PlanError::MissingCommit(RepoSource::Database, head))?;
+                let commit = db
+                    .commit(&head)
+                    .ok_or_else(|| PlanError::MissingCommit(RepoSource::Database, head))?;
                 head = commit.parent();
 
                 let hash = commit.migration_hash();
@@ -75,19 +83,17 @@ impl Plan {
                             parent: commit.parent(),
                         });
                     }
-                    None => {
-                        match local.rollback(&hash) {
-                            Some(rollback) => {
-                                rollbacks.push(RollbackStep {
-                                    target: hash,
-                                    source: RepoSource::Local,
-                                    text: rollback,
-                                    parent: commit.parent(),
-                                });
-                            }
-                            None => return Err(PlanError::MissingRollback(hash)),
+                    None => match local.rollback(&hash) {
+                        Some(rollback) => {
+                            rollbacks.push(RollbackStep {
+                                target: hash,
+                                source: RepoSource::Local,
+                                text: rollback,
+                                parent: commit.parent(),
+                            });
                         }
-                    }
+                        None => return Err(PlanError::MissingRollback(hash)),
+                    },
                 }
             }
 
@@ -98,7 +104,9 @@ impl Plan {
         let mut head = local_head.clone();
 
         while head != merge_base {
-            let commit = local.commit(&head).ok_or_else(|| PlanError::MissingCommit(RepoSource::Local, head))?;
+            let commit = local
+                .commit(&head)
+                .ok_or_else(|| PlanError::MissingCommit(RepoSource::Local, head))?;
             head = commit.parent();
             migrations.push(MigrationStep {
                 parent: commit.parent(),
@@ -129,9 +137,15 @@ pub enum PlanError {
 impl std::fmt::Display for PlanError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            PlanError::MissingCommit(RepoSource::Database, commit) => write!(f, "Unable to find commit in database: {commit}"),
-            PlanError::MissingCommit(RepoSource::Local, commit) => write!(f, "Unable to find commit locally: {commit}"),
-            PlanError::MissingRollback(hash) => write!(f, "Unable to find rollback for migration: {hash}"),
+            PlanError::MissingCommit(RepoSource::Database, commit) => {
+                write!(f, "Unable to find commit in database: {commit}")
+            }
+            PlanError::MissingCommit(RepoSource::Local, commit) => {
+                write!(f, "Unable to find commit locally: {commit}")
+            }
+            PlanError::MissingRollback(hash) => {
+                write!(f, "Unable to find rollback for migration: {hash}")
+            }
         }
     }
 }

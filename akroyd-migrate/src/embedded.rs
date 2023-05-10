@@ -39,15 +39,14 @@ pub struct EmbeddedRepo {
 impl EmbeddedRepo {
     pub fn load(&self) -> LocalRepo {
         let head = self.head.parse().unwrap();
-        let commits = self.migrations
+        let commits = self
+            .migrations
             .iter()
-            .map(|migration| {
-                LocalCommit {
-                    parent: migration.parent(),
-                    name: migration.name.to_string(),
-                    migration_text: migration.text.to_string(),
-                    rollback_text: migration.rollback.map(|s| s.to_string()),
-                }
+            .map(|migration| LocalCommit {
+                parent: migration.parent(),
+                name: migration.name.to_string(),
+                migration_text: migration.text.to_string(),
+                rollback_text: migration.rollback.map(|s| s.to_string()),
             })
             .collect();
 
@@ -79,14 +78,21 @@ impl EmbeddedRepoBuilder {
     }
 
     pub fn build(self) -> Result<(), std::io::Error> {
-        let repo_dir = self.dir.unwrap_or_else(|| std::path::PathBuf::from("./migrations"));
+        let repo_dir = self
+            .dir
+            .unwrap_or_else(|| std::path::PathBuf::from("./migrations"));
 
-        assert!(repo_dir.exists(), "Unable to find migration directory: {}", repo_dir.display());
+        assert!(
+            repo_dir.exists(),
+            "Unable to find migration directory: {}",
+            repo_dir.display()
+        );
 
         println!("cargo:rerun-if-changed={}", repo_dir.display());
 
         let out_file = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).join(
-            self.output.unwrap_or_else(|| std::path::PathBuf::from("akroyd-migrations.rs"))
+            self.output
+                .unwrap_or_else(|| std::path::PathBuf::from("akroyd-migrations.rs")),
         );
         let repo = FsRepo::new(&repo_dir).into_local().unwrap();
 

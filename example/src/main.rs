@@ -81,7 +81,8 @@ async fn main() -> Result<(), Error> {
     let (mut client, connection) = connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         tokio_postgres::NoTls,
-    ).await?;
+    )
+    .await?;
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
@@ -104,7 +105,8 @@ async fn main() -> Result<(), Error> {
     let (mut client, connection) = connect(
         "host=localhost user=akroyd_test password=akroyd_test",
         tokio_postgres::NoTls,
-    ).await?;
+    )
+    .await?;
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {

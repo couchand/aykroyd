@@ -37,11 +37,16 @@ pub struct DbMigration {
 }
 
 #[derive(Query)]
-#[query(row(DbMigration), text = "SELECT commit, parent, hash, name, text, rollback, created_on FROM migrations")]
+#[query(
+    row(DbMigration),
+    text = "SELECT commit, parent, hash, name, text, rollback, created_on FROM migrations"
+)]
 pub struct AllMigrations;
 
 #[derive(Statement)]
-#[query(text = "INSERT INTO migrations (commit, parent, hash, name, text, rollback, created_on) VALUES ($1, $2, $3, $4, $5, $6, $7)")]
+#[query(
+    text = "INSERT INTO migrations (commit, parent, hash, name, text, rollback, created_on) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+)]
 pub struct InsertMigration<'a> {
     pub commit: &'a CommitHash,
     pub parent: Option<&'a CommitHash>,
@@ -83,22 +88,35 @@ impl<Txn> DbRepo<Txn> {
                 }
             }
             if commits.len() != 1 {
-                let commits = commits.into_iter().map(ToString::to_string).collect::<Vec<_>>();
+                let commits = commits
+                    .into_iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>();
                 return Err(Error::multiple_heads(&commits.join(", ")));
             }
             commits[0].clone()
         };
 
-        Ok(DbRepo { txn, head, migrations })
+        Ok(DbRepo {
+            txn,
+            head,
+            migrations,
+        })
     }
 }
 
-impl<Txn> DbRepo<Txn> where Self: Repo {
+impl<Txn> DbRepo<Txn>
+where
+    Self: Repo,
+{
     pub fn fast_forward_plan(&self, local_repo: &LocalRepo) -> Result<Plan, Error> {
         let plan = Plan::from_db_and_local(self, local_repo)?;
 
         if !plan.is_fast_forward() {
-            return Err(Error::divergence(&format!("refusing to run {} rollbacks", plan.rollbacks.len())));
+            return Err(Error::divergence(&format!(
+                "refusing to run {} rollbacks",
+                plan.rollbacks.len()
+            )));
         }
 
         Ok(plan)
@@ -129,7 +147,10 @@ impl<'a> DbRepo<akroyd::sync_client::Transaction<'a>> {
         Ok(MergeStatus::Done)
     }
 
-    pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
+    pub fn fast_forward_migrate(
+        client: &mut akroyd::sync_client::Client,
+        mut local_repo: LocalRepo,
+    ) -> Result<MergeStatus, Error> {
         DbRepo::from_client(client)?.fast_forward_to(&mut local_repo)
     }
 
@@ -171,7 +192,11 @@ impl<'a> DbRepo<akroyd::sync_client::Transaction<'a>> {
 
         self.txn.execute(&InsertMigration {
             commit: &step.commit(),
-            parent: if step.parent.is_zero() { None } else { Some(&step.parent) },
+            parent: if step.parent.is_zero() {
+                None
+            } else {
+                Some(&step.parent)
+            },
             hash: &step.hash(),
             name: &step.name,
             text: &step.text,
@@ -186,7 +211,9 @@ impl<'a> DbRepo<akroyd::sync_client::Transaction<'a>> {
 #[cfg(feature = "async")]
 impl<'a> DbRepo<akroyd::async_client::Transaction<'a>> {
     /// Construct a new DbRepo wrapping the provided client.
-    pub async fn from_client(client: &'a mut akroyd::async_client::Client) -> Result<DbRepo<akroyd::async_client::Transaction<'a>>, Error> {
+    pub async fn from_client(
+        client: &'a mut akroyd::async_client::Client,
+    ) -> Result<DbRepo<akroyd::async_client::Transaction<'a>>, Error> {
         let mut txn = client.transaction().await?;
 
         txn.execute(&CreateTableMigrations).await?;
@@ -207,8 +234,14 @@ impl<'a> DbRepo<akroyd::async_client::Transaction<'a>> {
         Ok(MergeStatus::Done)
     }
 
-    pub async fn fast_forward_migrate(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-        DbRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
+    pub async fn fast_forward_migrate(
+        client: &mut akroyd::async_client::Client,
+        mut local_repo: LocalRepo,
+    ) -> Result<MergeStatus, Error> {
+        DbRepo::from_client(client)
+            .await?
+            .fast_forward_to(&mut local_repo)
+            .await
     }
 
     /// Apply the given plan to the database.
@@ -234,9 +267,11 @@ impl<'a> DbRepo<akroyd::async_client::Transaction<'a>> {
 
         self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
 
-        self.txn.execute(&DeleteMigration {
-            commit: &step.commit(),
-        }).await?;
+        self.txn
+            .execute(&DeleteMigration {
+                commit: &step.commit(),
+            })
+            .await?;
 
         Ok(())
     }
@@ -247,15 +282,21 @@ impl<'a> DbRepo<akroyd::async_client::Transaction<'a>> {
 
         self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
 
-        self.txn.execute(&InsertMigration {
-            commit: &step.commit(),
-            parent: if step.parent.is_zero() { None } else { Some(&step.parent) },
-            hash: &step.hash(),
-            name: &step.name,
-            text: &step.text,
-            rollback: step.rollback.as_ref().map(AsRef::as_ref),
-            created_on: Utc::now(),
-        }).await?;
+        self.txn
+            .execute(&InsertMigration {
+                commit: &step.commit(),
+                parent: if step.parent.is_zero() {
+                    None
+                } else {
+                    Some(&step.parent)
+                },
+                hash: &step.hash(),
+                name: &step.name,
+                text: &step.text,
+                rollback: step.rollback.as_ref().map(AsRef::as_ref),
+                created_on: Utc::now(),
+            })
+            .await?;
 
         Ok(())
     }

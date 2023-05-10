@@ -1,5 +1,5 @@
 use crate::hash::{CommitHash, MigrationHash};
-use crate::local::{LocalRepo, LocalCommit};
+use crate::local::{LocalCommit, LocalRepo};
 
 pub struct FsRepo {
     migrations_dir: std::path::PathBuf,
@@ -23,7 +23,10 @@ impl FsRepo {
         std::fs::write(self.head_path(), head_name.as_ref())
     }
 
-    pub fn migration<S: AsRef<str>>(&self, migration_name: S) -> Result<Option<FsMigration>, std::io::Error> {
+    pub fn migration<S: AsRef<str>>(
+        &self,
+        migration_name: S,
+    ) -> Result<Option<FsMigration>, std::io::Error> {
         let migration_dir = self.migrations_dir.join(migration_name.as_ref());
         if migration_dir.try_exists()? {
             Ok(Some(FsMigration::new(migration_dir)))
@@ -32,7 +35,10 @@ impl FsRepo {
         }
     }
 
-    pub fn add_migration<S: AsRef<str>>(&mut self, migration_name: S) -> Result<FsMigration, std::io::Error> {
+    pub fn add_migration<S: AsRef<str>>(
+        &mut self,
+        migration_name: S,
+    ) -> Result<FsMigration, std::io::Error> {
         let migration_dir = self.migrations_dir.join(migration_name.as_ref());
         std::fs::create_dir(&migration_dir)?;
         Ok(FsMigration::new(migration_dir))
@@ -66,13 +72,15 @@ impl FsRepo {
         // OTOH: being able to work with a half-validated structure (e.g. in guess_head) is useful
         self.check()?;
 
-        let head = self.migration(self.head_name().unwrap())
+        let head = self
+            .migration(self.head_name().unwrap())
             .map_err(CheckError::Io)?
             .unwrap()
             .commit()
             .map_err(CheckError::Io)?;
 
-        let commits = self.migrations()
+        let commits = self
+            .migrations()
             .map_err(CheckError::Io)?
             .into_iter()
             .map(|migration| {
@@ -85,7 +93,12 @@ impl FsRepo {
                 let name = migration.name().to_string();
                 let migration_text = migration.migration_text()?.unwrap_or_default();
                 let rollback_text = migration.rollback_text()?;
-                Ok(LocalCommit { parent, name, migration_text, rollback_text })
+                Ok(LocalCommit {
+                    parent,
+                    name,
+                    migration_text,
+                    rollback_text,
+                })
             })
             .collect::<Result<Vec<_>, _>>()
             .map_err(CheckError::Io)?;
@@ -117,21 +130,21 @@ impl FsRepo {
 
         while let Some(migration_name) = head_name {
             match self.migration(&migration_name)? {
-                None => return Err(CheckError::UnknownMigration {
-                    name: migration_name,
-                    child: child_name,
-                }),
+                None => {
+                    return Err(CheckError::UnknownMigration {
+                        name: migration_name,
+                        child: child_name,
+                    })
+                }
                 Some(migration) => {
                     let parent = match migration.parent_name()? {
                         None => None,
-                        Some(parent_name) => {
-                            self.migration(&parent_name)?
-                                .map(Some)
-                                .ok_or(CheckError::UnknownMigration {
-                                    name: parent_name.into(),
-                                    child: migration_name.clone(),
-                                })?
-                        }
+                        Some(parent_name) => self.migration(&parent_name)?.map(Some).ok_or(
+                            CheckError::UnknownMigration {
+                                name: parent_name.into(),
+                                child: migration_name.clone(),
+                            },
+                        )?,
                     };
 
                     let parent_name = migration.parent_name()?.clone();
@@ -156,7 +169,8 @@ impl FsRepo {
     }
 
     fn guess_head(&mut self) -> Result<(), CheckError> {
-        let mut migrations = self.migrations()?
+        let mut migrations = self
+            .migrations()?
             .into_iter()
             .map(|m| m.name().to_string())
             .collect::<Vec<_>>();
@@ -164,19 +178,17 @@ impl FsRepo {
         for migration in self.migrations()? {
             match migration.parent_name()? {
                 None => {}
-                Some(parent) => {
-                    match migrations.iter().enumerate().find(|(_, m)| *m == &parent) {
-                        Some((i, _)) => {
-                            migrations.remove(i);
-                        }
-                        None => {
-                            return Err(CheckError::UnknownMigration {
-                                name: parent,
-                                child: migration.name().to_string(),
-                            });
-                        }
+                Some(parent) => match migrations.iter().enumerate().find(|(_, m)| *m == &parent) {
+                    Some((i, _)) => {
+                        migrations.remove(i);
                     }
-                }
+                    None => {
+                        return Err(CheckError::UnknownMigration {
+                            name: parent,
+                            child: migration.name().to_string(),
+                        });
+                    }
+                },
             }
         }
 
@@ -191,10 +203,7 @@ impl FsRepo {
 #[derive(Debug)]
 pub enum CheckError {
     Io(std::io::Error),
-    UnknownMigration {
-        name: String,
-        child: String,
-    },
+    UnknownMigration { name: String, child: String },
 }
 
 impl From<std::io::Error> for CheckError {
@@ -207,7 +216,9 @@ impl std::fmt::Display for CheckError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             CheckError::Io(err) => write!(f, "unhandled i/o error: {err}"),
-            CheckError::UnknownMigration { name, child } => write!(f, "missing migration {name} parent of {child}"),
+            CheckError::UnknownMigration { name, child } => {
+                write!(f, "missing migration {name} parent of {child}")
+            }
         }
     }
 }
@@ -337,7 +348,8 @@ impl FsMigration {
             let commit_s = self.commit_path().metadata()?.st_mtime();
             let commit_ns = self.commit_path().metadata()?.st_mtime_nsec();
 
-            let commit_after_hash = commit_s > hash_s || (commit_s == hash_s && commit_ns > hash_ns);
+            let commit_after_hash =
+                commit_s > hash_s || (commit_s == hash_s && commit_ns > hash_ns);
             let commit_after_parent = parent_change
                 .map(|(parent_s, parent_ns)| {
                     commit_s > parent_s || (commit_s == parent_s && commit_ns > parent_ns)
@@ -370,8 +382,11 @@ impl FsMigration {
                 return Ok(());
             }
         }
-        
-        let hash = MigrationHash::from_name_and_text(self.name(), &self.migration_text()?.unwrap_or_default());
+
+        let hash = MigrationHash::from_name_and_text(
+            self.name(),
+            &self.migration_text()?.unwrap_or_default(),
+        );
         self.set_hash(hash)
     }
 }
@@ -402,14 +417,17 @@ mod test {
     }
 
     macro_rules! tmp_dir {
-        () => {
-            {
-                let now = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_nanos();
-                let dir = std::env::temp_dir().join("akroyd-tests").join(format!("tst{now}-{}", line!()));
-                std::fs::create_dir_all(&dir).unwrap();
-                TmpDir(dir)
-            }
-        }
+        () => {{
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let dir = std::env::temp_dir()
+                .join("akroyd-tests")
+                .join(format!("tst{now}-{}", line!()));
+            std::fs::create_dir_all(&dir).unwrap();
+            TmpDir(dir)
+        }};
     }
 
     fn test_hash(name: &str, text: &str) {
@@ -558,12 +576,10 @@ mod test {
 
     #[test]
     fn commit_simple() {
-        test_commit(vec![
-            (
-                "create-table-users",
-                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
-            ),
-        ]);
+        test_commit(vec![(
+            "create-table-users",
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+        )]);
         test_commit(vec![
             (
                 "create-table-users",
@@ -647,12 +663,10 @@ mod test {
 
     #[test]
     fn commit_edit() {
-        test_commit_edit(vec![
-            (
-                "create-table-users",
-                "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
-            ),
-        ]);
+        test_commit_edit(vec![(
+            "create-table-users",
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)",
+        )]);
         test_commit_edit(vec![
             (
                 "create-table-users",
