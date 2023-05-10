@@ -179,6 +179,80 @@ impl<'a> DatabaseRepo<akroyd::sync_client::Transaction<'a>> {
     }
 }
 
+#[cfg(feature = "async")]
+impl<'a> DatabaseRepo<akroyd::async_client::Transaction<'a>> {
+    /// Construct a new DatabaseRepo wrapping the provided client.
+    pub async fn from_client(client: &'a mut akroyd::async_client::Client) -> Result<DatabaseRepo<akroyd::async_client::Transaction<'a>>, Error> {
+        let mut txn = client.transaction().await?;
+
+        txn.execute(&CreateTableMigrations).await?;
+        let migrations = txn.query(&AllMigrations).await?;
+
+        DatabaseRepo::new(txn, migrations)
+    }
+
+    /// Fast-forward the database to the given LocalRepo, if possible.
+    pub async fn fast_forward_to(self, local_repo: &mut LocalRepo) -> Result<MergeStatus, Error> {
+        let plan = self.fast_forward_plan(local_repo)?;
+
+        if plan.is_empty() {
+            return Ok(MergeStatus::NothingToDo);
+        }
+
+        self.apply(&plan).await?;
+        Ok(MergeStatus::Done)
+    }
+
+    /// Apply the given plan to the database.
+    pub async fn apply(mut self, plan: &Plan) -> Result<(), Error> {
+        assert!(self.head() == plan.db_head);
+
+        for rollback in &plan.rollbacks {
+            self.apply_rollback(rollback).await?;
+        }
+
+        for migration in &plan.migrations {
+            self.apply_migration(migration).await?;
+        }
+
+        self.txn.commit().await?;
+
+        Ok(())
+    }
+
+    async fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
+        // TODO: configurable logging
+        println!("Rolling back {}...", step.target);
+
+        self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
+
+        self.txn.execute(&DeleteMigration {
+            commit: &step.commit(),
+        }).await?;
+
+        Ok(())
+    }
+
+    async fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), tokio_postgres::Error> {
+        // TODO: configurable logging
+        println!("Applying {}...", step.name);
+
+        self.txn.as_mut().execute(&step.text, &[]).await?; // TODO: the errors from this should be handled differently
+
+        self.txn.execute(&InsertMigration {
+            commit: &step.commit(),
+            parent: if step.parent.is_zero() { None } else { Some(&step.parent) },
+            hash: &step.hash(),
+            name: &step.name,
+            text: &step.text,
+            rollback: step.rollback.as_ref().map(AsRef::as_ref),
+            created_on: Utc::now(),
+        }).await?;
+
+        Ok(())
+    }
+}
+
 impl<Txn> std::fmt::Debug for DatabaseRepo<Txn> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "DatabaseRepo")
@@ -192,7 +266,7 @@ pub fn fast_forward_migrate(client: &mut akroyd::sync_client::Client, mut local_
 
 #[cfg(feature = "async")]
 pub async fn fast_forward_migrate_async(client: &mut akroyd::async_client::Client, mut local_repo: LocalRepo) -> Result<MergeStatus, Error> {
-    DatabaseRepo::from_client(client)?.fast_forward_to(&mut local_repo).await
+    DatabaseRepo::from_client(client).await?.fast_forward_to(&mut local_repo).await
 }
 
 impl<Txn> Repo for DatabaseRepo<Txn> {
