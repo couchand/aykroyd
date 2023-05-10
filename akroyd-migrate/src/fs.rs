@@ -63,6 +63,7 @@ impl FsRepo {
     pub fn into_local(mut self) -> Result<LocalRepo, CheckError> {
         // n.b. this check validates each unwrap below
         // TODO: parse, don't validate
+        // OTOH: being able to work with a half-validated structure (e.g. in guess_head) is useful
         self.check()?;
 
         let head = self.migration(self.head_name().unwrap())
@@ -97,6 +98,7 @@ impl FsRepo {
             migration.check_hash()?;
         }
 
+        // TODO: this seems like a sledghammer
         if let Some(head_name) = self.head_name() {
             let head_path = self.migrations_dir.join(head_name);
             if !head_path.try_exists().map_err(CheckError::Io)? {
