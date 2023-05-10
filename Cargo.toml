@@ -1,14 +1,14 @@
 [workspace]
 members = [
-    "akroyd",
-    "akroyd-derive",
-    "akroyd-migrate",
-    "bb8-akroyd",
+    "aykroyd",
+    "aykroyd-derive",
+    "aykroyd-migrate",
+    "bb8-aykroyd",
     "example",
 ]
 
 default-members = [
-    "akroyd",
-    "akroyd-derive",
-    "akroyd-migrate",
+    "aykroyd",
+    "aykroyd-derive",
+    "aykroyd-migrate",
 ]

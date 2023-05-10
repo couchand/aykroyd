@@ -1,0 +1,24 @@
+[package]
+name = "aykroyd-migrate"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+sync = ["aykroyd/sync"]
+async = ["aykroyd/async"]
+
+[dependencies]
+aykroyd = { version = "0.1", features = ["derive"], path = "../aykroyd" }
+
+bytes = "1"
+chrono = "0.4"
+generic-array = "0.14"
+itertools = "0.10"
+postgres-types = "0.2"
+sha3 = "0.10"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
+
+[dev-dependencies]
+aykroyd = { version = "0.1", features = ["sync"], path = "../aykroyd" }
+hex-literal = "0.2"
+tokio = { version = "1", features = ["full"] }

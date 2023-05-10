@@ -1,0 +1,32 @@
+[package]
+name = "aykroyd"
+description = "An opinionated micro-ORM for PostgreSQL."
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Andrew Dona-Couch <aykroyd@couchand.com>"]
+repository = "https://git.sr.ht/~couch/aykroyd"
+keywords = ["orm", "postgres", "postgresql", "sql"]
+categories = ["database"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["derive"]
+derive = ["aykroyd-derive"]
+
+sync = ["postgres"]
+async = ["async-trait"]
+
+[dependencies]
+aykroyd-derive = { path = "../aykroyd-derive", optional = true }
+bytes = "1"
+futures-util = "0.3"
+postgres = { version = "0.19", optional = true }
+tokio-postgres = "0.7"
+async-trait = { version = "0.1", optional = true }
+
+[dev-dependencies]
+rust_decimal = { version = "1", features = ["db-tokio-postgres"] }
+tokio = { version = "1", features = ["full"] }

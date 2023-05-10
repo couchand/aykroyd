@@ -1,8 +1,8 @@
 #[cfg(feature = "async")]
-use akroyd::async_client::connect;
+use aykroyd::async_client::connect;
 #[cfg(feature = "sync")]
-use akroyd::sync_client::Client;
-use akroyd_migrate::*;
+use aykroyd::sync_client::Client;
+use aykroyd_migrate::*;
 
 static MIGRATIONS: embedded::EmbeddedRepo = include_migrations!();
 
@@ -18,7 +18,7 @@ fn try_main() -> Result<(), Error> {
     println!("{local_repo:?}");
 
     let mut client = Client::connect(
-        "host=localhost user=akroyd_test password=akroyd_test",
+        "host=localhost user=aykroyd_test password=aykroyd_test",
         tokio_postgres::NoTls,
     )?;
 
@@ -62,7 +62,7 @@ fn try_main() -> Result<(), Error> {
 #[cfg(all(feature = "lite", feature = "sync"))]
 fn try_main() -> Result<(), Error> {
     let mut client = Client::connect(
-        "host=localhost user=akroyd_test password=akroyd_test",
+        "host=localhost user=aykroyd_test password=aykroyd_test",
         tokio_postgres::NoTls,
     )?;
 
@@ -79,7 +79,7 @@ fn try_main() -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let (mut client, connection) = connect(
-        "host=localhost user=akroyd_test password=akroyd_test",
+        "host=localhost user=aykroyd_test password=aykroyd_test",
         tokio_postgres::NoTls,
     )
     .await?;
@@ -103,7 +103,7 @@ async fn main() -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let (mut client, connection) = connect(
-        "host=localhost user=akroyd_test password=akroyd_test",
+        "host=localhost user=aykroyd_test password=aykroyd_test",
         tokio_postgres::NoTls,
     )
     .await?;

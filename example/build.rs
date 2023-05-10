@@ -1,5 +1,5 @@
 fn main() {
-    akroyd_migrate::embedded::EmbeddedRepoBuilder::new()
+    aykroyd_migrate::embedded::EmbeddedRepoBuilder::new()
         .build()
         .unwrap();
 }

@@ -7,14 +7,14 @@ edition = "2021"
 full = []
 lite = []
 
-sync = ["akroyd-migrate/sync"]
-async = ["akroyd-migrate/async"]
+sync = ["aykroyd-migrate/sync"]
+async = ["aykroyd-migrate/async"]
 
 [dependencies]
-akroyd = { version = "0.1", path = "../akroyd" }
-akroyd-migrate = { path = "../akroyd-migrate" }
+aykroyd = { version = "0.1", path = "../aykroyd" }
+aykroyd-migrate = { path = "../aykroyd-migrate" }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 
 [build-dependencies]
-akroyd-migrate = { path = "../akroyd-migrate" }
+aykroyd-migrate = { path = "../aykroyd-migrate" }
