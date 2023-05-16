@@ -4,6 +4,7 @@ members = [
     "aykroyd-derive",
     "aykroyd-migrate",
     "bb8-aykroyd",
+    "deadpool-aykroyd",
     "example",
 ]
 
