@@ -129,7 +129,7 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
         txn.execute(&CreateTableMigrations)?;
         let migrations = txn.query(&AllMigrations)?;
 
-        DbRepo::new(txn, migrations)
+        Self::new(txn, migrations)
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
@@ -145,10 +145,10 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
     }
 
     pub fn fast_forward_migrate(
-        client: &mut sync_client::Client,
+        client: &'a mut sync_client::Client,
         mut local_repo: LocalRepo,
     ) -> Result<MergeStatus, Error> {
-        DbRepo::from_client(client)?.fast_forward_to(&mut local_repo)
+        Self::from_client(client)?.fast_forward_to(&mut local_repo)
     }
 
     /// Apply the given plan to the database.
@@ -216,7 +216,7 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
         txn.execute(&CreateTableMigrations).await?;
         let migrations = txn.query(&AllMigrations).await?;
 
-        DbRepo::new(txn, migrations)
+        Self::new(txn, migrations)
     }
 
     /// Fast-forward the database to the given LocalRepo, if possible.
@@ -232,10 +232,10 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
     }
 
     pub async fn fast_forward_migrate(
-        client: &mut async_client::Client,
+        client: &'a mut async_client::Client,
         mut local_repo: LocalRepo,
     ) -> Result<MergeStatus, Error> {
-        DbRepo::from_client(client)
+        Self::from_client(client)
             .await?
             .fast_forward_to(&mut local_repo)
             .await
