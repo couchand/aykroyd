@@ -11,6 +11,11 @@ use crate::Error;
 use aykroyd::*;
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "sync")]
+pub type SyncRepo<'a> = DbRepo<sync_client::Transaction<'a>>;
+#[cfg(feature = "async")]
+pub type AsyncRepo<'a> = DbRepo<async_client::Transaction<'a>>;
+
 #[derive(Statement)]
 #[query(text = "
 CREATE TABLE IF NOT EXISTS migrations (
