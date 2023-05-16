@@ -176,6 +176,7 @@ impl FsRepo {
         }
 
         // TODO: check uncommitted migrations are parentless
+        // OTOH: we want to support a chain of "future" migrations when in a rollback state
         Ok(())
     }
 
