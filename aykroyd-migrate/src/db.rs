@@ -105,10 +105,7 @@ impl<Txn> DbRepo<Txn> {
     }
 }
 
-impl<Txn> DbRepo<Txn>
-where
-    Self: Repo,
-{
+impl<Txn> DbRepo<Txn> {
     pub fn fast_forward_plan(&self, local_repo: &LocalRepo) -> Result<Plan, Error> {
         let plan = Plan::from_db_and_local(self, local_repo)?;
 
