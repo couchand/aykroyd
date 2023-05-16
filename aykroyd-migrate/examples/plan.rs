@@ -11,7 +11,7 @@ fn main() {
 
 #[cfg(feature = "sync")]
 fn try_main() -> Result<(), Error> {
-    let fs_repo = fs::FsRepo::new("./migrations");
+    let fs_repo = fs::FsRepo::new("./migrations").expect("No migrations dir found");
     let local_repo = fs_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Error> {
         }
     });
 
-    let fs_repo = fs::FsRepo::new("./migrations");
+    let fs_repo = fs::FsRepo::new("./migrations").expect("No migrations dir found");
     let local_repo = fs_repo.into_local()?;
     println!("Local: {local_repo:?}");
 

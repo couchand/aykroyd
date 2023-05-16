@@ -6,9 +6,16 @@ pub struct FsRepo {
 }
 
 impl FsRepo {
-    pub fn new<P: AsRef<std::path::Path>>(migrations_dir: P) -> Self {
-        let migrations_dir = migrations_dir.as_ref().into();
-        FsRepo { migrations_dir }
+    pub fn new<P: AsRef<std::path::Path>>(migrations_dir: P) -> Result<Self, std::io::Error> {
+        let migrations_dir: std::path::PathBuf = migrations_dir.as_ref().into();
+        if migrations_dir.try_exists()? {
+            Ok(FsRepo { migrations_dir })
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Unable to open migrations dir {}", migrations_dir.display()),
+            ))
+        }
     }
 
     fn head_path(&self) -> std::path::PathBuf {
@@ -443,7 +450,7 @@ mod test {
         let migration_text = migration_dir.join("up.sql");
         std::fs::write(migration_text, text).unwrap();
 
-        let mut repo = FsRepo::new(&dir);
+        let mut repo = FsRepo::new(&dir).unwrap();
         repo.check().unwrap();
 
         let migration = repo.migration(name).unwrap().unwrap();
@@ -475,7 +482,7 @@ mod test {
         let migration_text = migration_dir.join("up.sql");
         std::fs::write(&migration_text, "ORIGINAL SQL TEXT").unwrap();
 
-        let mut repo = FsRepo::new(&dir);
+        let mut repo = FsRepo::new(&dir).unwrap();
         repo.check().unwrap();
 
         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -512,7 +519,7 @@ mod test {
         let migration_text = migration_dir.join("up.sql");
         std::fs::write(migration_text, text).unwrap();
 
-        let mut repo = FsRepo::new(&dir);
+        let mut repo = FsRepo::new(&dir).unwrap();
         repo.check().unwrap();
 
         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -567,7 +574,7 @@ mod test {
         }
         assert_eq!(expecteds.len(), commits.len());
 
-        let mut repo = FsRepo::new(&dir);
+        let mut repo = FsRepo::new(&dir).unwrap();
         repo.check().unwrap();
 
         for (name, expected) in expecteds {
@@ -645,7 +652,7 @@ mod test {
         }
         assert_eq!(expecteds.len(), commits.len());
 
-        let mut repo = FsRepo::new(&dir);
+        let mut repo = FsRepo::new(&dir).unwrap();
         repo.check().unwrap();
 
         std::thread::sleep(std::time::Duration::from_millis(1));

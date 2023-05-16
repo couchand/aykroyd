@@ -94,7 +94,7 @@ impl EmbeddedRepoBuilder {
             self.output
                 .unwrap_or_else(|| std::path::PathBuf::from("aykroyd-migrations.rs")),
         );
-        let repo = FsRepo::new(&repo_dir).into_local().unwrap();
+        let repo = FsRepo::new(&repo_dir).unwrap().into_local().unwrap();
 
         let mut code = String::new();
 
