@@ -7,5 +7,6 @@ edition = "2021"
 [dependencies]
 aykroyd = { path = "../aykroyd", features = ["async"] }
 aykroyd-migrate = { path = "../aykroyd-migrate", features = ["async"] }
+clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = "0.7"
