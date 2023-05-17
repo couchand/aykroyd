@@ -11,7 +11,7 @@ pub use deadpool_postgres::{ManagerConfig, RecyclingMethod};
 pub type Object<T> = deadpool::managed::Object<Manager<T>>;
 pub type Pool<T> = deadpool::managed::Pool<Manager<T>, deadpool::managed::Object<Manager<T>>>;
 pub type PoolBuilder<T> = deadpool::managed::PoolBuilder<Manager<T>>;
-pub type PoolError<T> = deadpool::managed::PoolError<Manager<T>>;
+pub type PoolError = deadpool::managed::PoolError<tokio_postgres::Error>;
 
 #[derive(Debug)]
 pub struct Manager<T> {
