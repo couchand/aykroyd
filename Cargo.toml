@@ -6,10 +6,12 @@ members = [
     "bb8-aykroyd",
     "deadpool-aykroyd",
     "example",
+    "myg",
 ]
 
 default-members = [
     "aykroyd",
     "aykroyd-derive",
     "aykroyd-migrate",
+    "myg",
 ]

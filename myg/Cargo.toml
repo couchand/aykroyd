@@ -1,0 +1,11 @@
+[package]
+name = "myg"
+description = "An opinionated schema migration tool for PostgreSQL."
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aykroyd = { path = "../aykroyd", features = ["async"] }
+aykroyd-migrate = { path = "../aykroyd-migrate", features = ["async"] }
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = "0.7"
