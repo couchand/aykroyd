@@ -1,7 +1,3 @@
-#[cfg(feature = "async")]
-use aykroyd::async_client::connect;
-#[cfg(feature = "sync")]
-use aykroyd::sync_client::Client;
 #[cfg(any(feature = "async", feature = "sync"))]
 use aykroyd_migrate::*;
 #[cfg(feature = "sync")]
@@ -33,20 +29,15 @@ fn try_main_sync() -> Result<(), Error> {
     let local_repo = source_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
-    let mut client = Client::connect(
-        "host=localhost user=aykroyd_test password=aykroyd_test",
-        tokio_postgres::NoTls,
-    )?;
+    let fs_repo = fs::FsRepo::new("./.myg").expect("Unable to load migrations");
+    println!("FS: {fs_repo:?}");
 
-    let db_repo = db::SyncRepo::from_client(&mut client)?;
-    println!("DB: {db_repo:?}");
-
-    let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
+    let plan = plan::Plan::from_db_and_local(&fs_repo, &local_repo)?;
     println!("Plan: {plan:?}");
 
     println!("Applying....");
 
-    db_repo.apply(&plan)?;
+    fs_repo.apply(&plan)?;
 
     println!("Done.");
 
@@ -61,33 +52,21 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(feature = "async")]
 async fn try_main_async() -> Result<(), Error> {
-    let (mut client, connection) = connect(
-        "host=localhost user=aykroyd_test password=aykroyd_test",
-        tokio_postgres::NoTls,
-    )
-    .await?;
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
-        }
-    });
-
     let source_repo = source::SourceRepo::new("./migrations").expect("No migrations dir found");
     println!("Source: {source_repo:?}");
 
     let local_repo = source_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
-    let db_repo = db::AsyncRepo::from_client(&mut client).await?;
-    println!("DB: {db_repo:?}");
+    let fs_repo = fs::FsRepo::new("./.myg").expect("Unable to load migrations");
+    println!("FS: {fs_repo:?}");
 
-    let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
+    let plan = plan::Plan::from_db_and_local(&fs_repo, &local_repo)?;
     println!("Plan: {plan:?}");
 
     println!("Applying....");
 
-    db_repo.apply(&plan).await?;
+    fs_repo.apply(&plan).await?;
 
     println!("Done.");
 

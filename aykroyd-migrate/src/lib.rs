@@ -80,8 +80,17 @@ impl From<tokio_postgres::Error> for Error {
     }
 }
 
-impl From<fs::CheckError> for Error {
-    fn from(err: fs::CheckError) -> Self {
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error {
+            kind: ErrorKind::Fs,
+            detail: Some(err.to_string()),
+        }
+    }
+}
+
+impl From<source::CheckError> for Error {
+    fn from(err: source::CheckError) -> Self {
         Error {
             kind: ErrorKind::Fs,
             detail: Some(err.to_string()),

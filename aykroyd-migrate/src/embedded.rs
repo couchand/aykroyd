@@ -3,6 +3,7 @@
 use crate::fs::FsRepo;
 use crate::hash::{CommitHash, MigrationHash};
 use crate::local::{LocalCommit, LocalRepo};
+use crate::traits::{Commit, Repo};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EmbeddedMigration {
@@ -80,7 +81,7 @@ impl EmbeddedRepoBuilder {
     pub fn build(self) -> Result<(), std::io::Error> {
         let repo_dir = self
             .dir
-            .unwrap_or_else(|| std::path::PathBuf::from("./migrations"));
+            .unwrap_or_else(|| std::path::PathBuf::from("./.myg"));
 
         assert!(
             repo_dir.exists(),
@@ -94,38 +95,51 @@ impl EmbeddedRepoBuilder {
             self.output
                 .unwrap_or_else(|| std::path::PathBuf::from("aykroyd-migrations.rs")),
         );
-        let repo = FsRepo::new(&repo_dir).unwrap().into_local().unwrap();
+        let repo = FsRepo::new(&repo_dir).unwrap();
 
         let mut code = String::new();
 
         code.push_str("::aykroyd_migrate::embedded::EmbeddedRepo {\n");
 
         code.push_str("    head: ");
-        code.push_str(&format!("{:?}", repo.head.to_string()));
+        code.push_str(&format!("{:?}", repo.head().to_string()));
         code.push_str(",\n");
 
         code.push_str("    migrations: &[\n");
 
-        for migration in &repo.commits {
+        let mut cursor = repo.head();
+        while !cursor.is_zero() {
+            let commit = match repo.commit(&cursor) {
+                Some(c) => c,
+                None => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("unable to find commit {cursor}"),
+                    ));
+                }
+            };
+
             code.push_str("        ::aykroyd_migrate::embedded::EmbeddedMigration {\n");
 
             code.push_str("            parent: ");
-            code.push_str(&format!("{:?}", migration.parent.to_string()));
+            code.push_str(&format!("{:?}", commit.parent().to_string()));
             code.push_str(",\n");
 
             code.push_str("            name: ");
-            code.push_str(&format!("{:?}", migration.name));
+            code.push_str(&format!("{:?}", commit.migration_name()));
             code.push_str(",\n");
 
             code.push_str("            text: ");
-            code.push_str(&format!("{:?}", migration.migration_text));
+            code.push_str(&format!("{:?}", commit.migration_text()));
             code.push_str(",\n");
 
             code.push_str("            rollback: ");
-            code.push_str(&format!("{:?}", migration.rollback_text));
+            code.push_str(&format!("{:?}", repo.rollback(&commit.migration_hash())));
             code.push_str(",\n");
 
             code.push_str("        },\n");
+
+            cursor = commit.parent();
         }
 
         code.push_str("    ]\n");

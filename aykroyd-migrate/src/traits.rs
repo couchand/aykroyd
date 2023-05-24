@@ -23,7 +23,7 @@ pub trait Apply: Repo + Sized {
 
     fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), Self::Error>;
     fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), Self::Error>;
-    fn commit(self) -> Result<(), Self::Error>;
+    fn commit(self) -> Result<(), Self::Error> { Ok(()) }
 
     /// Apply the given plan to the database.
     fn apply(mut self, plan: &Plan) -> Result<(), Self::Error> {
@@ -50,7 +50,7 @@ pub trait AsyncApply: Repo + Sized {
 
     async fn apply_migration(&mut self, step: &MigrationStep) -> Result<(), Self::Error>;
     async fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), Self::Error>;
-    async fn commit(self) -> Result<(), Self::Error>;
+    async fn commit(self) -> Result<(), Self::Error> { Ok(()) }
 
     /// Apply the given plan to the database.
     async fn apply(mut self, plan: &Plan) -> Result<(), Self::Error> {

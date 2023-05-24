@@ -1,6 +1,7 @@
 use crate::hash::{CommitHash, MigrationHash};
 use crate::local::{LocalCommit, LocalRepo};
 
+#[derive(Debug)]
 pub struct SourceRepo {
     migrations_dir: std::path::PathBuf,
 }
