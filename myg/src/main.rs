@@ -1,5 +1,6 @@
 use aykroyd::async_client::connect;
 use aykroyd_migrate::*;
+use aykroyd_migrate::traits::AsyncApply;
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -18,6 +19,12 @@ enum Command {
         /// The name of the new migration
         migration_name: String,
     },
+
+    /// Update the local repo to match the source migrations
+    Commit,
+
+    /// Generate a plan to update the database to the local schema
+    Plan,
 
     /// Update the database to match the local schema
     Apply,
@@ -40,29 +47,35 @@ async fn main() -> Result<(), Error> {
         }
     });
 
-    let mut fs_repo = loop {
-        let migrations_dir = "./migrations";
-        match fs::FsRepo::new(migrations_dir) {
-            Ok(fs_repo) => break fs_repo,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                std::fs::create_dir(migrations_dir).unwrap();
-            }
-            Err(err) => {
-                eprintln!("Error opening migrations dir: {err}");
-                std::process::exit(-1);
-            }
-        }
-    };
-
     match &args.command {
-        Command::Status | Command::Apply => {
-            let local_repo = fs_repo.into_local()?;
+        Command::Status => {
+            todo!()
+        }
+        Command::Commit => {
+            let source_repo = get_source_repo("./migrations");
+            let local_repo = source_repo.into_local().unwrap();
             println!("Local: {local_repo:?}");
+
+            let fs_repo = get_fs_repo("./.myg");
+            println!("FS: {fs_repo:?}");
+
+            let plan = plan::Plan::from_db_and_local(&fs_repo, &local_repo)?;
+            println!("Plan: {plan:?}");
+
+            println!("Applying....");
+
+            fs_repo.apply(&plan).await?;
+
+            println!("Done.");
+        }
+        Command::Plan | Command::Apply => {
+            let fs_repo = get_fs_repo("./.myg");
+            println!("FS: {fs_repo:?}");
 
             let db_repo = db::AsyncRepo::from_client(&mut client).await?;
             println!("DB: {db_repo:?}");
 
-            let plan = plan::Plan::from_db_and_local(&db_repo, &local_repo)?;
+            let plan = plan::Plan::from_db_and_local(&db_repo, &fs_repo)?;
             println!("Plan: {plan:?}");
 
             if matches!(&args.command, Command::Apply) {
@@ -74,7 +87,8 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Create { migration_name } => {
-            if let Err(e) = fs_repo.add_migration(&migration_name) {
+            let mut source_repo = get_source_repo("./migrations");
+            if let Err(e) = source_repo.add_migration(&migration_name) {
                 eprintln!("Error creating migration: {e}");
                 std::process::exit(-1);
             }
@@ -83,4 +97,30 @@ async fn main() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn get_source_repo<P: AsRef<std::path::Path>>(migrations_dir: P) -> source::SourceRepo {
+    let migrations_dir = migrations_dir.as_ref();
+    loop {
+        match source::SourceRepo::new(migrations_dir) {
+            Ok(repo) => break repo,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::create_dir(migrations_dir).unwrap();
+            }
+            Err(err) => {
+                eprintln!("Error opening migrations dir: {err}");
+                std::process::exit(-1);
+            }
+        }
+    }
+}
+
+fn get_fs_repo<P: AsRef<std::path::Path>>(migrations_dir: P) -> fs::FsRepo {
+    match fs::FsRepo::new(migrations_dir) {
+        Ok(repo) => repo,
+        Err(err) => {
+            eprintln!("Error opening migrations dir: {err}");
+            std::process::exit(-1);
+        }
+    }
 }
