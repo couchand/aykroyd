@@ -4,6 +4,7 @@ pub mod fs;
 pub mod hash;
 pub mod local;
 pub mod plan;
+pub mod source;
 pub mod traits;
 
 #[derive(Debug)]
