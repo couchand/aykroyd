@@ -337,7 +337,7 @@ impl FsMigration {
 
     pub fn check_commit(&mut self, parent: Option<FsMigration>) -> Result<(), std::io::Error> {
         use std::os::linux::fs::MetadataExt;
-        if self.commit_path().exists() {
+        if self.commit_path().try_exists()? {
             let hash_s = self.hash_path().metadata()?.st_mtime();
             let hash_ns = self.hash_path().metadata()?.st_mtime_nsec();
             let parent_change = if let Some(parent) = &parent {
