@@ -345,6 +345,7 @@ impl FsMigration {
                 let name_ns = self.parent_path().metadata()?.st_mtime_nsec();
                 let commit_s = parent.commit_path().metadata()?.st_mtime();
                 let commit_ns = parent.commit_path().metadata()?.st_mtime_nsec();
+                // TODO: this code is a mess
                 if name_s > commit_s {
                     Some((name_s, name_ns))
                 } else if commit_s > name_s {
