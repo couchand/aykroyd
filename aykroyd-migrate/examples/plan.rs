@@ -27,8 +27,8 @@ fn main() {
 
 #[cfg(feature = "sync")]
 fn try_main_sync() -> Result<(), Error> {
-    let fs_repo = fs::FsRepo::new("./migrations").expect("No migrations dir found");
-    let local_repo = fs_repo.into_local()?;
+    let source_repo = source::SourceRepo::new("./migrations").expect("No migrations dir found");
+    let local_repo = source_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
     let mut client = Client::connect(
@@ -71,8 +71,8 @@ async fn try_main_async() -> Result<(), Error> {
         }
     });
 
-    let fs_repo = fs::FsRepo::new("./migrations").expect("No migrations dir found");
-    let local_repo = fs_repo.into_local()?;
+    let source_repo = source::SourceRepo::new("./migrations").expect("No migrations dir found");
+    let local_repo = source_repo.into_local()?;
     println!("Local: {local_repo:?}");
 
     let db_repo = db::AsyncRepo::from_client(&mut client).await?;
