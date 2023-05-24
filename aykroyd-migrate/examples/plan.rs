@@ -4,6 +4,10 @@ use aykroyd::async_client::connect;
 use aykroyd::sync_client::Client;
 #[cfg(any(feature = "async", feature = "sync"))]
 use aykroyd_migrate::*;
+#[cfg(feature = "sync")]
+use aykroyd_migrate::traits::Apply;
+#[cfg(feature = "async")]
+use aykroyd_migrate::traits::AsyncApply;
 
 #[cfg(all(not(feature = "sync"), not(feature = "async")))]
 fn main() {

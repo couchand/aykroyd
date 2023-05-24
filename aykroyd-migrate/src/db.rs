@@ -6,6 +6,10 @@ use crate::plan::Plan;
 #[cfg(any(feature = "sync", feature = "async"))]
 use crate::plan::{MigrationStep, RollbackStep};
 use crate::traits::{Commit, Repo};
+#[cfg(feature = "sync")]
+use crate::traits::Apply;
+#[cfg(feature = "async")]
+use crate::traits::AsyncApply;
 use crate::Error;
 
 use aykroyd::*;
@@ -155,23 +159,11 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
     ) -> Result<MergeStatus, Error> {
         Self::from_client(client)?.fast_forward_to(&mut local_repo)
     }
+}
 
-    /// Apply the given plan to the database.
-    pub fn apply(mut self, plan: &Plan) -> Result<(), Error> {
-        assert!(self.head() == plan.db_head);
-
-        for rollback in &plan.rollbacks {
-            self.apply_rollback(rollback)?;
-        }
-
-        for migration in &plan.migrations {
-            self.apply_migration(migration)?;
-        }
-
-        self.txn.commit()?;
-
-        Ok(())
-    }
+#[cfg(feature = "sync")]
+impl<'a> Apply for DbRepo<sync_client::Transaction<'a>> {
+    type Error = tokio_postgres::Error;
 
     fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
         // TODO: configurable logging
@@ -207,6 +199,10 @@ impl<'a> DbRepo<sync_client::Transaction<'a>> {
         })?;
 
         Ok(())
+    }
+
+    fn commit(self) -> Result<(), tokio_postgres::Error> {
+        self.txn.commit()
     }
 }
 
@@ -245,23 +241,12 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
             .fast_forward_to(&mut local_repo)
             .await
     }
+}
 
-    /// Apply the given plan to the database.
-    pub async fn apply(mut self, plan: &Plan) -> Result<(), Error> {
-        assert!(self.head() == plan.db_head);
-
-        for rollback in &plan.rollbacks {
-            self.apply_rollback(rollback).await?;
-        }
-
-        for migration in &plan.migrations {
-            self.apply_migration(migration).await?;
-        }
-
-        self.txn.commit().await?;
-
-        Ok(())
-    }
+#[cfg(feature = "async")]
+#[async_trait::async_trait]
+impl<'a> AsyncApply for DbRepo<async_client::Transaction<'a>> {
+    type Error = tokio_postgres::Error;
 
     async fn apply_rollback(&mut self, step: &RollbackStep) -> Result<(), tokio_postgres::Error> {
         // TODO: configurable logging
@@ -301,6 +286,10 @@ impl<'a> DbRepo<async_client::Transaction<'a>> {
             .await?;
 
         Ok(())
+    }
+
+    async fn commit(self) -> Result<(), tokio_postgres::Error> {
+        self.txn.commit().await
     }
 }
 

@@ -6,11 +6,12 @@ edition = "2021"
 
 [features]
 sync = ["aykroyd/sync"]
-async = ["aykroyd/async"]
+async = ["aykroyd/async", "async-trait"]
 
 [dependencies]
 aykroyd = { version = "0.1", features = ["derive"], path = "../aykroyd" }
 
+async-trait = { version = "0.1", optional = true }
 bytes = "1"
 chrono = "0.4"
 generic-array = "0.14"
