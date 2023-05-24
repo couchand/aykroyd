@@ -49,7 +49,15 @@ async fn main() -> Result<(), Error> {
 
     match &args.command {
         Command::Status => {
-            todo!()
+            let source_repo = get_source_repo("./migrations");
+            let local_repo = source_repo.into_local().unwrap();
+            println!("Local: {local_repo:?}");
+
+            let fs_repo = get_fs_repo("./.myg");
+            println!("FS: {fs_repo:?}");
+
+            let diff = plan::Diff::from_db_and_local(&fs_repo, &local_repo)?;
+            println!("Diff: {diff:?}");
         }
         Command::Commit => {
             let source_repo = get_source_repo("./migrations");

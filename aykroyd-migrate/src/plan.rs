@@ -2,6 +2,66 @@ use crate::hash::{CommitHash, MigrationHash};
 use crate::traits::{Commit, Repo};
 
 #[derive(Debug, Clone)]
+pub struct Diff {
+    pub local_head: CommitHash,
+    pub db_head: CommitHash,
+    pub merge_base: CommitHash,
+    pub only_on_local: Vec<CommitHash>,
+    pub only_on_db: Vec<CommitHash>,
+}
+
+impl Diff {
+    pub fn from_db_and_local<Database: Repo, Local: Repo>(
+        db: &Database,
+        local: &Local,
+    ) -> Result<Self, PlanError> {
+        let db_head = db.head();
+        let local_head = local.head();
+
+        let (merge_base, only_on_db) = if db_head.is_zero() || local.commit(&db_head).is_some() {
+            (db_head.clone(), vec![])
+        } else {
+            let mut commits = vec![];
+            let mut head = db_head.clone();
+
+            while local.commit(&head).is_none() {
+                if head.is_zero() {
+                    break;
+                }
+
+                let commit = db
+                    .commit(&head)
+                    .ok_or(PlanError::MissingCommit(RepoSource::Database, head))?;
+                head = commit.parent();
+
+                commits.push(commit.commit_hash());
+            }
+
+            (head, commits)
+        };
+
+        let mut only_on_local = vec![];
+        let mut head = local_head.clone();
+
+        while head != merge_base {
+            let commit = local
+                .commit(&head)
+                .ok_or(PlanError::MissingCommit(RepoSource::Local, head))?;
+            head = commit.parent();
+            only_on_local.push(commit.commit_hash());
+        }
+
+        Ok(Diff {
+            local_head,
+            db_head,
+            merge_base,
+            only_on_local,
+            only_on_db,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Plan {
     pub local_head: CommitHash,
     pub db_head: CommitHash,
