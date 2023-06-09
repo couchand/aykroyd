@@ -7,6 +7,106 @@ use crate::traits::AsyncApply;
 #[cfg(feature = "sync")]
 use crate::traits::Apply;
 
+fn escape(s: &str) -> String {
+    let mut result = String::new();
+
+    for ch in s.chars() {
+        match ch {
+            '\\' => result.push_str("\\\\"),
+            '\n' => result.push_str("\\n"),
+            c => result.push(c),
+        }
+    }
+
+    result
+}
+
+fn unescape(s: &str) -> Result<String, String> {
+    let mut result = String::new();
+    let mut escaping = false;
+
+    for ch in s.chars() {
+        let mut new_escaping = false;
+        match (escaping, ch) {
+            (true, 'n') => result.push('\n'),
+            (true, '\\') => result.push('\\'),
+            (true, _) => return Err(format!("Unknown escape sequence '\\{ch}'")),
+            (false, '\\') => new_escaping = true,
+            (false, _) => result.push(ch),
+        }
+        escaping = new_escaping;
+    }
+
+    if escaping {
+        Err("Unexpected EOF in escape sequence".into())
+    } else {
+        Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn roundtrip_escape() {
+        let original = "foo\nbar\n\tbaz\n\tbad\n\tgood";
+        let roundtrip = unescape(&escape(original)).unwrap();
+        assert_eq!(original, roundtrip);
+    }
+
+    #[test]
+    fn roundtrip_serialize() {
+        let original = StringFromLine::from("foo\nbar\n\tbaz\n\tbad\n\tgood");
+        let serialized = format!("{:?}", original);
+        let deserialized: StringFromLine = serialized.parse().unwrap();
+        assert_eq!(original.0, deserialized.0);
+    }
+
+    #[test]
+    fn roundtrip_serialize_evil() {
+        let original = StringFromLine::from("foo\nbar\r\n\tbaz\n\r\tbad\r\tgood");
+        let serialized = format!("{:?}", original);
+        let deserialized: StringFromLine = serialized.parse().unwrap();
+        assert_eq!(original.0, deserialized.0);
+    }
+}
+
+#[derive(Clone)]
+pub struct StringFromLine(String);
+
+impl From<&str> for StringFromLine {
+    fn from(s: &str) -> Self {
+        StringFromLine(s.into())
+    }
+}
+
+impl From<String> for StringFromLine {
+    fn from(s: String) -> Self {
+        StringFromLine(s)
+    }
+}
+
+impl From<StringFromLine> for String {
+    fn from(s: StringFromLine) -> String {
+        s.0
+    }
+}
+
+impl std::fmt::Debug for StringFromLine {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", escape(&self.0))
+    }
+}
+
+impl std::str::FromStr for StringFromLine {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(StringFromLine(unescape(s)?))
+    }
+}
+
 #[derive(Debug)]
 pub struct FsRepo {
     migrations_dir: std::path::PathBuf,
@@ -101,9 +201,9 @@ pub struct FsMigrationData {
     pub commit: CommitHash,
     pub parent: CommitHash,
     pub hash: MigrationHash,
-    pub name: String,
-    pub text: String,
-    pub rollback: Option<String>,
+    pub name: StringFromLine,
+    pub text: StringFromLine,
+    pub rollback: Option<StringFromLine>,
 }
 
 impl FsMigration {
@@ -194,7 +294,7 @@ impl Repo for FsRepo {
         self.migrations
             .iter()
             .find(|c| c.data.hash == *hash)
-            .and_then(|c| c.data.rollback.clone())
+            .and_then(|c| c.data.rollback.clone().map(Into::into))
     }
 }
 
@@ -208,11 +308,11 @@ impl Commit for FsMigration {
     }
 
     fn migration_name(&self) -> String {
-        self.data.name.clone()
+        self.data.name.clone().into()
     }
 
     fn migration_text(&self) -> String {
-        self.data.text.clone()
+        self.data.text.clone().into()
     }
 
     fn migration_hash(&self) -> MigrationHash {
@@ -229,9 +329,9 @@ impl Apply for FsRepo {
             commit: step.commit(),
             parent: step.parent.clone(),
             hash: step.hash(),
-            name: step.name.clone(),
-            text: step.text.clone(),
-            rollback: step.rollback.clone(),
+            name: step.name.into(),
+            text: step.text.into(),
+            rollback: step.rollback.into(),
         })?;
         self.set_head(&step.commit())?;
 
@@ -257,9 +357,9 @@ impl AsyncApply for FsRepo {
             commit: step.commit(),
             parent: step.parent.clone(),
             hash: step.hash(),
-            name: step.name.clone(),
-            text: step.text.clone(),
-            rollback: step.rollback.clone(),
+            name: step.name.clone().into(),
+            text: step.text.clone().into(),
+            rollback: step.rollback.clone().map(Into::into),
         })?;
         self.set_head(&step.commit())?;
 
