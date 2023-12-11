@@ -1,6 +1,6 @@
 [package]
 name = "aykroyd-derive"
-description = "Derive macros for aykroyd:  an opinionated micro-ORM for PostgreSQL."
+description = "Derive macros for aykroyd: an opinionated micro-ORM for PostgreSQL."
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
