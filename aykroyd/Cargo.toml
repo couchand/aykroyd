@@ -20,7 +20,7 @@ sync = ["postgres"]
 async = ["async-trait"]
 
 [dependencies]
-aykroyd-derive = { path = "../aykroyd-derive", optional = true }
+aykroyd-derive = { version = "0.1", path = "../aykroyd-derive", optional = true }
 bytes = "1"
 futures-util = "0.3"
 postgres = { version = "0.19", optional = true }
