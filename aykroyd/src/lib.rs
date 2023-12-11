@@ -128,16 +128,21 @@ async fn main() -> Result<(), Error> {
 "##
 )]
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 #[cfg(feature = "derive")]
+#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use aykroyd_derive::*;
 
 mod traits;
 pub use traits::*;
 
 #[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub mod async_client;
 
 #[cfg(feature = "sync")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sync")))]
 pub mod sync_client;
 
 #[cfg(any(feature = "async", feature = "sync"))]
