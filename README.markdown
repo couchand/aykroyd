@@ -13,6 +13,8 @@ would be wise to verify.  To do so, you'll need to connect to a live database.
 It is recommended to do so in a suite of automated tests which can be run
 against any database environment to verify that particular tier.
 
+See [the documentation][https://docs.rs/aykroyd/latest/aykroyd/] for more details.
+
 ## Examples
 
 ### Synchronous
