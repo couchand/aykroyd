@@ -11,7 +11,7 @@ sync = ["aykroyd-migrate/sync"]
 async = ["aykroyd-migrate/async"]
 
 [dependencies]
-aykroyd = { version = "0.1", path = "../aykroyd" }
+aykroyd = { path = "../aykroyd" }
 aykroyd-migrate = { path = "../aykroyd-migrate" }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
