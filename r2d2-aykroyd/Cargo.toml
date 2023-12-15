@@ -1,6 +1,6 @@
 [package]
 name = "r2d2-aykroyd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Aykroyd micro-ORM for the r2d2 connection pool."
 license = "MIT"

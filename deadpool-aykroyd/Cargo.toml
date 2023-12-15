@@ -1,6 +1,6 @@
 [package]
 name = "deadpool-aykroyd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Aykroyd micro-ORM for the deadpool connection pool."
 license = "MIT"

@@ -1,6 +1,6 @@
 [package]
 name = "bb8-aykroyd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Aykroyd micro-ORM for the bb8 connection pool."
 license = "MIT"
