@@ -33,7 +33,7 @@ fn main() {
             let mut client = pool.get().unwrap();
             let row = client.query_one(&AddOneTo(i)).unwrap();
             let value = row.0;
-            assert_eq!(value, i + 10;
+            assert_eq!(value, i + 1);
         });
     }
 }
