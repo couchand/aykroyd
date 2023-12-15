@@ -1,4 +1,4 @@
-//! Postgres support for the `bb8` connection pool.
+//! Aykroyd support for the `bb8` connection pool.
 #![deny(missing_docs, missing_debug_implementations)]
 
 pub use bb8;

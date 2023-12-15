@@ -1,4 +1,4 @@
-//! Postgres `aykroyd` support for the `r2d2` connection pool.
+//! Aykroyd support for the `r2d2` connection pool.
 #![warn(missing_docs)]
 
 pub use aykroyd;
