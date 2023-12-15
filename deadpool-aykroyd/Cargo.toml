@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-aykroyd = { version = "0.1", features = ["async"], path = "../aykroyd" }
+aykroyd = { version = "0.2", features = ["async"], path = "../aykroyd" }
 deadpool = "0.9"
 deadpool-postgres = "0.10"
 tokio = "1"

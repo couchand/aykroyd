@@ -9,7 +9,7 @@ sync = ["aykroyd/sync"]
 async = ["aykroyd/async", "async-trait"]
 
 [dependencies]
-aykroyd = { version = "0.1", features = ["derive"], path = "../aykroyd" }
+aykroyd = { version = "0.2", features = ["derive"], path = "../aykroyd" }
 
 async-trait = { version = "0.1", optional = true }
 bytes = "1"
@@ -21,6 +21,6 @@ sha3 = "0.10"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 
 [dev-dependencies]
-aykroyd = { version = "0.1", features = ["sync"], path = "../aykroyd" }
+aykroyd = { version = "0.2", features = ["sync"], path = "../aykroyd" }
 hex-literal = "0.2"
 tokio = { version = "1", features = ["full"] }

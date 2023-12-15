@@ -15,7 +15,7 @@ edition = "2021"
 "with-time-0_3" = ["bb8-postgres/with-time-0_3"]
 
 [dependencies]
-aykroyd = { version = "0.1", features = ["async"], path = "../aykroyd" }
+aykroyd = { version = "0.2", features = ["async"], path = "../aykroyd" }
 async-trait = "0.1"
 bb8 = "0.8"
 bb8-postgres = "0.8"
