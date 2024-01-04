@@ -1,5 +1,9 @@
 //! Aykroyd support for the `deadpool` connection pool.
 
+pub use deadpool;
+pub use aykroyd;
+pub use tokio_postgres;
+
 use async_trait::async_trait;
 use aykroyd::async_client::Client;
 use tokio_postgres::tls::{MakeTlsConnect, TlsConnect};

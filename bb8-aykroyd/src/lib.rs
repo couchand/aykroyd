@@ -3,6 +3,7 @@
 
 pub use bb8;
 pub use aykroyd;
+pub use tokio_postgres;
 
 use aykroyd::async_client::Client;
 use async_trait::async_trait;
