@@ -1,8 +1,28 @@
-readme
-derive error reporting
-logging
-more verification on prepare
-txn builder?
-generic client?
-maybe opt in to column order fromrow for structs with named fields
-gate all doctests using derive on derive feature
+random (some maybe already done?)
+---------------------------------
+
+- readme
+- derive error reporting
+- logging
+- more verification on prepare
+- txn builder?
+- generic client?
+- maybe opt in to column order fromrow for structs with named fields
+- gate all doctests using derive on derive feature
+
+
+
+design directions
+-----------------
+
+- fromcolumnsindexed/fromcolumnsnamed
+- sqltext/staticsqltext
+- multi-backend support????
+- named params e.g. where id = @id
+
+
+potential breaking changes
+--------------------------
+
+- derive attribute query => aykroyd ??
+- multi-backend probably needs something here?
