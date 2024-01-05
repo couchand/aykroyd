@@ -5,6 +5,7 @@ members = [
     "aykroyd",
     "aykroyd-derive",
     "aykroyd-migrate",
+    "aykroyd-v2",
     "bb8-aykroyd",
     "deadpool-aykroyd",
     "r2d2-aykroyd",

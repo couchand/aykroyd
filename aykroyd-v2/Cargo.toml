@@ -1,0 +1,10 @@
+[package]
+name = "aykroyd-v2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1"
+mysql = "24"
+rusqlite = "0.30"
+tokio-postgres = "0.7"
