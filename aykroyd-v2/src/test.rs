@@ -1,5 +1,8 @@
 use super::*;
 use super::client::SyncClient;
+use super::combinator::EitherQuery;
+use super::query::{ToParams, QueryText};
+use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 
 struct FakeRow {
     columns: Vec<String>,

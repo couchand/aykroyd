@@ -1,4 +1,5 @@
-use super::{QueryText, Query, QueryOne, ToParams, FromRow, Client};
+use super::{FromRow, Client};
+use super::query::{QueryText, Query, QueryOne, ToParams};
 
 pub enum EitherQuery<A, B> {
     Left(A),

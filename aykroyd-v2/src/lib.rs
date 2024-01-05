@@ -12,7 +12,6 @@ pub mod sqlite;
 mod test;
 
 pub use client::Client;
-pub use combinator::*;
-pub use error::*;
-pub use query::*;
-pub use row::*;
+pub use error::Error;
+pub use query::{Query, QueryOne, Statement, StaticQueryText};
+pub use row::{FromRow, FromSql};
