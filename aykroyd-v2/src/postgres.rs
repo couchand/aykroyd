@@ -1,4 +1,4 @@
-use super::{FromSql, FromRow, Client, Error, Query, Statement, StaticSqlText};
+use super::{FromSql, FromRow, Client, Error, Query, Statement, StaticQueryText};
 use super::client::AsyncClient;
 
 impl<'a, T: tokio_postgres::types::FromSql<'a>> FromSql<&'a tokio_postgres::Row, usize> for T {
@@ -21,9 +21,9 @@ pub struct PostgresAsyncClient {
 impl PostgresAsyncClient {
     async fn prepare_internal<S: Into<String>>(
         &mut self,
-        sql_text: S,
+        query_text: S,
     ) -> Result<tokio_postgres::Statement, Error> {
-        match self.statements.entry(sql_text.into()) {
+        match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let statement = self
@@ -55,7 +55,7 @@ impl AsyncClient for PostgresAsyncClient {
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
-        let statement = self.prepare_internal(query.sql_text()).await?;
+        let statement = self.prepare_internal(query.query_text()).await?;
 
         let rows = self.client.query(&statement, &params)
             .await
@@ -69,7 +69,7 @@ impl AsyncClient for PostgresAsyncClient {
         statement: &S,
     ) -> Result<u64, Error> {
         let params = statement.to_params();
-        let statement = self.prepare_internal(statement.sql_text()).await?;
+        let statement = self.prepare_internal(statement.query_text()).await?;
 
         let rows_affected = self.client.execute(&statement, &params)
             .await
@@ -78,8 +78,8 @@ impl AsyncClient for PostgresAsyncClient {
         Ok(rows_affected)
     }
 
-    async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
-        self.prepare_internal(S::SQL_TEXT).await?;
+    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
+        self.prepare_internal(S::QUERY_TEXT).await?;
         Ok(())
     }
 }

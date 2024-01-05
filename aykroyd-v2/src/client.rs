@@ -1,4 +1,4 @@
-use super::{Error, Query, QueryOne, Statement, StaticSqlText};
+use super::{Error, Query, QueryOne, Statement, StaticQueryText};
 
 pub trait Client: Sized {
     type Row<'a>;
@@ -17,7 +17,7 @@ pub trait AsyncClient: Client {
         statement: &S,
     ) -> Result<u64, Error>;
 
-    async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
+    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error>;
 
     async fn query_opt<Q: QueryOne<Self>>(
         &mut self,
@@ -45,7 +45,7 @@ pub trait SyncClient: Client {
         statement: &S,
     ) -> Result<u64, Error>;
 
-    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error>;
 
     fn query_opt<Q: QueryOne<Self>>(
         &mut self,

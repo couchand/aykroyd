@@ -1,15 +1,15 @@
-use super::{SqlText, Query, QueryOne, ToParams, FromRow, Client};
+use super::{QueryText, Query, QueryOne, ToParams, FromRow, Client};
 
 pub enum EitherQuery<A, B> {
     Left(A),
     Right(B),
 }
 
-impl<A: SqlText, B: SqlText> SqlText for EitherQuery<A, B> {
-    fn sql_text(&self) -> String {
+impl<A: QueryText, B: QueryText> QueryText for EitherQuery<A, B> {
+    fn query_text(&self) -> String {
         match self {
-            EitherQuery::Left(a) => a.sql_text(),
-            EitherQuery::Right(b) => b.sql_text(),
+            EitherQuery::Left(a) => a.query_text(),
+            EitherQuery::Right(b) => b.query_text(),
         }
     }
 }

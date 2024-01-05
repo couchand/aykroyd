@@ -1,4 +1,4 @@
-use super::{Error, FromSql, Client, Query, Statement, StaticSqlText, FromRow};
+use super::{Error, FromSql, Client, Query, Statement, StaticQueryText, FromRow};
 use super::client::SyncClient;
 
 impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, usize> for T {
@@ -25,7 +25,7 @@ impl SyncClient for rusqlite::Connection {
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self, &query.sql_text())
+        let mut statement = rusqlite::Connection::prepare_cached(self, &query.query_text())
             .map_err(|e| Error::Prepare(e.to_string()))?;
 
         let mut rows = statement.query(&params[..])
@@ -45,7 +45,7 @@ impl SyncClient for rusqlite::Connection {
     ) -> Result<u64, Error> {
         let params = statement.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self, &statement.sql_text())
+        let mut statement = rusqlite::Connection::prepare_cached(self, &statement.query_text())
             .map_err(|e| Error::Prepare(e.to_string()))?;
 
         let rows_affected = statement.execute(&params[..])
@@ -54,8 +54,8 @@ impl SyncClient for rusqlite::Connection {
         Ok(rows_affected.try_into().unwrap_or_default())
     }
 
-    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
-        self.prepare_cached(S::SQL_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
+        self.prepare_cached(S::QUERY_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
         Ok(())
     }
 }

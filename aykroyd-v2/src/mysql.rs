@@ -1,4 +1,4 @@
-use super::{Error, FromSql, Client, Query, Statement, StaticSqlText, FromRow};
+use super::{Error, FromSql, Client, Query, Statement, StaticQueryText, FromRow};
 use super::client::SyncClient;
 
 impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, usize> for T {
@@ -34,7 +34,7 @@ impl SyncClient for mysql::Conn {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let query = self.prep(query.sql_text()).map_err(|e| Error::Prepare(e.to_string()))?;
+        let query = self.prep(query.query_text()).map_err(|e| Error::Prepare(e.to_string()))?;
 
         let rows = mysql::prelude::Queryable::exec(self, &query, params)
             .map_err(|e| Error::Query(e.to_string()))?;
@@ -53,7 +53,7 @@ impl SyncClient for mysql::Conn {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let statement = self.prep(statement.sql_text()).map_err(|e| Error::Prepare(e.to_string()))?;
+        let statement = self.prep(statement.query_text()).map_err(|e| Error::Prepare(e.to_string()))?;
 
         mysql::prelude::Queryable::exec_drop(self, &statement, params)
             .map_err(|e| Error::Query(e.to_string()))?;
@@ -61,9 +61,9 @@ impl SyncClient for mysql::Conn {
         Ok(self.affected_rows())
     }
 
-    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         use mysql::prelude::Queryable;
-        self.prep(S::SQL_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+        self.prep(S::QUERY_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
         Ok(())
     }
 }

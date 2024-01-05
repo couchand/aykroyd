@@ -139,32 +139,32 @@ fn smoke_named() {
 
 struct GetAllPosts;
 
-impl StaticSqlText for GetAllPosts {
-    const SQL_TEXT: &'static str = "SELECT text, user.name user_name FROM post";
+impl StaticQueryText for GetAllPosts {
+    const QUERY_TEXT: &'static str = "SELECT text, user.name user_name FROM post";
 }
 
 #[test]
 fn smoke_static_text() {
     let query = GetAllPosts;
-    assert_eq!(GetAllPosts::SQL_TEXT, query.sql_text());
+    assert_eq!(GetAllPosts::QUERY_TEXT, query.query_text());
 }
 
 struct GetActivePosts;
 
-impl StaticSqlText for GetActivePosts {
-    const SQL_TEXT: &'static str = "SELECT text, user.name user_name FROM post WHERE active";
+impl StaticQueryText for GetActivePosts {
+    const QUERY_TEXT: &'static str = "SELECT text, user.name user_name FROM post WHERE active";
 }
 
 #[test]
 fn smoke_dynamic_text() {
     let query: EitherQuery<GetAllPosts, GetActivePosts> = EitherQuery::Right(GetActivePosts);
-    assert_eq!(GetActivePosts::SQL_TEXT, query.sql_text());
+    assert_eq!(GetActivePosts::QUERY_TEXT, query.query_text());
 }
 
 struct GetPostsByUser(String);
 
-impl StaticSqlText for GetPostsByUser {
-    const SQL_TEXT: &'static str = "SELECT text, user.name user_name FROM post \
+impl StaticQueryText for GetPostsByUser {
+    const QUERY_TEXT: &'static str = "SELECT text, user.name user_name FROM post \
         WHERE user.name = $1";
 }
 
@@ -239,7 +239,7 @@ impl SyncClient for FakeClient {
         Ok(1)
     }
 
-    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -271,8 +271,8 @@ fn smoke_query() {
 
 struct UpdatePost(String);
 
-impl StaticSqlText for UpdatePost {
-    const SQL_TEXT: &'static str = "UPDATE post SET text = $1";
+impl StaticQueryText for UpdatePost {
+    const QUERY_TEXT: &'static str = "UPDATE post SET text = $1";
 }
 
 impl<C: Client> ToParams<C> for UpdatePost
