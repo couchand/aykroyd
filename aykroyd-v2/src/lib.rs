@@ -240,6 +240,8 @@ pub trait ToParams<C: Client>: Sync {
     fn to_params(&self) -> Vec<C::Param<'_>>;
 }
 
+pub trait Statement<C: Client>: ToParams<C> + SqlText + Sync {}
+
 pub trait Query<C: Client>: ToParams<C> + SqlText + Sync {
     type Row: for<'a> FromRow<C::Row<'a>>;
 }
@@ -252,6 +254,11 @@ pub trait AsyncClient: Client {
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error>;
+
+    async fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error>;
 
     async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
 
@@ -275,6 +282,11 @@ pub trait SyncClient: Client {
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error>;
+
+    fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error>;
 
     fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
 
@@ -309,6 +321,20 @@ impl AsyncClient for PostgresAsyncClient {
         rows.iter().map(FromRow::from_row).collect()
     }
 
+    async fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error> {
+        let params = statement.to_params();
+        let statement = self.prepare_internal(statement.sql_text()).await?;
+
+        let rows_affected = self.client.execute(&statement, &params)
+            .await
+            .map_err(|e| Error::Query(e.to_string()))?;
+
+        Ok(rows_affected)
+    }
+
     async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
         self.prepare_internal(S::SQL_TEXT).await?;
         Ok(())
@@ -320,16 +346,38 @@ impl SyncClient for mysql::Conn {
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
+        use mysql::prelude::Queryable;
+
         let params = query.to_params();
         let params = match params.len() {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
+        let query = self.prep(query.sql_text()).map_err(|e| Error::Prepare(e.to_string()))?;
 
-        let rows = mysql::prelude::Queryable::exec(self, &query.sql_text(), params)
+        let rows = mysql::prelude::Queryable::exec(self, &query, params)
             .map_err(|e| Error::Query(e.to_string()))?;
 
         rows.iter().map(FromRow::from_row).collect()
+    }
+
+    fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error> {
+        use mysql::prelude::Queryable;
+
+        let params = statement.to_params();
+        let params = match params.len() {
+            0 => mysql::Params::Empty,
+            _ => mysql::Params::Positional(params),
+        };
+        let statement = self.prep(statement.sql_text()).map_err(|e| Error::Prepare(e.to_string()))?;
+
+        mysql::prelude::Queryable::exec_drop(self, &statement, params)
+            .map_err(|e| Error::Query(e.to_string()))?;
+
+        Ok(self.affected_rows())
     }
 
     fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
@@ -347,7 +395,7 @@ impl SyncClient for rusqlite::Connection {
         let params = query.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(self, &query.sql_text())
-            .map_err(|e| Error::Query(e.to_string()))?;
+            .map_err(|e| Error::Prepare(e.to_string()))?;
 
         let mut rows = statement.query(&params[..])
             .map_err(|e| Error::Query(e.to_string()))?;
@@ -358,6 +406,21 @@ impl SyncClient for rusqlite::Connection {
         }
 
         Ok(result)
+    }
+
+    fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error> {
+        let params = statement.to_params();
+
+        let mut statement = rusqlite::Connection::prepare_cached(self, &statement.sql_text())
+            .map_err(|e| Error::Prepare(e.to_string()))?;
+
+        let rows_affected = statement.execute(&params[..])
+            .map_err(|e| Error::Query(e.to_string()))?;
+
+        Ok(rows_affected.try_into().unwrap_or_default())
     }
 
     fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
@@ -583,6 +646,31 @@ mod test {
             Ok(rows)
         }
 
+        fn execute<S: Statement<Self>>(
+            &mut self,
+            statement: &S,
+        ) -> Result<u64, Error> {
+            let params = statement.to_params();
+            assert_eq!(1, params.len());
+            let text = params.into_iter().next().unwrap();
+
+            if self.0.is_empty() {
+                self.0.push(FakeRow {
+                    columns: vec![
+                        "text".into(),
+                        "user_name".into(),
+                    ],
+                    tuple: vec![
+                        text,
+                        "Sam Author".into(),
+                    ],
+                });
+            } else {
+                self.0[0].tuple[0] = text
+            }
+            Ok(1)
+        }
+
         fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
             Ok(())
         }
@@ -611,5 +699,50 @@ mod test {
             assert_eq!("Sam Author", rows[0].user.name);
             assert_eq!("my cool post!", rows[0].text);
         }
+    }
+
+    struct UpdatePost(String);
+
+    impl StaticSqlText for UpdatePost {
+        const SQL_TEXT: &'static str = "UPDATE post SET text = $1";
+    }
+
+    impl<C: Client> ToParams<C> for UpdatePost
+    where
+        for<'a> &'a String: Into<C::Param<'a>>,
+    {
+        fn to_params(&self) -> Vec<C::Param<'_>> {
+            vec![
+                Into::into(&self.0),
+            ]
+        }
+    }
+
+    impl<C: Client> Statement<C> for UpdatePost
+    where
+        Self: ToParams<C>,
+    {
+    }
+
+    #[test]
+    fn smoke_statement() {
+        let statement = UpdatePost("i can change".into());
+        let row = FakeRow {
+            columns: vec![
+                "text".into(),
+                "user_name".into(),
+            ],
+            tuple: vec![
+                "my cool post!".into(),
+                "Sam Author".into(),
+            ],
+        };
+        let mut client = FakeClient(vec![row]);
+
+        let result = client.execute(&statement);
+
+        assert!(matches!(result, Ok(1)));
+
+        assert_eq!("i can change", client.0[0].tuple[0]);
     }
 }
