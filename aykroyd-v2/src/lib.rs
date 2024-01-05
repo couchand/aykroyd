@@ -153,6 +153,21 @@ impl<A: SqlText, B: SqlText> SqlText for EitherQuery<A, B> {
     }
 }
 
+impl<C, R, A, B> ToParams<C> for EitherQuery<A, B>
+where
+    C: Client,
+    R: for<'a> FromRow<C::Row<'a>>,
+    A: Query<C, Row = R>,
+    B: Query<C, Row = R>,
+{
+    fn to_params(&self) -> Vec<C::Param<'_>> {
+        match self {
+            EitherQuery::Left(a) => a.to_params(),
+            EitherQuery::Right(b) => b.to_params(),
+        }
+    }
+}
+
 impl<C, R, A, B> Query<C> for EitherQuery<A, B>
 where
     C: Client,
@@ -161,14 +176,15 @@ where
     B: Query<C, Row = R>,
 {
     type Row = R;
-
-    fn to_params(&self) -> Vec<C::Param<'_>> {
-        match self {
-            EitherQuery::Left(a) => a.to_params(),
-            EitherQuery::Right(b) => b.to_params(),
-        }
-    }
 }
+
+impl<C, R, A, B> QueryOne<C> for EitherQuery<A, B>
+where
+    C: Client,
+    R: for<'a> FromRow<C::Row<'a>>,
+    A: QueryOne<C, Row = R>,
+    B: QueryOne<C, Row = R>,
+{}
 
 pub trait Client: Sized {
     type Row<'a>;
@@ -220,11 +236,15 @@ impl Client for rusqlite::Connection {
     type Param<'a> = &'a dyn rusqlite::types::ToSql;
 }
 
-pub trait Query<C: Client>: SqlText + Sync {
-    type Row: for<'a> FromRow<C::Row<'a>>;
-
+pub trait ToParams<C: Client>: Sync {
     fn to_params(&self) -> Vec<C::Param<'_>>;
 }
+
+pub trait Query<C: Client>: ToParams<C> + SqlText + Sync {
+    type Row: for<'a> FromRow<C::Row<'a>>;
+}
+
+pub trait QueryOne<C: Client>: Query<C> {}
 
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {
@@ -234,6 +254,20 @@ pub trait AsyncClient: Client {
     ) -> Result<Vec<Q::Row>, Error>;
 
     async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
+
+    async fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        self.query(query).await.map(|rows| rows.into_iter().next())
+    }
+
+    async fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        self.query_opt(query).await.map(|row| row.unwrap())
+    }
 }
 
 pub trait SyncClient: Client {
@@ -243,6 +277,20 @@ pub trait SyncClient: Client {
     ) -> Result<Vec<Q::Row>, Error>;
 
     fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
+
+    fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        self.query(query).map(|rows| rows.into_iter().next())
+    }
+
+    fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        self.query_opt(query).map(|row| row.unwrap())
+    }
 }
 
 #[async_trait::async_trait]
@@ -489,18 +537,23 @@ mod test {
             WHERE user.name = $1";
     }
 
-    impl<C: Client> Query<C> for GetPostsByUser
+    impl<C: Client> ToParams<C> for GetPostsByUser
     where
-        for<'a> PostIndexed: FromRow<C::Row<'a>>,
         for<'a> &'a String: Into<C::Param<'a>>,
     {
-        type Row = PostIndexed;
-
         fn to_params(&self) -> Vec<C::Param<'_>> {
             vec![
                 Into::into(&self.0),
             ]
         }
+    }
+
+    impl<C: Client> Query<C> for GetPostsByUser
+    where
+        for<'a> PostIndexed: FromRow<C::Row<'a>>,
+        Self: ToParams<C>,
+    {
+        type Row = PostIndexed;
     }
 
     struct FakeClient(Vec<FakeRow>);
@@ -513,7 +566,7 @@ mod test {
     #[test]
     fn smoke_to_params() {
         let query = GetPostsByUser("foobar".into());
-        let row = <GetPostsByUser as Query<FakeClient>>::to_params(&query);
+        let row = <GetPostsByUser as ToParams<FakeClient>>::to_params(&query);
         assert_eq!(1, row.len());
         assert_eq!("foobar", row[0]);
     }
