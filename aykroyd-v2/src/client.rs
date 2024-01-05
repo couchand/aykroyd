@@ -1,10 +1,19 @@
+//! Traits that represent database clients.
+//!
+//! Our model expects each database backend to manage the
+//! connection as well as caching prepared statements.
+//! The client can be synchronous or asynchronous, both
+//! provide the same interface.
+
 use super::{Error, Query, QueryOne, Statement, StaticQueryText};
 
+/// A database client's parameter and row types.
 pub trait Client: Sized {
     type Row<'a>;
     type Param<'a>;
 }
 
+/// An asynchronous database client.
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {
     async fn query<Q: Query<Self>>(
@@ -34,6 +43,7 @@ pub trait AsyncClient: Client {
     }
 }
 
+/// A synchronous database client.
 pub trait SyncClient: Client {
     fn query<Q: Query<Self>>(
         &mut self,

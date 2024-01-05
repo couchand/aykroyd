@@ -1,3 +1,5 @@
+//! Aykroyd: An opinionated micro-ORM.
+
 pub mod client;
 pub mod combinator;
 pub mod error;

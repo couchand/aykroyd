@@ -1,3 +1,5 @@
+//! Sqlite bindings.
+
 use super::{Error, FromSql, Client, Query, Statement, StaticQueryText, FromRow};
 use super::client::SyncClient;
 

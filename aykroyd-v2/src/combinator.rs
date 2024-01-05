@@ -1,6 +1,9 @@
+//! Query combinators.
+
 use super::{FromRow, Client};
 use super::query::{QueryText, Query, QueryOne, ToParams};
 
+/// A query that could be one of two options.
 pub enum EitherQuery<A, B> {
     Left(A),
     Right(B),

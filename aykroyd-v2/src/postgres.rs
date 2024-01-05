@@ -1,3 +1,5 @@
+//! PostgreSQL bindings.
+
 use super::{FromSql, FromRow, Client, Error, Query, Statement, StaticQueryText};
 use super::client::AsyncClient;
 
