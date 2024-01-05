@@ -1,7 +1,8 @@
 #[derive(Debug)]
 pub enum Error {
     FromSql(String),
-    Database(String),
+    Query(String),
+    Prepare(String),
 }
 
 pub trait FromSql<Row, Index>: Sized {
@@ -152,12 +153,59 @@ impl<A: SqlText, B: SqlText> SqlText for EitherQuery<A, B> {
     }
 }
 
+impl<C, R, A, B> Query<C> for EitherQuery<A, B>
+where
+    C: Client,
+    R: for<'a> FromRow<C::Row<'a>>,
+    A: Query<C, Row = R>,
+    B: Query<C, Row = R>,
+{
+    type Row = R;
+
+    fn to_params(&self) -> Vec<C::Param<'_>> {
+        match self {
+            EitherQuery::Left(a) => a.to_params(),
+            EitherQuery::Right(b) => b.to_params(),
+        }
+    }
+}
+
 pub trait Client: Sized {
     type Row<'a>;
     type Param<'a>;
 }
 
-impl Client for tokio_postgres::Client {
+pub struct PostgresAsyncClient {
+    client: tokio_postgres::Client,
+    statements: std::collections::HashMap<String, tokio_postgres::Statement>,
+}
+
+impl PostgresAsyncClient {
+    async fn prepare_internal<S: Into<String>>(
+        &mut self,
+        sql_text: S,
+    ) -> Result<tokio_postgres::Statement, Error> {
+        match self.statements.entry(sql_text.into()) {
+            std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let statement = self
+                    .client
+                    .prepare(entry.key())
+                    .await
+                    .map_err(|e| Error::Prepare(e.to_string()))?;
+                Ok(entry.insert(statement).clone())
+            }
+        }
+    }
+}
+
+impl AsRef<tokio_postgres::Client> for PostgresAsyncClient {
+    fn as_ref(&self) -> &tokio_postgres::Client {
+        &self.client
+    }
+}
+
+impl Client for PostgresAsyncClient {
     type Row<'a> = tokio_postgres::Row;
     type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
 }
@@ -172,70 +220,101 @@ impl Client for rusqlite::Connection {
     type Param<'a> = &'a dyn rusqlite::types::ToSql;
 }
 
-pub trait Query<C: Client>: SqlText {
+pub trait Query<C: Client>: SqlText + Sync {
     type Row: for<'a> FromRow<C::Row<'a>>;
 
-    fn to_row(&self) -> Vec<C::Param<'_>>;
+    fn to_params(&self) -> Vec<C::Param<'_>>;
 }
 
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {
-    async fn query<Q: Query<Self> + Sync>(
+    async fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error>;
+
+    async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
 }
 
 pub trait SyncClient: Client {
-    fn query<Q: Query<Self> + Sync>(
+    fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error>;
+
+    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
-impl AsyncClient for tokio_postgres::Client {
-    async fn query<Q: Query<Self> + Sync>(
+impl AsyncClient for PostgresAsyncClient {
+    async fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
-        let rows = tokio_postgres::Client::query(self, &query.sql_text(), &[])
+        let params = query.to_params();
+        let statement = self.prepare_internal(query.sql_text()).await?;
+
+        let rows = self.client.query(&statement, &params)
             .await
-            .map_err(|e| Error::Database(e.to_string()))?;
+            .map_err(|e| Error::Query(e.to_string()))?;
 
         rows.iter().map(FromRow::from_row).collect()
+    }
+
+    async fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+        self.prepare_internal(S::SQL_TEXT).await?;
+        Ok(())
     }
 }
 
 impl SyncClient for mysql::Conn {
-    fn query<Q: Query<Self> + Sync>(
+    fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
-        let rows = mysql::prelude::Queryable::query(self, &query.sql_text())
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let params = query.to_params();
+        let params = match params.len() {
+            0 => mysql::Params::Empty,
+            _ => mysql::Params::Positional(params),
+        };
+
+        let rows = mysql::prelude::Queryable::exec(self, &query.sql_text(), params)
+            .map_err(|e| Error::Query(e.to_string()))?;
 
         rows.iter().map(FromRow::from_row).collect()
+    }
+
+    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+        use mysql::prelude::Queryable;
+        self.prep(S::SQL_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+        Ok(())
     }
 }
 
 impl SyncClient for rusqlite::Connection {
-    fn query<Q: Query<Self> + Sync>(
+    fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
-        let mut statement = rusqlite::Connection::prepare(self, &query.sql_text())
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let params = query.to_params();
 
-        let mut rows = statement.query([])
-            .map_err(|e| Error::Database(e.to_string()))?;
+        let mut statement = rusqlite::Connection::prepare_cached(self, &query.sql_text())
+            .map_err(|e| Error::Query(e.to_string()))?;
+
+        let mut rows = statement.query(&params[..])
+            .map_err(|e| Error::Query(e.to_string()))?;
         
         let mut result = vec![];
-        while let Some(row) = rows.next().map_err(|e| Error::Database(e.to_string()))? {
+        while let Some(row) = rows.next().map_err(|e| Error::Query(e.to_string()))? {
             result.push(FromRow::from_row(row)?);
         }
 
         Ok(result)
+    }
+
+    fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+        self.prepare_cached(S::SQL_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+        Ok(())
     }
 }
 
@@ -412,13 +491,72 @@ mod test {
 
     impl<C: Client> Query<C> for GetPostsByUser
     where
-        PostIndexed: for<'a> FromRow<C::Row<'a>>,
+        for<'a> PostIndexed: FromRow<C::Row<'a>>,
+        for<'a> &'a String: Into<C::Param<'a>>,
     {
         type Row = PostIndexed;
 
-        fn to_row(&self) -> Vec<C::Param<'_>> {
-            //vec![&self.0]
-            todo!()
+        fn to_params(&self) -> Vec<C::Param<'_>> {
+            vec![
+                Into::into(&self.0),
+            ]
+        }
+    }
+
+    struct FakeClient(Vec<FakeRow>);
+
+    impl Client for FakeClient {
+        type Row<'a> = &'a FakeRow;
+        type Param<'a> = String;
+    }
+
+    #[test]
+    fn smoke_to_params() {
+        let query = GetPostsByUser("foobar".into());
+        let row = <GetPostsByUser as Query<FakeClient>>::to_params(&query);
+        assert_eq!(1, row.len());
+        assert_eq!("foobar", row[0]);
+    }
+
+    impl SyncClient for FakeClient {
+        fn query<Q: Query<Self>>(
+            &mut self,
+            _query: &Q,
+        ) -> Result<Vec<Q::Row>, Error> {
+            let mut rows = vec![];
+            for row in &self.0 {
+                rows.push(FromRow::from_row(&row)?);
+            }
+            Ok(rows)
+        }
+
+        fn prepare<S: StaticSqlText>(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn smoke_query() {
+        let query = GetPostsByUser("Sam Author".into());
+        let row = FakeRow {
+            columns: vec![
+                "text".into(),
+                "user_name".into(),
+            ],
+            tuple: vec![
+                "my cool post!".into(),
+                "Sam Author".into(),
+            ],
+        };
+        let mut client = FakeClient(vec![row]);
+
+        let result = client.query(&query);
+
+        assert!(matches!(result, Ok(_)));
+        if let Ok(rows) = result {
+            assert_eq!(1, rows.len());
+            assert_eq!("Sam Author", rows[0].user.name);
+            assert_eq!("my cool post!", rows[0].text);
         }
     }
 }
