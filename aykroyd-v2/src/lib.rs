@@ -6,8 +6,10 @@ pub mod error;
 pub mod query;
 pub mod row;
 
+#[cfg(feature = "mysql")]
 pub mod mysql;
 pub mod postgres;
+#[cfg(feature = "rusqlite")]
 pub mod sqlite;
 
 #[cfg(test)]
