@@ -79,7 +79,15 @@ impl<'a, Row> ColumnsNamed<'a, Row> {
 /// - one or more column has an attribute `#[aykroyd(index = <index>)]`
 /// - the type has an attribute `#[aykroyd(indexed)]`
 pub trait FromColumnsIndexed<Row>: Sized {
+    //const NUM_COLUMNS: usize;
     fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error>;
+}
+
+impl<Row, T: FromColumnsIndexed<Row>> FromColumnsIndexed<Row> for Option<T> {
+    //const NUM_COLUMNS: usize = T::NUM_COLUMNS;
+    fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
+        T::from_columns(columns).map(Some).or(Ok(None)) // TODO: this is terrible!
+    }
 }
 
 /// A type that can be produced from a result row by column name.
