@@ -15,10 +15,7 @@ pub struct ColumnsIndexed<'a, Row> {
 
 impl<'a, Row> ColumnsIndexed<'a, Row> {
     pub fn new(row: &'a Row) -> Self {
-        ColumnsIndexed {
-            row,
-            offset: 0,
-        }
+        ColumnsIndexed { row, offset: 0 }
     }
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>

@@ -1,7 +1,7 @@
 //! Sqlite bindings.
 
-use super::{Error, FromSql, Client, Query, Statement, StaticQueryText, FromRow};
 use super::client::SyncClient;
+use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
 
 impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, usize> for T {
     fn get(row: &rusqlite::Row, index: usize) -> Result<Self, Error> {
@@ -21,16 +21,14 @@ impl Client for rusqlite::Connection {
 }
 
 impl SyncClient for rusqlite::Connection {
-    fn query<Q: Query<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(self, &query.query_text())
             .map_err(|e| Error::Prepare(e.to_string()))?;
 
-        let mut rows = statement.query(&params[..])
+        let mut rows = statement
+            .query(&params[..])
             .map_err(|e| Error::Query(e.to_string()))?;
 
         let mut result = vec![];
@@ -41,23 +39,22 @@ impl SyncClient for rusqlite::Connection {
         Ok(result)
     }
 
-    fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(self, &statement.query_text())
             .map_err(|e| Error::Prepare(e.to_string()))?;
 
-        let rows_affected = statement.execute(&params[..])
+        let rows_affected = statement
+            .execute(&params[..])
             .map_err(|e| Error::Query(e.to_string()))?;
 
         Ok(rows_affected.try_into().unwrap_or_default())
     }
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
-        self.prepare_cached(S::QUERY_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+        self.prepare_cached(S::QUERY_TEXT)
+            .map_err(|e| Error::Prepare(e.to_string()))?;
         Ok(())
     }
 }

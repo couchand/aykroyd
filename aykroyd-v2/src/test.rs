@@ -1,8 +1,8 @@
-use super::*;
 use super::client::SyncClient;
 use super::combinator::EitherQuery;
-use super::query::{ToParams, QueryText};
+use super::query::{QueryText, ToParams};
 use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
+use super::*;
 
 struct FakeRow {
     columns: Vec<String>,
@@ -11,7 +11,10 @@ struct FakeRow {
 
 impl FromSql<&FakeRow, usize> for String {
     fn get(row: &FakeRow, index: usize) -> Result<String, Error> {
-        row.tuple.get(index).cloned().ok_or(Error::FromSql("not found".into()))
+        row.tuple
+            .get(index)
+            .cloned()
+            .ok_or(Error::FromSql("not found".into()))
     }
 }
 
@@ -82,14 +85,8 @@ where
 #[test]
 fn smoke_indexed() {
     let result = FakeRow {
-        columns: vec![
-            "text".into(),
-            "user_name".into(),
-        ],
-        tuple: vec![
-            "my cool post!".into(),
-            "Sam Author".into(),
-        ],
+        columns: vec!["text".into(), "user_name".into()],
+        tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
     let post = PostIndexed::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
@@ -126,14 +123,8 @@ where
 #[test]
 fn smoke_named() {
     let result = FakeRow {
-        columns: vec![
-            "text".into(),
-            "user_name".into(),
-        ],
-        tuple: vec![
-            "my cool post!".into(),
-            "Sam Author".into(),
-        ],
+        columns: vec!["text".into(), "user_name".into()],
+        tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
     let post = PostNamed::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
@@ -176,9 +167,7 @@ where
     for<'a> &'a String: Into<C::Param<'a>>,
 {
     fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![
-            Into::into(&self.0),
-        ]
+        vec![Into::into(&self.0)]
     }
 }
 
@@ -206,10 +195,7 @@ fn smoke_to_params() {
 }
 
 impl SyncClient for FakeClient {
-    fn query<Q: Query<Self>>(
-        &mut self,
-        _query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    fn query<Q: Query<Self>>(&mut self, _query: &Q) -> Result<Vec<Q::Row>, Error> {
         let mut rows = vec![];
         for row in &self.0 {
             rows.push(FromRow::from_row(row)?);
@@ -217,24 +203,15 @@ impl SyncClient for FakeClient {
         Ok(rows)
     }
 
-    fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         assert_eq!(1, params.len());
         let text = params.into_iter().next().unwrap();
 
         if self.0.is_empty() {
             self.0.push(FakeRow {
-                columns: vec![
-                    "text".into(),
-                    "user_name".into(),
-                ],
-                tuple: vec![
-                    text,
-                    "Sam Author".into(),
-                ],
+                columns: vec!["text".into(), "user_name".into()],
+                tuple: vec![text, "Sam Author".into()],
             });
         } else {
             self.0[0].tuple[0] = text
@@ -251,14 +228,8 @@ impl SyncClient for FakeClient {
 fn smoke_query() {
     let query = GetPostsByUser("Sam Author".into());
     let row = FakeRow {
-        columns: vec![
-            "text".into(),
-            "user_name".into(),
-        ],
-        tuple: vec![
-            "my cool post!".into(),
-            "Sam Author".into(),
-        ],
+        columns: vec!["text".into(), "user_name".into()],
+        tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
     let mut client = FakeClient(vec![row]);
 
@@ -283,30 +254,18 @@ where
     for<'a> &'a String: Into<C::Param<'a>>,
 {
     fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![
-            Into::into(&self.0),
-        ]
+        vec![Into::into(&self.0)]
     }
 }
 
-impl<C: Client> Statement<C> for UpdatePost
-where
-    Self: ToParams<C>,
-{
-}
+impl<C: Client> Statement<C> for UpdatePost where Self: ToParams<C> {}
 
 #[test]
 fn smoke_statement() {
     let statement = UpdatePost("i can change".into());
     let row = FakeRow {
-        columns: vec![
-            "text".into(),
-            "user_name".into(),
-        ],
-        tuple: vec![
-            "my cool post!".into(),
-            "Sam Author".into(),
-        ],
+        columns: vec!["text".into(), "user_name".into()],
+        tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
     let mut client = FakeClient(vec![row]);
 

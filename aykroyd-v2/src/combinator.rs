@@ -1,7 +1,7 @@
 //! Query combinators.
 
-use super::{FromRow, Client};
-use super::query::{QueryText, Query, QueryOne, ToParams};
+use super::query::{Query, QueryOne, QueryText, ToParams};
+use super::{Client, FromRow};
 
 /// A query that could be one of two options.
 pub enum EitherQuery<A, B> {
@@ -49,4 +49,5 @@ where
     R: for<'a> FromRow<C::Row<'a>>,
     A: QueryOne<C, Row = R>,
     B: QueryOne<C, Row = R>,
-{}
+{
+}

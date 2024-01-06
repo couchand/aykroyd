@@ -1,7 +1,7 @@
 //! MySQL bindings.
 
-use super::{Error, FromSql, Client, Query, Statement, StaticQueryText, FromRow};
 use super::client::SyncClient;
+use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
 
 impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, usize> for T {
     fn get(row: &mysql::Row, index: usize) -> Result<Self, Error> {
@@ -25,10 +25,7 @@ impl Client for mysql::Conn {
 }
 
 impl SyncClient for mysql::Conn {
-    fn query<Q: Query<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -36,7 +33,9 @@ impl SyncClient for mysql::Conn {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let query = self.prep(query.query_text()).map_err(|e| Error::Prepare(e.to_string()))?;
+        let query = self
+            .prep(query.query_text())
+            .map_err(|e| Error::Prepare(e.to_string()))?;
 
         let rows = mysql::prelude::Queryable::exec(self, &query, params)
             .map_err(|e| Error::Query(e.to_string()))?;
@@ -44,10 +43,7 @@ impl SyncClient for mysql::Conn {
         rows.iter().map(FromRow::from_row).collect()
     }
 
-    fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -55,7 +51,9 @@ impl SyncClient for mysql::Conn {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let statement = self.prep(statement.query_text()).map_err(|e| Error::Prepare(e.to_string()))?;
+        let statement = self
+            .prep(statement.query_text())
+            .map_err(|e| Error::Prepare(e.to_string()))?;
 
         mysql::prelude::Queryable::exec_drop(self, &statement, params)
             .map_err(|e| Error::Query(e.to_string()))?;
@@ -65,7 +63,8 @@ impl SyncClient for mysql::Conn {
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         use mysql::prelude::Queryable;
-        self.prep(S::QUERY_TEXT).map_err(|e| Error::Prepare(e.to_string()))?;
+        self.prep(S::QUERY_TEXT)
+            .map_err(|e| Error::Prepare(e.to_string()))?;
         Ok(())
     }
 }
