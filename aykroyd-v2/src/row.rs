@@ -8,13 +8,13 @@ pub trait FromSql<Row, Index>: Sized {
 }
 
 /// The columns of a result row by index.
-pub struct ColumnsIndexed<Row> {
-    row: Row,
+pub struct ColumnsIndexed<'a, Row> {
+    row: &'a Row,
     offset: usize,
 }
 
-impl<Row: Copy> ColumnsIndexed<Row> {
-    pub fn new(row: Row) -> Self {
+impl<'a, Row> ColumnsIndexed<'a, Row> {
+    pub fn new(row: &'a Row) -> Self {
         ColumnsIndexed {
             row,
             offset: 0,
@@ -23,7 +23,7 @@ impl<Row: Copy> ColumnsIndexed<Row> {
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>
     where
-        T: FromSql<Row, usize>,
+        T: FromSql<&'a Row, usize>,
     {
         FromSql::get(self.row, self.offset + index)
     }
@@ -38,13 +38,13 @@ impl<Row: Copy> ColumnsIndexed<Row> {
 }
 
 /// The columns of a result row by name.
-pub struct ColumnsNamed<Row> {
-    row: Row,
+pub struct ColumnsNamed<'a, Row> {
+    row: &'a Row,
     prefix: String,
 }
 
-impl<Row: Copy> ColumnsNamed<Row> {
-    pub fn new(row: Row) -> Self {
+impl<'a, Row> ColumnsNamed<'a, Row> {
+    pub fn new(row: &'a Row) -> Self {
         ColumnsNamed {
             row,
             prefix: String::new(),
@@ -53,7 +53,7 @@ impl<Row: Copy> ColumnsNamed<Row> {
 
     pub fn get<T>(&self, index: &str) -> Result<T, Error>
     where
-        T: for<'a> FromSql<Row, &'a str>,
+        T: for<'b> FromSql<&'a Row, &'b str>,
     {
         let mut name = self.prefix.clone();
         name.push_str(index);

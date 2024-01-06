@@ -30,9 +30,9 @@ struct User {
     name: String,
 }
 
-impl<Row: Copy> FromColumnsIndexed<Row> for User
+impl<Row> FromColumnsIndexed<Row> for User
 where
-    String: FromSql<Row, usize>,
+    String: for<'a> FromSql<&'a Row, usize>,
 {
     fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
         Ok(User {
@@ -41,9 +41,9 @@ where
     }
 }
 
-impl<Row: Copy> FromColumnsNamed<Row> for User
+impl<Row> FromColumnsNamed<Row> for User
 where
-    String: for<'a> FromSql<Row, &'a str>,
+    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
 {
     fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {
         Ok(User {
@@ -57,18 +57,18 @@ struct PostIndexed {
     user: User,
 }
 
-impl<Row: Copy> FromRow<Row> for PostIndexed
+impl<Row> FromRow<Row> for PostIndexed
 where
-    String: FromSql<Row, usize>,
+    String: for<'a> FromSql<&'a Row, usize>,
 {
     fn from_row(row: &Row) -> Result<Self, Error> {
-        FromColumnsIndexed::from_columns(ColumnsIndexed::new(*row))
+        FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
     }
 }
 
-impl<Row: Copy> FromColumnsIndexed<Row> for PostIndexed
+impl<Row> FromColumnsIndexed<Row> for PostIndexed
 where
-    String: FromSql<Row, usize>,
+    String: for<'a> FromSql<&'a Row, usize>,
     User: FromColumnsIndexed<Row>,
 {
     fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
@@ -91,7 +91,7 @@ fn smoke_indexed() {
             "Sam Author".into(),
         ],
     };
-    let post = PostIndexed::from_row(&&result).unwrap();
+    let post = PostIndexed::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
     assert_eq!("my cool post!", post.text);
 }
@@ -101,18 +101,18 @@ struct PostNamed {
     user: User,
 }
 
-impl<Row: Copy> FromRow<Row> for PostNamed
+impl<Row> FromRow<Row> for PostNamed
 where
-    String: for<'a> FromSql<Row, &'a str>,
+    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
 {
     fn from_row(row: &Row) -> Result<Self, Error> {
-        FromColumnsNamed::from_columns(ColumnsNamed::new(*row))
+        FromColumnsNamed::from_columns(ColumnsNamed::new(row))
     }
 }
 
-impl<Row: Copy> FromColumnsNamed<Row> for PostNamed
+impl<Row> FromColumnsNamed<Row> for PostNamed
 where
-    String: for<'a> FromSql<Row, &'a str>,
+    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
     User: FromColumnsNamed<Row>,
 {
     fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {
@@ -135,7 +135,7 @@ fn smoke_named() {
             "Sam Author".into(),
         ],
     };
-    let post = PostNamed::from_row(&&result).unwrap();
+    let post = PostNamed::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
     assert_eq!("my cool post!", post.text);
 }
@@ -193,7 +193,7 @@ where
 struct FakeClient(Vec<FakeRow>);
 
 impl Client for FakeClient {
-    type Row<'a> = &'a FakeRow;
+    type Row<'a> = FakeRow;
     type Param<'a> = String;
 }
 
@@ -212,7 +212,7 @@ impl SyncClient for FakeClient {
     ) -> Result<Vec<Q::Row>, Error> {
         let mut rows = vec![];
         for row in &self.0 {
-            rows.push(FromRow::from_row(&row)?);
+            rows.push(FromRow::from_row(row)?);
         }
         Ok(rows)
     }
