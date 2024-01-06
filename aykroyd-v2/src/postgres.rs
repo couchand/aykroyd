@@ -22,6 +22,11 @@ pub struct PostgresAsyncClient {
 }
 
 impl PostgresAsyncClient {
+    pub fn new(client: tokio_postgres::Client) -> Self {
+        let statements = std::collections::HashMap::new();
+        PostgresAsyncClient { client, statements }
+    }
+
     async fn prepare_internal<S: Into<String>>(
         &mut self,
         query_text: S,
