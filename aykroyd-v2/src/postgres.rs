@@ -82,7 +82,7 @@ impl AsyncClient for PostgresAsyncClient {
             .await
             .map_err(|e| Error::Query(e.to_string()))?;
 
-        rows.iter().map(|row| FromRow::from_row(row)).collect()
+        FromRow::from_rows(&rows)
     }
 
     async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {

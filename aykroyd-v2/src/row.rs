@@ -106,4 +106,11 @@ pub trait FromColumnsNamed<C: Client>: Sized {
 /// Don't implement this directly, use the derive macro.
 pub trait FromRow<C: Client>: Sized {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error>;
+
+    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error> {
+        rows
+            .iter()
+            .map(|row| FromRow::from_row(row))
+            .collect()
+    }
 }

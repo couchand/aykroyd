@@ -55,7 +55,7 @@ impl SyncClient for mysql::Conn {
         let rows: Vec<mysql::Row> = mysql::prelude::Queryable::exec(self, &query, params)
             .map_err(|e| Error::Query(e.to_string()))?;
 
-        rows.iter().map(|row| FromRow::from_row(row)).collect()
+        FromRow::from_rows(&rows)
     }
 
     fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
