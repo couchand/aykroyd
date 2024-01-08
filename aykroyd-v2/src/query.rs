@@ -3,7 +3,8 @@
 //! This module contains a group of traits that together provide
 //! the tools needed to define database queries.
 
-use super::{Client, FromRow};
+use crate::client::Client;
+use crate::row::FromRow;
 
 /// The text of a given `Query` or `Statement`.
 ///

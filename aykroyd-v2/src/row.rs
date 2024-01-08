@@ -1,7 +1,7 @@
 //! Traits and structs for handling result rows.
 
-use super::{Client, Error};
-use super::client::{FromColumnIndexed, FromColumnNamed};
+use crate::error::Error;
+use crate::client::{Client, FromColumnIndexed, FromColumnNamed};
 
 /// The columns of a result row by index.
 pub struct ColumnsIndexed<'a, 'b, C: Client> {

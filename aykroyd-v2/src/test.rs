@@ -1,8 +1,8 @@
-use super::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
-use super::combinator::Either;
-use super::query::{QueryText, ToParams};
-use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
-use super::*;
+use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::combinator::Either;
+use crate::query::{QueryText, StaticQueryText, ToParams};
+use crate::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
+use crate::*;
 
 struct FakeRow {
     columns: Vec<String>,

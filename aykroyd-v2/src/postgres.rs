@@ -1,7 +1,9 @@
 //! PostgreSQL bindings.
 
-use super::client::{AsyncClient, FromColumnIndexed, FromColumnNamed, ToParam};
-use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
+use crate::client::{AsyncClient, Client, FromColumnIndexed, FromColumnNamed, ToParam};
+use crate::error::Error;
+use crate::query::{Query, Statement, StaticQueryText};
+use crate::row::FromRow;
 
 impl<T> FromColumnIndexed<tokio_postgres::Row> for T
 where

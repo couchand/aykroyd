@@ -5,7 +5,8 @@
 //! The client can be synchronous or asynchronous, both
 //! provide the same interface.
 
-use super::{Error, Query, QueryOne, Statement, StaticQueryText};
+use crate::error::Error;
+use crate::query::{Query, QueryOne, Statement, StaticQueryText};
 
 /// A database client's parameter and row types.
 pub trait Client: Sized {

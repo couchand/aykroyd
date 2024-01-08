@@ -1,7 +1,9 @@
 //! Sqlite bindings.
 
-use super::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
-use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
+use crate::client::{Client, FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::error::Error;
+use crate::query::{Query, Statement, StaticQueryText};
+use crate::row::FromRow;
 
 impl<T> FromColumnIndexed<rusqlite::Row<'_>> for T
 where
