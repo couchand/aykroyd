@@ -53,10 +53,10 @@ impl SyncClient for mysql::Conn {
         };
         let query = self
             .prep(query.query_text())
-            .map_err(|e| Error::prepare(e))?;
+            .map_err(Error::prepare)?;
 
         let rows: Vec<mysql::Row> = mysql::prelude::Queryable::exec(self, &query, params)
-            .map_err(|e| Error::query(e))?;
+            .map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
     }
@@ -71,10 +71,10 @@ impl SyncClient for mysql::Conn {
         };
         let statement = self
             .prep(statement.query_text())
-            .map_err(|e| Error::prepare(e))?;
+            .map_err(Error::prepare)?;
 
         mysql::prelude::Queryable::exec_drop(self, &statement, params)
-            .map_err(|e| Error::query(e))?;
+            .map_err(Error::query)?;
 
         Ok(self.affected_rows())
     }
@@ -82,7 +82,7 @@ impl SyncClient for mysql::Conn {
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
         use mysql::prelude::Queryable;
         self.prep(S::QUERY_TEXT)
-            .map_err(|e| Error::prepare(e))?;
+            .map_err(Error::prepare)?;
         Ok(())
     }
 }

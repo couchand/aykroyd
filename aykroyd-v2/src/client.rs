@@ -37,13 +37,13 @@ pub trait Client: Sized {
 /// A type that can be retrieved from a database column by index.
 pub trait FromColumnIndexed<C: Client>: Sized {
     /// Get the converted value of the column at the given index.
-    fn from_column<'a>(row: &C::Row<'a>, index: usize) -> Result<Self, Error<C::Error>>;
+    fn from_column(row: &C::Row<'_>, index: usize) -> Result<Self, Error<C::Error>>;
 }
 
 /// A type that can be retrieved from a database column by name.
 pub trait FromColumnNamed<C: Client>: Sized {
     /// Get the converted value of the column with the given name.
-    fn from_column<'a>(row: &C::Row<'a>, name: &str) -> Result<Self, Error<C::Error>>;
+    fn from_column(row: &C::Row<'_>, name: &str) -> Result<Self, Error<C::Error>>;
 }
 
 /// A type that can be converted to a database param.

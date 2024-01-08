@@ -11,7 +11,7 @@ where
 {
     fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error<tokio_postgres::Error>> {
         row.try_get(index)
-            .map_err(|e| Error::from_column(e))
+            .map_err(Error::from_column)
     }
 }
 
@@ -21,7 +21,7 @@ where
 {
     fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error<tokio_postgres::Error>> {
         row.try_get(name)
-            .map_err(|e| Error::from_column(e))
+            .map_err(Error::from_column)
     }
 }
 
@@ -56,7 +56,7 @@ impl PostgresAsyncClient {
                     .client
                     .prepare(entry.key())
                     .await
-                    .map_err(|e| Error::prepare(e))?;
+                    .map_err(Error::prepare)?;
                 Ok(entry.insert(statement).clone())
             }
         }
@@ -85,7 +85,7 @@ impl AsyncClient for PostgresAsyncClient {
             .client
             .query(&statement, &params)
             .await
-            .map_err(|e| Error::query(e))?;
+            .map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
     }
@@ -98,7 +98,7 @@ impl AsyncClient for PostgresAsyncClient {
             .client
             .execute(&statement, &params)
             .await
-            .map_err(|e| Error::query(e))?;
+            .map_err(Error::query)?;
 
         Ok(rows_affected)
     }
