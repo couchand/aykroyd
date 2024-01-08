@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1"
 mysql = { version = "24", optional = true }
+postgres = "0.19"
 rusqlite = { version = "0.30", optional = true }
 tokio-postgres = "0.7"

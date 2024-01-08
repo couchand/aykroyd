@@ -1,11 +1,11 @@
-//! PostgreSQL bindings.
+//! A synchronous client for PostgreSQL.
 
-use crate::client::{AsyncClient, Client, FromColumnIndexed, FromColumnNamed, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
 
-impl<T> FromColumnIndexed<PostgresAsyncClient> for T
+impl<T> FromColumnIndexed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<T> FromColumnNamed<PostgresAsyncClient> for T
+impl<T> FromColumnNamed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<T> ToParam<PostgresAsyncClient> for T
+impl<T> ToParam<Client> for T
 where
     T: tokio_postgres::types::ToSql + Sync,
 {
@@ -38,28 +38,27 @@ where
     }
 }
 
-pub struct PostgresAsyncClient {
-    client: tokio_postgres::Client,
+pub struct Client {
+    client: postgres::Client,
     statements: std::collections::HashMap<String, tokio_postgres::Statement>,
 }
 
-impl PostgresAsyncClient {
-    pub fn new(client: tokio_postgres::Client) -> Self {
+impl Client {
+    pub fn new(client: postgres::Client) -> Self {
         let statements = std::collections::HashMap::new();
-        PostgresAsyncClient { client, statements }
+        Client { client, statements }
     }
 
-    async fn prepare_internal<S: Into<String>>(
+    fn prepare_internal<S: Into<String>>(
         &mut self,
         query_text: S,
-    ) -> Result<tokio_postgres::Statement, Error<tokio_postgres::Error>> {
+    ) -> Result<postgres::Statement, Error<tokio_postgres::Error>> {
         match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let statement = self
                     .client
                     .prepare(entry.key())
-                    .await
                     .map_err(Error::prepare)?;
                 Ok(entry.insert(statement).clone())
             }
@@ -67,54 +66,63 @@ impl PostgresAsyncClient {
     }
 }
 
-impl AsRef<tokio_postgres::Client> for PostgresAsyncClient {
-    fn as_ref(&self) -> &tokio_postgres::Client {
+impl AsMut<postgres::Client> for Client {
+    fn as_mut(&mut self) -> &mut postgres::Client {
+        &mut self.client
+    }
+}
+
+impl AsRef<postgres::Client> for Client {
+    fn as_ref(&self) -> &postgres::Client {
         &self.client
     }
 }
 
-impl Client for PostgresAsyncClient {
+impl From<postgres::Client> for Client {
+    fn from(client: postgres::Client) -> Self {
+        Self::new(client)
+    }
+}
+
+impl crate::client::Client for Client {
     type Row<'a> = tokio_postgres::Row;
     type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
     type Error = tokio_postgres::Error;
 }
 
-#[async_trait::async_trait]
-impl AsyncClient for PostgresAsyncClient {
-    async fn query<Q: Query<Self>>(
+impl SyncClient for Client {
+    fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
         let params = query.to_params();
-        let statement = self.prepare_internal(query.query_text()).await?;
+        let statement = self.prepare_internal(query.query_text())?;
 
         let rows = self
             .client
             .query(&statement, &params)
-            .await
             .map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
     }
 
-    async fn execute<S: Statement<Self>>(
+    fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
     ) -> Result<u64, Error<tokio_postgres::Error>> {
         let params = statement.to_params();
-        let statement = self.prepare_internal(statement.query_text()).await?;
+        let statement = self.prepare_internal(statement.query_text())?;
 
         let rows_affected = self
             .client
             .execute(&statement, &params)
-            .await
             .map_err(Error::query)?;
 
         Ok(rows_affected)
     }
 
-    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
-        self.prepare_internal(S::QUERY_TEXT).await?;
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+        self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
 }
