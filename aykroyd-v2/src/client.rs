@@ -61,17 +61,27 @@ pub trait ToParam<C: Client> {
 /// An asynchronous database client.
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {
-    async fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<Self::Error>>;
+    async fn query<Q: Query<Self>>(&mut self, query: &Q)
+        -> Result<Vec<Q::Row>, Error<Self::Error>>;
 
-    async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<Self::Error>>;
+    async fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<Self::Error>>;
 
     async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
 
-    async fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error<Self::Error>> {
+    async fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error<Self::Error>> {
         self.query(query).await.map(|rows| rows.into_iter().next())
     }
 
-    async fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error<Self::Error>> {
+    async fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error<Self::Error>> {
         self.query_opt(query).await.map(|row| row.unwrap())
     }
 }
@@ -84,7 +94,10 @@ pub trait SyncClient: Client {
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
 
-    fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error<Self::Error>> {
+    fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error<Self::Error>> {
         self.query(query).map(|rows| rows.into_iter().next())
     }
 

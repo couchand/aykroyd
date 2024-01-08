@@ -24,22 +24,34 @@ impl<ClientError> Error<ClientError> {
         self.inner.as_ref()
     }
 
-    pub fn from_column_str<S: Into<String>>(message: S, inner: Option<ClientError> ) -> Self {
+    pub fn from_column_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
         let kind = ErrorKind::FromColumn;
         let message = message.into();
-        Error { message, kind, inner }
+        Error {
+            message,
+            kind,
+            inner,
+        }
     }
 
-    pub fn prepare_str<S: Into<String>>(message: S, inner: Option<ClientError> ) -> Self {
+    pub fn prepare_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
         let kind = ErrorKind::Prepare;
         let message = message.into();
-        Error { message, kind, inner }
+        Error {
+            message,
+            kind,
+            inner,
+        }
     }
 
-    pub fn query_str<S: Into<String>>(message: S, inner: Option<ClientError> ) -> Self {
+    pub fn query_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
         let kind = ErrorKind::Query;
         let message = message.into();
-        Error { message, kind, inner }
+        Error {
+            message,
+            kind,
+            inner,
+        }
     }
 }
 

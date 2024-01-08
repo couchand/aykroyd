@@ -45,9 +45,7 @@ impl SyncClient for rusqlite::Connection {
         let mut statement = rusqlite::Connection::prepare_cached(self, &query.query_text())
             .map_err(Error::prepare)?;
 
-        let mut rows = statement
-            .query(&params[..])
-            .map_err(Error::query)?;
+        let mut rows = statement.query(&params[..]).map_err(Error::query)?;
 
         let mut result = vec![];
         while let Some(row) = rows.next().map_err(Error::query)? {
@@ -57,22 +55,22 @@ impl SyncClient for rusqlite::Connection {
         Ok(result)
     }
 
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<rusqlite::Error>> {
+    fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<rusqlite::Error>> {
         let params = statement.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(self, &statement.query_text())
             .map_err(Error::prepare)?;
 
-        let rows_affected = statement
-            .execute(&params[..])
-            .map_err(Error::query)?;
+        let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
 
         Ok(rows_affected.try_into().unwrap_or_default())
     }
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
-        self.prepare_cached(S::QUERY_TEXT)
-            .map_err(Error::prepare)?;
+        self.prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())
     }
 }

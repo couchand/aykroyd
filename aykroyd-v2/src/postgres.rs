@@ -9,9 +9,11 @@ impl<T> FromColumnIndexed<PostgresAsyncClient> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error<tokio_postgres::Error>> {
-        row.try_get(index)
-            .map_err(Error::from_column)
+    fn from_column(
+        row: &tokio_postgres::Row,
+        index: usize,
+    ) -> Result<Self, Error<tokio_postgres::Error>> {
+        row.try_get(index).map_err(Error::from_column)
     }
 }
 
@@ -19,9 +21,11 @@ impl<T> FromColumnNamed<PostgresAsyncClient> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error<tokio_postgres::Error>> {
-        row.try_get(name)
-            .map_err(Error::from_column)
+    fn from_column(
+        row: &tokio_postgres::Row,
+        name: &str,
+    ) -> Result<Self, Error<tokio_postgres::Error>> {
+        row.try_get(name).map_err(Error::from_column)
     }
 }
 
@@ -77,7 +81,10 @@ impl Client for PostgresAsyncClient {
 
 #[async_trait::async_trait]
 impl AsyncClient for PostgresAsyncClient {
-    async fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
+    async fn query<Q: Query<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
         let params = query.to_params();
         let statement = self.prepare_internal(query.query_text()).await?;
 
@@ -90,7 +97,10 @@ impl AsyncClient for PostgresAsyncClient {
         FromRow::from_rows(&rows)
     }
 
-    async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<tokio_postgres::Error>> {
+    async fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<tokio_postgres::Error>> {
         let params = statement.to_params();
         let statement = self.prepare_internal(statement.query_text()).await?;
 
