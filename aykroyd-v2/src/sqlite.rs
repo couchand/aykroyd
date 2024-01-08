@@ -1,11 +1,11 @@
 //! Sqlite bindings.
 
-use crate::client::{Client, FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
 
-impl<T> FromColumnIndexed<rusqlite::Connection> for T
+impl<T> FromColumnIndexed<Client> for T
 where
     T: rusqlite::types::FromSql,
 {
@@ -14,7 +14,7 @@ where
     }
 }
 
-impl<T> FromColumnNamed<rusqlite::Connection> for T
+impl<T> FromColumnNamed<Client> for T
 where
     T: rusqlite::types::FromSql,
 {
@@ -23,7 +23,7 @@ where
     }
 }
 
-impl<T> ToParam<rusqlite::Connection> for T
+impl<T> ToParam<Client> for T
 where
     T: rusqlite::types::ToSql,
 {
@@ -32,17 +32,47 @@ where
     }
 }
 
-impl Client for rusqlite::Connection {
+pub struct Client(rusqlite::Connection);
+
+impl Client {
+    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, rusqlite::Error> {
+        rusqlite::Connection::open(path).map(Client)
+    }
+
+    pub fn open_in_memory() -> Result<Self, rusqlite::Error> {
+        rusqlite::Connection::open_in_memory().map(Client)
+    }
+}
+
+impl AsMut<rusqlite::Connection> for Client {
+    fn as_mut(&mut self) -> &mut rusqlite::Connection {
+        &mut self.0
+    }
+}
+
+impl AsRef<rusqlite::Connection> for Client {
+    fn as_ref(&self) -> &rusqlite::Connection {
+        &self.0
+    }
+}
+
+impl From<rusqlite::Connection> for Client {
+    fn from(inner: rusqlite::Connection) -> Self {
+        Client(inner)
+    }
+}
+
+impl crate::client::Client for Client {
     type Row<'a> = rusqlite::Row<'a>;
     type Param<'a> = &'a dyn rusqlite::types::ToSql;
     type Error = rusqlite::Error;
 }
 
-impl SyncClient for rusqlite::Connection {
+impl SyncClient for Client {
     fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
         let params = query.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self, &query.query_text())
+        let mut statement = rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
             .map_err(Error::prepare)?;
 
         let mut rows = statement.query(&params[..]).map_err(Error::query)?;
@@ -61,7 +91,7 @@ impl SyncClient for rusqlite::Connection {
     ) -> Result<u64, Error<rusqlite::Error>> {
         let params = statement.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self, &statement.query_text())
+        let mut statement = rusqlite::Connection::prepare_cached(self.as_mut(), &statement.query_text())
             .map_err(Error::prepare)?;
 
         let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
@@ -70,7 +100,7 @@ impl SyncClient for rusqlite::Connection {
     }
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
-        self.prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
+        self.as_mut().prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())
     }
 }
