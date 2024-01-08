@@ -13,6 +13,16 @@ pub trait Client: Sized {
     type Param<'a>;
 }
 
+/// A type that can be produced from a database column.
+pub trait FromColumn<C: Client, Index>: Sized {
+    fn get(row: &C::Row<'_>, index: Index) -> Result<Self, Error>;
+}
+
+/// A type that can be converted to a database param.
+pub trait ToParam<C: Client> {
+    fn to_param(&self) -> C::Param<'_>;
+}
+
 /// An asynchronous database client.
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {

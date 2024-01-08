@@ -33,11 +33,6 @@ impl<S: StaticQueryText> QueryText for S {
     }
 }
 
-/// A type that can be converted to a database param.
-pub trait ToParam<C: Client> {
-    fn to_param(&self) -> C::Param<'_>;
-}
-
 /// A helper trait to build query parameters for a `Client`.
 ///
 /// Types that wish to be used as a `Query` or `Statement`

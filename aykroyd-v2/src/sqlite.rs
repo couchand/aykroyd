@@ -1,8 +1,7 @@
 //! Sqlite bindings.
 
-use super::client::SyncClient;
-use super::query::ToParam;
-use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
+use super::client::{FromColumn, SyncClient, ToParam};
+use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
 
 impl<T> FromColumn<rusqlite::Connection, usize> for T
 where

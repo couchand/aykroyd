@@ -1,8 +1,7 @@
 //! PostgreSQL bindings.
 
-use super::client::AsyncClient;
-use super::query::ToParam;
-use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
+use super::client::{AsyncClient, FromColumn, ToParam};
+use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
 
 impl<T> FromColumn<PostgresAsyncClient, usize> for T
 where

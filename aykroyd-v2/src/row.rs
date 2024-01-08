@@ -1,11 +1,7 @@
 //! Traits and structs for handling result rows.
 
 use super::{Client, Error};
-
-/// A type that can be produced from a database column.
-pub trait FromColumn<C: Client, Index>: Sized {
-    fn get(row: &C::Row<'_>, index: Index) -> Result<Self, Error>;
-}
+use super::client::FromColumn;
 
 /// The columns of a result row by index.
 pub struct ColumnsIndexed<'a, 'b, C: Client> {

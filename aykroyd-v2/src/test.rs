@@ -1,7 +1,7 @@
-use super::client::SyncClient;
+use super::client::{FromColumn, SyncClient, ToParam};
 use super::combinator::Either;
-use super::query::{QueryText, ToParam, ToParams};
-use super::row::{ColumnsIndexed, ColumnsNamed, FromColumn, FromColumnsIndexed, FromColumnsNamed};
+use super::query::{QueryText, ToParams};
+use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 use super::*;
 
 struct FakeRow {
