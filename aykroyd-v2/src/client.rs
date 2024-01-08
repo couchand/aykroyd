@@ -4,27 +4,53 @@
 //! connection as well as caching prepared statements.
 //! The client can be synchronous or asynchronous, both
 //! provide the same interface.
+//!
+//! To implement a new database driver, start with
+//! [`Client`](./trait.Client.html), where you'll define the
+//! database's input `Param` and output `Row` types.
+//! Then add appropriate implementations of
+//! [`ToParam`](./trait.ToParam.html) for
+//! anything you can convert to your client `Param` type,
+//! as well as
+//! [`FromColumnIndexed`](./trait.FromColumnIndexed.html) and/or
+//! [`FromColumnNamed`](./trait.FromColumnNamed.html) for
+//! anything you can retrieve from a database row (by column
+//! index and/or name).  Finally, implement either
+//! [`AsyncClient`](./trait.AsyncClient.html) or
+//! [`SyncClient`](./trait.SyncClient.html) as appropriate.
 
 use crate::error::Error;
 use crate::query::{Query, QueryOne, Statement, StaticQueryText};
 
 /// A database client's parameter and row types.
 pub trait Client: Sized {
-    type Row<'a>;
+    /// The database's input parameter type.
     type Param<'a>;
+
+    /// The database's output row type.
+    type Row<'a>;
 }
 
 /// A type that can be retrieved from a database column by index.
 pub trait FromColumnIndexed<Row>: Sized {
+    /// Get the converted value of the column at the given index.
     fn from_column(row: &Row, index: usize) -> Result<Self, Error>;
 }
 
 /// A type that can be retrieved from a database column by name.
 pub trait FromColumnNamed<Row>: Sized {
+    /// Get the converted value of the column with the given name.
     fn from_column(row: &Row, name: &str) -> Result<Self, Error>;
 }
 
 /// A type that can be converted to a database param.
+///
+/// Your database client probably either has an owned object
+/// parameter type or a trait that any parameter type can
+/// implement. For an example where the parameter is an
+/// owned object, see the MySQL implementation.
+/// For an example where the parameter is a trait object,
+/// see the PostgreSQL implementation.
 pub trait ToParam<C: Client> {
     fn to_param(&self) -> C::Param<'_>;
 }
