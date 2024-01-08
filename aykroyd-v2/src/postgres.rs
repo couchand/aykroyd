@@ -1,22 +1,22 @@
 //! PostgreSQL bindings.
 
-use super::client::{AsyncClient, FromColumn, ToParam};
+use super::client::{AsyncClient, FromColumnIndexed, FromColumnNamed, ToParam};
 use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
 
-impl<T> FromColumn<PostgresAsyncClient, usize> for T
+impl<T> FromColumnIndexed<tokio_postgres::Row> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn get(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
         row.try_get(index).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<T> FromColumn<PostgresAsyncClient, &str> for T
+impl<T> FromColumnNamed<tokio_postgres::Row> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn get(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
         row.try_get(name).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }

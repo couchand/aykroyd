@@ -1,22 +1,22 @@
 //! Sqlite bindings.
 
-use super::client::{FromColumn, SyncClient, ToParam};
+use super::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
 
-impl<T> FromColumn<rusqlite::Connection, usize> for T
+impl<T> FromColumnIndexed<rusqlite::Row<'_>> for T
 where
     T: rusqlite::types::FromSql,
 {
-    fn get(row: &rusqlite::Row, index: usize) -> Result<Self, Error> {
+    fn from_column(row: &rusqlite::Row, index: usize) -> Result<Self, Error> {
         row.get(index).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<T> FromColumn<rusqlite::Connection, &str> for T
+impl<T> FromColumnNamed<rusqlite::Row<'_>> for T
 where
     T: rusqlite::types::FromSql,
 {
-    fn get(row: &rusqlite::Row, name: &str) -> Result<Self, Error> {
+    fn from_column(row: &rusqlite::Row, name: &str) -> Result<Self, Error> {
         row.get(name).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }

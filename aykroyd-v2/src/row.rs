@@ -1,7 +1,7 @@
 //! Traits and structs for handling result rows.
 
 use super::{Client, Error};
-use super::client::FromColumn;
+use super::client::{FromColumnIndexed, FromColumnNamed};
 
 /// The columns of a result row by index.
 pub struct ColumnsIndexed<'a, 'b, C: Client> {
@@ -16,9 +16,9 @@ impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>
     where
-        T: FromColumn<C, usize>,
+        T: FromColumnIndexed<C::Row<'b>>,
     {
-        FromColumn::get(self.row, self.offset + index)
+        FromColumnIndexed::from_column(self.row, self.offset + index)
     }
 
     pub fn child(&self, offset: usize) -> Self {
@@ -46,14 +46,14 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
 
     pub fn get<T>(&self, name: &str) -> Result<T, Error>
     where
-        T: for<'c> FromColumn<C, &'c str>,
+        T: FromColumnNamed<C::Row<'b>>,
     {
         let name = {
             let mut s = self.prefix.clone();
             s.push_str(name);
             s
         };
-        FromColumn::get(self.row, name.as_ref())
+        FromColumnNamed::from_column(self.row, name.as_ref())
     }
 
     pub fn child(&self, prefix: &str) -> Self {

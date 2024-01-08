@@ -1,4 +1,4 @@
-use super::client::{FromColumn, SyncClient, ToParam};
+use super::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use super::combinator::Either;
 use super::query::{QueryText, ToParams};
 use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
@@ -9,8 +9,8 @@ struct FakeRow {
     tuple: Vec<String>,
 }
 
-impl FromColumn<FakeClient, usize> for String {
-    fn get(row: &FakeRow, index: usize) -> Result<String, Error> {
+impl FromColumnIndexed<FakeRow> for String {
+    fn from_column(row: &FakeRow, index: usize) -> Result<String, Error> {
         row.tuple
             .get(index)
             .cloned()
@@ -18,8 +18,8 @@ impl FromColumn<FakeClient, usize> for String {
     }
 }
 
-impl FromColumn<FakeClient, &str> for String {
-    fn get(row: &FakeRow, name: &str) -> Result<String, Error> {
+impl FromColumnNamed<FakeRow> for String {
+    fn from_column(row: &FakeRow, name: &str) -> Result<String, Error> {
         row.columns
             .iter()
             .position(|d| d.eq_ignore_ascii_case(name))
@@ -41,7 +41,7 @@ struct User {
 
 impl<C: Client> FromColumnsIndexed<C> for User
 where
-    String: for<'a> FromColumn<C, usize>,
+    String: for<'a> FromColumnIndexed<C::Row<'a>>,
 {
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
         Ok(User {
@@ -52,7 +52,7 @@ where
 
 impl<C: Client> FromColumnsNamed<C> for User
 where
-    String: for<'a> FromColumn<C, &'a str>,
+    String: for<'a> FromColumnNamed<C::Row<'a>>,
 {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
         Ok(User {
@@ -68,7 +68,7 @@ struct PostIndexed {
 
 impl<C: Client> FromRow<C> for PostIndexed
 where
-    String: FromColumn<C, usize>,
+    String: for<'a> FromColumnIndexed<C::Row<'a>>,
 {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
@@ -77,7 +77,7 @@ where
 
 impl<C: Client> FromColumnsIndexed<C> for PostIndexed
 where
-    String: FromColumn<C, usize>,
+    String: for<'a> FromColumnIndexed<C::Row<'a>>,
     User: FromColumnsIndexed<C>,
 {
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
@@ -106,7 +106,7 @@ struct PostNamed {
 
 impl<C: Client> FromRow<C> for PostNamed
 where
-    String: for<'a> FromColumn<C, &'a str>,
+    String: for<'a> FromColumnNamed<C::Row<'a>>,
 {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsNamed::from_columns(ColumnsNamed::new(row))
@@ -115,7 +115,7 @@ where
 
 impl<C: Client> FromColumnsNamed<C> for PostNamed
 where
-    String: for<'a> FromColumn<C, &'a str>,
+    String: for<'a> FromColumnNamed<C::Row<'a>>,
     User: FromColumnsNamed<C>,
 {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {

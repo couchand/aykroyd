@@ -1,24 +1,24 @@
 //! MySQL bindings.
 
-use super::client::{FromColumn, SyncClient, ToParam};
+use super::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use super::{Client, Error, FromRow, Query, Statement, StaticQueryText};
 
-impl<T> FromColumn<mysql::Conn, usize> for T
+impl<T> FromColumnIndexed<mysql::Row> for T
 where
     T: mysql::prelude::FromValue,
 {
-    fn get(row: &mysql::Row, index: usize) -> Result<Self, Error> {
+    fn from_column(row: &mysql::Row, index: usize) -> Result<Self, Error> {
         row.get_opt(index)
             .ok_or_else(|| Error::FromColumn(format!("unknown column {}", index)))?
             .map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<T> FromColumn<mysql::Conn, &str> for T
+impl<T> FromColumnNamed<mysql::Row> for T
 where
     T: mysql::prelude::FromValue,
 {
-    fn get(row: &mysql::Row, name: &str) -> Result<Self, Error> {
+    fn from_column(row: &mysql::Row, name: &str) -> Result<Self, Error> {
         row.get_opt(name)
             .ok_or_else(|| Error::FromColumn(format!("unknown column {}", name)))?
             .map_err(|e| Error::FromColumn(e.to_string()))

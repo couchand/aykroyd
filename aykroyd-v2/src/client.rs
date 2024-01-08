@@ -13,9 +13,14 @@ pub trait Client: Sized {
     type Param<'a>;
 }
 
-/// A type that can be produced from a database column.
-pub trait FromColumn<C: Client, Index>: Sized {
-    fn get(row: &C::Row<'_>, index: Index) -> Result<Self, Error>;
+/// A type that can be retrieved from a database column by index.
+pub trait FromColumnIndexed<Row>: Sized {
+    fn from_column(row: &Row, index: usize) -> Result<Self, Error>;
+}
+
+/// A type that can be retrieved from a database column by name.
+pub trait FromColumnNamed<Row>: Sized {
+    fn from_column(row: &Row, name: &str) -> Result<Self, Error>;
 }
 
 /// A type that can be converted to a database param.
