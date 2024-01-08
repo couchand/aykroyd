@@ -3,9 +3,31 @@ name = "aykroyd-v2"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-async-trait = "0.1"
-mysql = { version = "24", optional = true }
-postgres = "0.19"
-rusqlite = { version = "0.30", optional = true }
-tokio-postgres = "0.7"
+[features]
+default = []
+
+async = ["dep:async-trait"]
+mysql = ["dep:mysql"]
+postgres = ["dep:postgres", "dep:tokio-postgres"]
+rusqlite = ["dep:rusqlite"]
+tokio-postgres = ["dep:tokio-postgres", "async"]
+
+[dependencies.async-trait]
+version = "0.1"
+optional = true
+
+[dependencies.mysql]
+version = "24"
+optional = true
+
+[dependencies.postgres]
+version = "0.19"
+optional = true
+
+[dependencies.rusqlite]
+version = "0.30"
+optional = true
+
+[dependencies.tokio-postgres]
+version = "0.7"
+optional = true

@@ -8,6 +8,7 @@ pub mod row;
 
 #[cfg(feature = "mysql")]
 pub mod mysql;
+#[cfg(any(feature = "postgres", feature = "tokio-postgres"))]
 pub mod postgres;
 #[cfg(feature = "rusqlite")]
 pub mod sqlite;

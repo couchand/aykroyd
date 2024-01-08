@@ -49,6 +49,20 @@ impl Client {
         Client { client, statements }
     }
 
+    /// A convenience function which parses a configuration string into a `Config` and then connects to the database.
+    ///
+    /// See the documentation for `postgres::Config` for information about the connection syntax.
+    pub fn connect<T>(params: &str, tls_mode: T) -> Result<Self, tokio_postgres::Error>
+    where
+        T: postgres::tls::MakeTlsConnect<postgres::Socket> + 'static + Send,
+        T::TlsConnect: Send,
+        T::Stream: Send,
+        <T::TlsConnect as postgres::tls::TlsConnect<postgres::Socket>>::Future: Send,
+    {
+        let client = postgres::Client::connect(params, tls_mode)?;
+        Ok(Self::new(client))
+    }
+
     fn prepare_internal<S: Into<String>>(
         &mut self,
         query_text: S,

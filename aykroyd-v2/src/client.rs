@@ -60,6 +60,7 @@ pub trait ToParam<C: Client> {
 
 /// An asynchronous database client.
 #[async_trait::async_trait]
+#[cfg(feature = "async")]
 pub trait AsyncClient: Client {
     async fn query<Q: Query<Self>>(&mut self, query: &Q)
         -> Result<Vec<Q::Row>, Error<Self::Error>>;
