@@ -10,7 +10,8 @@ where
     T: tokio_postgres::types::FromSqlOwned,
 {
     fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
-        row.try_get(index).map_err(|e| Error::FromColumn(e.to_string()))
+        row.try_get(index)
+            .map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
@@ -19,7 +20,8 @@ where
     T: tokio_postgres::types::FromSqlOwned,
 {
     fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
-        row.try_get(name).map_err(|e| Error::FromColumn(e.to_string()))
+        row.try_get(name)
+            .map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 

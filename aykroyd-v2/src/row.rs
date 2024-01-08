@@ -1,7 +1,7 @@
 //! Traits and structs for handling result rows.
 
-use crate::error::Error;
 use crate::client::{Client, FromColumnIndexed, FromColumnNamed};
+use crate::error::Error;
 
 /// The columns of a result row by index.
 pub struct ColumnsIndexed<'a, 'b, C: Client> {
@@ -108,9 +108,6 @@ pub trait FromRow<C: Client>: Sized {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error>;
 
     fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error> {
-        rows
-            .iter()
-            .map(|row| FromRow::from_row(row))
-            .collect()
+        rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 }
