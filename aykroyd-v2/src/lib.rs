@@ -15,7 +15,5 @@ pub mod sqlite;
 #[cfg(test)]
 mod test;
 
-pub use client::Client;
-pub use error::Error;
 pub use query::{Query, QueryOne, Statement};
 pub use row::FromRow;

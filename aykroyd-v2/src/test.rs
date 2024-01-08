@@ -1,5 +1,6 @@
-use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::client::{Client, FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
 use crate::combinator::Either;
+use crate::error::Error;
 use crate::query::{QueryText, StaticQueryText, ToParams};
 use crate::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 use crate::*;
