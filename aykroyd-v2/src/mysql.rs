@@ -1,6 +1,7 @@
 //! MySQL bindings.
 
 use super::client::SyncClient;
+use super::query::ToParam;
 use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
 
 impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, usize> for T {
@@ -16,6 +17,12 @@ impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, &str> for T {
         row.get_opt(name)
             .ok_or_else(|| Error::FromSql(format!("unknown column {}", name)))?
             .map_err(|e| Error::FromSql(e.to_string()))
+    }
+}
+
+impl<T: Into<mysql::Value> + Clone> ToParam<mysql::Conn> for T {
+    fn to_param(&self) -> mysql::Value {
+        self.clone().into()
     }
 }
 

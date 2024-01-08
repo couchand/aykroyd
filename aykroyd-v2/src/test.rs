@@ -1,6 +1,6 @@
 use super::client::SyncClient;
 use super::combinator::EitherQuery;
-use super::query::{QueryText, ToParams};
+use super::query::{QueryText, ToParam, ToParams};
 use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 use super::*;
 
@@ -26,6 +26,12 @@ impl FromSql<&FakeRow, &str> for String {
             .and_then(|i| row.tuple.get(i))
             .cloned()
             .ok_or(Error::FromSql("not found".into()))
+    }
+}
+
+impl ToParam<FakeClient> for String {
+    fn to_param(&self) -> String {
+        self.clone()
     }
 }
 
@@ -164,10 +170,10 @@ impl StaticQueryText for GetPostsByUser {
 
 impl<C: Client> ToParams<C> for GetPostsByUser
 where
-    for<'a> &'a String: Into<C::Param<'a>>,
+    String: ToParam<C>,
 {
     fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![Into::into(&self.0)]
+        vec![self.0.to_param()]
     }
 }
 
@@ -251,10 +257,10 @@ impl StaticQueryText for UpdatePost {
 
 impl<C: Client> ToParams<C> for UpdatePost
 where
-    for<'a> &'a String: Into<C::Param<'a>>,
+    String: ToParam<C>,
 {
     fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![Into::into(&self.0)]
+        vec![self.0.to_param()]
     }
 }
 

@@ -1,6 +1,7 @@
 //! PostgreSQL bindings.
 
 use super::client::AsyncClient;
+use super::query::ToParam;
 use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
 
 impl<'a, T: tokio_postgres::types::FromSql<'a>> FromSql<&'a tokio_postgres::Row, usize> for T {
@@ -13,6 +14,12 @@ impl<'a, T: tokio_postgres::types::FromSql<'a>> FromSql<&'a tokio_postgres::Row,
 impl<'a, T: tokio_postgres::types::FromSql<'a>> FromSql<&'a tokio_postgres::Row, &str> for T {
     fn get(row: &'a tokio_postgres::Row, name: &str) -> Result<Self, Error> {
         row.try_get(name).map_err(|e| Error::FromSql(e.to_string()))
+    }
+}
+
+impl<T: tokio_postgres::types::ToSql + Sync> ToParam<PostgresAsyncClient> for T {
+    fn to_param(&self) -> &(dyn tokio_postgres::types::ToSql + Sync) {
+        self
     }
 }
 

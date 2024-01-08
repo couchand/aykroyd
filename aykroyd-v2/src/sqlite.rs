@@ -1,6 +1,7 @@
 //! Sqlite bindings.
 
 use super::client::SyncClient;
+use super::query::ToParam;
 use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
 
 impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, usize> for T {
@@ -12,6 +13,12 @@ impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, usize> for T {
 impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, &str> for T {
     fn get(row: &rusqlite::Row, name: &str) -> Result<Self, Error> {
         row.get(name).map_err(|e| Error::FromSql(e.to_string()))
+    }
+}
+
+impl<T: rusqlite::types::ToSql> ToParam<rusqlite::Connection> for T {
+    fn to_param(&self) -> &dyn rusqlite::types::ToSql {
+        self
     }
 }
 
