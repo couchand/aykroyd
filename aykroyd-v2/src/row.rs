@@ -48,12 +48,15 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
         }
     }
 
-    pub fn get<T>(&self, index: &str) -> Result<T, Error>
+    pub fn get<T>(&self, name: &str) -> Result<T, Error>
     where
         T: for<'c> FromColumn<C, &'c str>,
     {
-        let mut name = self.prefix.clone();
-        name.push_str(index);
+        let name = {
+            let mut s = self.prefix.clone();
+            s.push_str(name);
+            s
+        };
         FromColumn::get(self.row, name.as_ref())
     }
 

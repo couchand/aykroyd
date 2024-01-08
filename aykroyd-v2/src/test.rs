@@ -1,5 +1,5 @@
 use super::client::SyncClient;
-use super::combinator::EitherQuery;
+use super::combinator::Either;
 use super::query::{QueryText, ToParam, ToParams};
 use super::row::{ColumnsIndexed, ColumnsNamed, FromColumn, FromColumnsIndexed, FromColumnsNamed};
 use super::*;
@@ -157,7 +157,7 @@ impl StaticQueryText for GetActivePosts {
 
 #[test]
 fn smoke_dynamic_text() {
-    let query: EitherQuery<GetAllPosts, GetActivePosts> = EitherQuery::Right(GetActivePosts);
+    let query: Either<GetAllPosts, GetActivePosts> = Either::Right(GetActivePosts);
     assert_eq!(GetActivePosts::QUERY_TEXT, query.query_text());
 }
 

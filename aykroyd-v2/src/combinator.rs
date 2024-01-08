@@ -1,39 +1,46 @@
 //! Query combinators.
 
-use super::query::{Query, QueryOne, QueryText, ToParams};
+use super::query::{Query, QueryOne, QueryText, Statement, ToParams};
 use super::{Client, FromRow};
 
 /// A query that could be one of two options.
-pub enum EitherQuery<A, B> {
+pub enum Either<A, B> {
     Left(A),
     Right(B),
 }
 
-impl<A: QueryText, B: QueryText> QueryText for EitherQuery<A, B> {
+impl<A: QueryText, B: QueryText> QueryText for Either<A, B> {
     fn query_text(&self) -> String {
         match self {
-            EitherQuery::Left(a) => a.query_text(),
-            EitherQuery::Right(b) => b.query_text(),
+            Either::Left(a) => a.query_text(),
+            Either::Right(b) => b.query_text(),
         }
     }
 }
 
-impl<C, R, A, B> ToParams<C> for EitherQuery<A, B>
+impl<C, A, B> ToParams<C> for Either<A, B>
 where
     C: Client,
-    R: FromRow<C>,
-    A: Query<C, Row = R>,
-    B: Query<C, Row = R>,
+    A: ToParams<C>,
+    B: ToParams<C>,
 {
     fn to_params(&self) -> Vec<C::Param<'_>> {
         match self {
-            EitherQuery::Left(a) => a.to_params(),
-            EitherQuery::Right(b) => b.to_params(),
+            Either::Left(a) => a.to_params(),
+            Either::Right(b) => b.to_params(),
         }
     }
 }
 
-impl<C, R, A, B> Query<C> for EitherQuery<A, B>
+impl<C, A, B> Statement<C> for Either<A, B>
+where
+    C: Client,
+    A: Statement<C>,
+    B: Statement<C>,
+{
+}
+
+impl<C, R, A, B> Query<C> for Either<A, B>
 where
     C: Client,
     R: FromRow<C>,
@@ -43,7 +50,7 @@ where
     type Row = R;
 }
 
-impl<C, R, A, B> QueryOne<C> for EitherQuery<A, B>
+impl<C, R, A, B> QueryOne<C> for Either<A, B>
 where
     C: Client,
     R: FromRow<C>,
