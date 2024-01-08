@@ -10,22 +10,22 @@ struct FakeRow {
 }
 
 impl FromColumnIndexed<FakeClient> for String {
-    fn from_column(row: &FakeRow, index: usize) -> Result<String, Error> {
+    fn from_column(row: &FakeRow, index: usize) -> Result<String, Error<String>> {
         row.tuple
             .get(index)
             .cloned()
-            .ok_or(Error::FromColumn("not found".into()))
+            .ok_or(Error::from_column("not found".into()))
     }
 }
 
 impl FromColumnNamed<FakeClient> for String {
-    fn from_column(row: &FakeRow, name: &str) -> Result<String, Error> {
+    fn from_column(row: &FakeRow, name: &str) -> Result<String, Error<String>> {
         row.columns
             .iter()
             .position(|d| d.eq_ignore_ascii_case(name))
             .and_then(|i| row.tuple.get(i))
             .cloned()
-            .ok_or(Error::FromColumn("not found".into()))
+            .ok_or(Error::from_column("not found".into()))
     }
 }
 
@@ -43,7 +43,7 @@ impl<C: Client> FromColumnsIndexed<C> for User
 where
     String: FromColumnIndexed<C>,
 {
-    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         Ok(User {
             name: columns.get(0)?,
         })
@@ -54,7 +54,7 @@ impl<C: Client> FromColumnsNamed<C> for User
 where
     String: FromColumnNamed<C>,
 {
-    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>> {
         Ok(User {
             name: columns.get("name")?,
         })
@@ -70,7 +70,7 @@ impl<C: Client> FromRow<C> for PostIndexed
 where
     String: FromColumnIndexed<C>,
 {
-    fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
     }
 }
@@ -80,7 +80,7 @@ where
     String: FromColumnIndexed<C>,
     User: FromColumnsIndexed<C>,
 {
-    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         Ok(PostIndexed {
             text: columns.get(0)?,
             user: FromColumnsIndexed::from_columns(columns.child(1))?,
@@ -108,7 +108,7 @@ impl<C: Client> FromRow<C> for PostNamed
 where
     String: FromColumnNamed<C>,
 {
-    fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
         FromColumnsNamed::from_columns(ColumnsNamed::new(row))
     }
 }
@@ -118,7 +118,7 @@ where
     String: FromColumnNamed<C>,
     User: FromColumnsNamed<C>,
 {
-    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>> {
         Ok(PostNamed {
             text: columns.get("text")?,
             user: FromColumnsNamed::from_columns(columns.child("user_"))?,
@@ -190,6 +190,7 @@ struct FakeClient(Vec<FakeRow>);
 impl Client for FakeClient {
     type Row<'a> = FakeRow;
     type Param<'a> = String;
+    type Error = String;
 }
 
 #[test]
@@ -201,7 +202,7 @@ fn smoke_to_params() {
 }
 
 impl SyncClient for FakeClient {
-    fn query<Q: Query<Self>>(&mut self, _query: &Q) -> Result<Vec<Q::Row>, Error> {
+    fn query<Q: Query<Self>>(&mut self, _query: &Q) -> Result<Vec<Q::Row>, Error<String>> {
         let mut rows = vec![];
         for row in &self.0 {
             rows.push(FromRow::from_row(row)?);
@@ -209,7 +210,7 @@ impl SyncClient for FakeClient {
         Ok(rows)
     }
 
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<String>> {
         let params = statement.to_params();
         assert_eq!(1, params.len());
         let text = params.into_iter().next().unwrap();
@@ -225,7 +226,7 @@ impl SyncClient for FakeClient {
         Ok(1)
     }
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<String>> {
         Ok(())
     }
 }

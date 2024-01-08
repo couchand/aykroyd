@@ -7,7 +7,7 @@
 //!
 //! To implement a new database driver, start with
 //! [`Client`](./trait.Client.html), where you'll define the
-//! database's input `Param` and output `Row` types.
+//! database's input `Param` output `Row`, and `Error` types.
 //! Then add appropriate implementations of
 //! [`ToParam`](./trait.ToParam.html) for
 //! anything you can convert to your client `Param` type,
@@ -29,18 +29,21 @@ pub trait Client: Sized {
 
     /// The database's output row type.
     type Row<'a>;
+
+    /// The type of database errors.
+    type Error;
 }
 
 /// A type that can be retrieved from a database column by index.
 pub trait FromColumnIndexed<C: Client>: Sized {
     /// Get the converted value of the column at the given index.
-    fn from_column<'a>(row: &C::Row<'a>, index: usize) -> Result<Self, Error>;
+    fn from_column<'a>(row: &C::Row<'a>, index: usize) -> Result<Self, Error<C::Error>>;
 }
 
 /// A type that can be retrieved from a database column by name.
 pub trait FromColumnNamed<C: Client>: Sized {
     /// Get the converted value of the column with the given name.
-    fn from_column<'a>(row: &C::Row<'a>, name: &str) -> Result<Self, Error>;
+    fn from_column<'a>(row: &C::Row<'a>, name: &str) -> Result<Self, Error<C::Error>>;
 }
 
 /// A type that can be converted to a database param.
@@ -58,34 +61,34 @@ pub trait ToParam<C: Client> {
 /// An asynchronous database client.
 #[async_trait::async_trait]
 pub trait AsyncClient: Client {
-    async fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error>;
+    async fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<Self::Error>>;
 
-    async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error>;
+    async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<Self::Error>>;
 
-    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error>;
+    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
 
-    async fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
+    async fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error<Self::Error>> {
         self.query(query).await.map(|rows| rows.into_iter().next())
     }
 
-    async fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
+    async fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error<Self::Error>> {
         self.query_opt(query).await.map(|row| row.unwrap())
     }
 }
 
 /// A synchronous database client.
 pub trait SyncClient: Client {
-    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error>;
+    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<Self::Error>>;
 
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error>;
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<Self::Error>>;
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error>;
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
 
-    fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
+    fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error<Self::Error>> {
         self.query(query).map(|rows| rows.into_iter().next())
     }
 
-    fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
+    fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error<Self::Error>> {
         self.query_opt(query).map(|row| row.unwrap())
     }
 }

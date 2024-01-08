@@ -14,7 +14,7 @@ impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
         ColumnsIndexed { row, offset: 0 }
     }
 
-    pub fn get<T>(&self, index: usize) -> Result<T, Error>
+    pub fn get<T>(&self, index: usize) -> Result<T, Error<C::Error>>
     where
         T: FromColumnIndexed<C>,
     {
@@ -44,7 +44,7 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
         }
     }
 
-    pub fn get<T>(&self, name: &str) -> Result<T, Error>
+    pub fn get<T>(&self, name: &str) -> Result<T, Error<C::Error>>
     where
         T: FromColumnNamed<C>,
     {
@@ -79,12 +79,12 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
 /// - the type has an attribute `#[aykroyd(indexed)]`
 pub trait FromColumnsIndexed<C: Client>: Sized {
     //const NUM_COLUMNS: usize;
-    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error>;
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>>;
 }
 
 impl<C: Client, T: FromColumnsIndexed<C>> FromColumnsIndexed<C> for Option<T> {
     //const NUM_COLUMNS: usize = T::NUM_COLUMNS;
-    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         T::from_columns(columns).map(Some).or(Ok(None)) // TODO: this is terrible!
     }
 }
@@ -98,16 +98,16 @@ impl<C: Client, T: FromColumnsIndexed<C>> FromColumnsIndexed<C> for Option<T> {
 /// - one or more column has an attribute `#[aykroyd(name = "<name>")]`
 /// - the type has an attribute `#[aykroyd(named)]`
 pub trait FromColumnsNamed<C: Client>: Sized {
-    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error>;
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>>;
 }
 
 /// A type that can be produced from a database's result row.
 ///
 /// Don't implement this directly, use the derive macro.
 pub trait FromRow<C: Client>: Sized {
-    fn from_row(row: &C::Row<'_>) -> Result<Self, Error>;
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
 
-    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error> {
+    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error<C::Error>> {
         rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 }
