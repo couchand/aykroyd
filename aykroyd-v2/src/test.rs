@@ -241,7 +241,7 @@ fn smoke_query() {
 
     let result = client.query(&query);
 
-    assert!(matches!(result, Ok(_)));
+    assert!(result.is_ok());
     if let Ok(rows) = result {
         assert_eq!(1, rows.len());
         assert_eq!("Sam Author", rows[0].user.name);
