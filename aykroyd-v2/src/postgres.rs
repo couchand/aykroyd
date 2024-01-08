@@ -4,20 +4,20 @@ use super::client::AsyncClient;
 use super::query::ToParam;
 use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
 
-impl<'a, T> FromColumn<&'a tokio_postgres::Row, usize> for T
+impl<T> FromColumn<PostgresAsyncClient, usize> for T
 where
-    T: tokio_postgres::types::FromSql<'a>,
+    T: tokio_postgres::types::FromSqlOwned,
 {
-    fn get(row: &'a tokio_postgres::Row, index: usize) -> Result<Self, Error> {
+    fn get(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
         row.try_get(index).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<'a, T> FromColumn<&'a tokio_postgres::Row, &str> for T
+impl<T> FromColumn<PostgresAsyncClient, &str> for T
 where
-    T: tokio_postgres::types::FromSql<'a>,
+    T: tokio_postgres::types::FromSqlOwned,
 {
-    fn get(row: &'a tokio_postgres::Row, name: &str) -> Result<Self, Error> {
+    fn get(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
         row.try_get(name).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
@@ -83,7 +83,7 @@ impl AsyncClient for PostgresAsyncClient {
             .await
             .map_err(|e| Error::Query(e.to_string()))?;
 
-        rows.iter().map(FromRow::from_row).collect()
+        rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 
     async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {

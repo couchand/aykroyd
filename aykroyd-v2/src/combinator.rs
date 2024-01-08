@@ -21,7 +21,7 @@ impl<A: QueryText, B: QueryText> QueryText for EitherQuery<A, B> {
 impl<C, R, A, B> ToParams<C> for EitherQuery<A, B>
 where
     C: Client,
-    R: for<'a> FromRow<C::Row<'a>>,
+    R: FromRow<C>,
     A: Query<C, Row = R>,
     B: Query<C, Row = R>,
 {
@@ -36,7 +36,7 @@ where
 impl<C, R, A, B> Query<C> for EitherQuery<A, B>
 where
     C: Client,
-    R: for<'a> FromRow<C::Row<'a>>,
+    R: FromRow<C>,
     A: Query<C, Row = R>,
     B: Query<C, Row = R>,
 {
@@ -46,7 +46,7 @@ where
 impl<C, R, A, B> QueryOne<C> for EitherQuery<A, B>
 where
     C: Client,
-    R: for<'a> FromRow<C::Row<'a>>,
+    R: FromRow<C>,
     A: QueryOne<C, Row = R>,
     B: QueryOne<C, Row = R>,
 {

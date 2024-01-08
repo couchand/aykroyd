@@ -9,7 +9,7 @@ struct FakeRow {
     tuple: Vec<String>,
 }
 
-impl FromColumn<&FakeRow, usize> for String {
+impl FromColumn<FakeClient, usize> for String {
     fn get(row: &FakeRow, index: usize) -> Result<String, Error> {
         row.tuple
             .get(index)
@@ -18,7 +18,7 @@ impl FromColumn<&FakeRow, usize> for String {
     }
 }
 
-impl FromColumn<&FakeRow, &str> for String {
+impl FromColumn<FakeClient, &str> for String {
     fn get(row: &FakeRow, name: &str) -> Result<String, Error> {
         row.columns
             .iter()
@@ -39,22 +39,22 @@ struct User {
     name: String,
 }
 
-impl<Row> FromColumnsIndexed<Row> for User
+impl<C: Client> FromColumnsIndexed<C> for User
 where
-    String: for<'a> FromColumn<&'a Row, usize>,
+    String: for<'a> FromColumn<C, usize>,
 {
-    fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
         Ok(User {
             name: columns.get(0)?,
         })
     }
 }
 
-impl<Row> FromColumnsNamed<Row> for User
+impl<C: Client> FromColumnsNamed<C> for User
 where
-    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
+    String: for<'a> FromColumn<C, &'a str>,
 {
-    fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
         Ok(User {
             name: columns.get("name")?,
         })
@@ -66,21 +66,21 @@ struct PostIndexed {
     user: User,
 }
 
-impl<Row> FromRow<Row> for PostIndexed
+impl<C: Client> FromRow<C> for PostIndexed
 where
-    String: for<'a> FromColumn<&'a Row, usize>,
+    String: FromColumn<C, usize>,
 {
-    fn from_row(row: &Row) -> Result<Self, Error> {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
     }
 }
 
-impl<Row> FromColumnsIndexed<Row> for PostIndexed
+impl<C: Client> FromColumnsIndexed<C> for PostIndexed
 where
-    String: for<'a> FromColumn<&'a Row, usize>,
-    User: FromColumnsIndexed<Row>,
+    String: FromColumn<C, usize>,
+    User: FromColumnsIndexed<C>,
 {
-    fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
         Ok(PostIndexed {
             text: columns.get(0)?,
             user: FromColumnsIndexed::from_columns(columns.child(1))?,
@@ -94,7 +94,7 @@ fn smoke_indexed() {
         columns: vec!["text".into(), "user_name".into()],
         tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
-    let post = PostIndexed::from_row(&result).unwrap();
+    let post = <PostIndexed as FromRow<FakeClient>>::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
     assert_eq!("my cool post!", post.text);
 }
@@ -104,21 +104,21 @@ struct PostNamed {
     user: User,
 }
 
-impl<Row> FromRow<Row> for PostNamed
+impl<C: Client> FromRow<C> for PostNamed
 where
-    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
+    String: for<'a> FromColumn<C, &'a str>,
 {
-    fn from_row(row: &Row) -> Result<Self, Error> {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsNamed::from_columns(ColumnsNamed::new(row))
     }
 }
 
-impl<Row> FromColumnsNamed<Row> for PostNamed
+impl<C: Client> FromColumnsNamed<C> for PostNamed
 where
-    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
-    User: FromColumnsNamed<Row>,
+    String: for<'a> FromColumn<C, &'a str>,
+    User: FromColumnsNamed<C>,
 {
-    fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
         Ok(PostNamed {
             text: columns.get("text")?,
             user: FromColumnsNamed::from_columns(columns.child("user_"))?,
@@ -132,7 +132,7 @@ fn smoke_named() {
         columns: vec!["text".into(), "user_name".into()],
         tuple: vec!["my cool post!".into(), "Sam Author".into()],
     };
-    let post = PostNamed::from_row(&result).unwrap();
+    let post = <PostNamed as FromRow<FakeClient>>::from_row(&result).unwrap();
     assert_eq!("Sam Author", post.user.name);
     assert_eq!("my cool post!", post.text);
 }
@@ -179,7 +179,7 @@ where
 
 impl<C: Client> Query<C> for GetPostsByUser
 where
-    for<'a> PostIndexed: FromRow<C::Row<'a>>,
+    for<'a> PostIndexed: FromRow<C>,
     Self: ToParams<C>,
 {
     type Row = PostIndexed;

@@ -4,7 +4,7 @@ use super::client::SyncClient;
 use super::query::ToParam;
 use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
 
-impl<T> FromColumn<&mysql::Row, usize> for T
+impl<T> FromColumn<mysql::Conn, usize> for T
 where
     T: mysql::prelude::FromValue,
 {
@@ -15,7 +15,7 @@ where
     }
 }
 
-impl<T> FromColumn<&mysql::Row, &str> for T
+impl<T> FromColumn<mysql::Conn, &str> for T
 where
     T: mysql::prelude::FromValue,
 {
@@ -53,10 +53,10 @@ impl SyncClient for mysql::Conn {
             .prep(query.query_text())
             .map_err(|e| Error::Prepare(e.to_string()))?;
 
-        let rows = mysql::prelude::Queryable::exec(self, &query, params)
+        let rows: Vec<mysql::Row> = mysql::prelude::Queryable::exec(self, &query, params)
             .map_err(|e| Error::Query(e.to_string()))?;
 
-        rows.iter().map(FromRow::from_row).collect()
+        rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 
     fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {

@@ -4,7 +4,7 @@ use super::client::SyncClient;
 use super::query::ToParam;
 use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
 
-impl<'a, T> FromColumn<&rusqlite::Row<'a>, usize> for T
+impl<T> FromColumn<rusqlite::Connection, usize> for T
 where
     T: rusqlite::types::FromSql,
 {
@@ -13,7 +13,7 @@ where
     }
 }
 
-impl<'a, T> FromColumn<&rusqlite::Row<'a>, &str> for T
+impl<T> FromColumn<rusqlite::Connection, &str> for T
 where
     T: rusqlite::types::FromSql,
 {

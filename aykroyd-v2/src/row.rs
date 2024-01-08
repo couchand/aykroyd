@@ -1,26 +1,26 @@
 //! Traits and structs for handling result rows.
 
-use super::Error;
+use super::{Client, Error};
 
 /// A type that can be produced from a database column.
-pub trait FromColumn<Row, Index>: Sized {
-    fn get(row: Row, index: Index) -> Result<Self, Error>;
+pub trait FromColumn<C: Client, Index>: Sized {
+    fn get(row: &C::Row<'_>, index: Index) -> Result<Self, Error>;
 }
 
 /// The columns of a result row by index.
-pub struct ColumnsIndexed<'a, Row> {
-    row: &'a Row,
+pub struct ColumnsIndexed<'a, 'b, C: Client> {
+    row: &'a C::Row<'b>,
     offset: usize,
 }
 
-impl<'a, Row> ColumnsIndexed<'a, Row> {
-    pub fn new(row: &'a Row) -> Self {
+impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
+    pub fn new(row: &'a C::Row<'b>) -> Self {
         ColumnsIndexed { row, offset: 0 }
     }
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>
     where
-        T: FromColumn<&'a Row, usize>,
+        T: FromColumn<C, usize>,
     {
         FromColumn::get(self.row, self.offset + index)
     }
@@ -35,13 +35,13 @@ impl<'a, Row> ColumnsIndexed<'a, Row> {
 }
 
 /// The columns of a result row by name.
-pub struct ColumnsNamed<'a, Row> {
-    row: &'a Row,
+pub struct ColumnsNamed<'a, 'b, C: Client> {
+    row: &'a C::Row<'b>,
     prefix: String,
 }
 
-impl<'a, Row> ColumnsNamed<'a, Row> {
-    pub fn new(row: &'a Row) -> Self {
+impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
+    pub fn new(row: &'a C::Row<'b>) -> Self {
         ColumnsNamed {
             row,
             prefix: String::new(),
@@ -50,7 +50,7 @@ impl<'a, Row> ColumnsNamed<'a, Row> {
 
     pub fn get<T>(&self, index: &str) -> Result<T, Error>
     where
-        T: for<'b> FromColumn<&'a Row, &'b str>,
+        T: for<'c> FromColumn<C, &'c str>,
     {
         let mut name = self.prefix.clone();
         name.push_str(index);
@@ -78,14 +78,14 @@ impl<'a, Row> ColumnsNamed<'a, Row> {
 /// - the type is a tuple struct without attributes
 /// - one or more column has an attribute `#[aykroyd(index = <index>)]`
 /// - the type has an attribute `#[aykroyd(indexed)]`
-pub trait FromColumnsIndexed<Row>: Sized {
+pub trait FromColumnsIndexed<C: Client>: Sized {
     //const NUM_COLUMNS: usize;
-    fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error>;
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error>;
 }
 
-impl<Row, T: FromColumnsIndexed<Row>> FromColumnsIndexed<Row> for Option<T> {
+impl<C: Client, T: FromColumnsIndexed<C>> FromColumnsIndexed<C> for Option<T> {
     //const NUM_COLUMNS: usize = T::NUM_COLUMNS;
-    fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
         T::from_columns(columns).map(Some).or(Ok(None)) // TODO: this is terrible!
     }
 }
@@ -98,13 +98,13 @@ impl<Row, T: FromColumnsIndexed<Row>> FromColumnsIndexed<Row> for Option<T> {
 /// - the type is a struct without attributes
 /// - one or more column has an attribute `#[aykroyd(name = "<name>")]`
 /// - the type has an attribute `#[aykroyd(named)]`
-pub trait FromColumnsNamed<Row>: Sized {
-    fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error>;
+pub trait FromColumnsNamed<C: Client>: Sized {
+    fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error>;
 }
 
 /// A type that can be produced from a database's result row.
 ///
 /// Don't implement this directly, use the derive macro.
-pub trait FromRow<Row>: Sized {
-    fn from_row(row: &Row) -> Result<Self, Error>;
+pub trait FromRow<C: Client>: Sized {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error>;
 }

@@ -84,7 +84,7 @@ pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 /// struct GetAllTodos;
 /// ```
 pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
-    type Row: for<'a> FromRow<C::Row<'a>>;
+    type Row: FromRow<C>;
 }
 
 /// A marker trait that a query only returns zero or one row.
