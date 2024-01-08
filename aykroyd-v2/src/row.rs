@@ -3,7 +3,7 @@
 use super::Error;
 
 /// A type that can be produced from a database column.
-pub trait FromSql<Row, Index>: Sized {
+pub trait FromColumn<Row, Index>: Sized {
     fn get(row: Row, index: Index) -> Result<Self, Error>;
 }
 
@@ -20,9 +20,9 @@ impl<'a, Row> ColumnsIndexed<'a, Row> {
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>
     where
-        T: FromSql<&'a Row, usize>,
+        T: FromColumn<&'a Row, usize>,
     {
-        FromSql::get(self.row, self.offset + index)
+        FromColumn::get(self.row, self.offset + index)
     }
 
     pub fn child(&self, offset: usize) -> Self {
@@ -50,11 +50,11 @@ impl<'a, Row> ColumnsNamed<'a, Row> {
 
     pub fn get<T>(&self, index: &str) -> Result<T, Error>
     where
-        T: for<'b> FromSql<&'a Row, &'b str>,
+        T: for<'b> FromColumn<&'a Row, &'b str>,
     {
         let mut name = self.prefix.clone();
         name.push_str(index);
-        FromSql::get(self.row, name.as_ref())
+        FromColumn::get(self.row, name.as_ref())
     }
 
     pub fn child(&self, prefix: &str) -> Self {

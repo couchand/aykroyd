@@ -2,17 +2,17 @@
 
 use super::client::SyncClient;
 use super::query::ToParam;
-use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
+use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
 
-impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, usize> for T {
+impl<'a, T: rusqlite::types::FromSql> FromColumn<&rusqlite::Row<'a>, usize> for T {
     fn get(row: &rusqlite::Row, index: usize) -> Result<Self, Error> {
-        row.get(index).map_err(|e| Error::FromSql(e.to_string()))
+        row.get(index).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<'a, T: rusqlite::types::FromSql> FromSql<&rusqlite::Row<'a>, &str> for T {
+impl<'a, T: rusqlite::types::FromSql> FromColumn<&rusqlite::Row<'a>, &str> for T {
     fn get(row: &rusqlite::Row, name: &str) -> Result<Self, Error> {
-        row.get(name).map_err(|e| Error::FromSql(e.to_string()))
+        row.get(name).map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 

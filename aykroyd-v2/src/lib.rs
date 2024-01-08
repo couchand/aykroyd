@@ -18,4 +18,4 @@ mod test;
 pub use client::Client;
 pub use error::Error;
 pub use query::{Query, QueryOne, Statement, StaticQueryText};
-pub use row::{FromRow, FromSql};
+pub use row::{FromColumn, FromRow};

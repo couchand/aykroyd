@@ -1,7 +1,7 @@
 use super::client::SyncClient;
 use super::combinator::EitherQuery;
 use super::query::{QueryText, ToParam, ToParams};
-use super::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
+use super::row::{ColumnsIndexed, ColumnsNamed, FromColumn, FromColumnsIndexed, FromColumnsNamed};
 use super::*;
 
 struct FakeRow {
@@ -9,23 +9,23 @@ struct FakeRow {
     tuple: Vec<String>,
 }
 
-impl FromSql<&FakeRow, usize> for String {
+impl FromColumn<&FakeRow, usize> for String {
     fn get(row: &FakeRow, index: usize) -> Result<String, Error> {
         row.tuple
             .get(index)
             .cloned()
-            .ok_or(Error::FromSql("not found".into()))
+            .ok_or(Error::FromColumn("not found".into()))
     }
 }
 
-impl FromSql<&FakeRow, &str> for String {
+impl FromColumn<&FakeRow, &str> for String {
     fn get(row: &FakeRow, name: &str) -> Result<String, Error> {
         row.columns
             .iter()
             .position(|d| d.eq_ignore_ascii_case(name))
             .and_then(|i| row.tuple.get(i))
             .cloned()
-            .ok_or(Error::FromSql("not found".into()))
+            .ok_or(Error::FromColumn("not found".into()))
     }
 }
 
@@ -41,7 +41,7 @@ struct User {
 
 impl<Row> FromColumnsIndexed<Row> for User
 where
-    String: for<'a> FromSql<&'a Row, usize>,
+    String: for<'a> FromColumn<&'a Row, usize>,
 {
     fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
         Ok(User {
@@ -52,7 +52,7 @@ where
 
 impl<Row> FromColumnsNamed<Row> for User
 where
-    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
+    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
 {
     fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {
         Ok(User {
@@ -68,7 +68,7 @@ struct PostIndexed {
 
 impl<Row> FromRow<Row> for PostIndexed
 where
-    String: for<'a> FromSql<&'a Row, usize>,
+    String: for<'a> FromColumn<&'a Row, usize>,
 {
     fn from_row(row: &Row) -> Result<Self, Error> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
@@ -77,7 +77,7 @@ where
 
 impl<Row> FromColumnsIndexed<Row> for PostIndexed
 where
-    String: for<'a> FromSql<&'a Row, usize>,
+    String: for<'a> FromColumn<&'a Row, usize>,
     User: FromColumnsIndexed<Row>,
 {
     fn from_columns(columns: ColumnsIndexed<Row>) -> Result<Self, Error> {
@@ -106,7 +106,7 @@ struct PostNamed {
 
 impl<Row> FromRow<Row> for PostNamed
 where
-    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
+    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
 {
     fn from_row(row: &Row) -> Result<Self, Error> {
         FromColumnsNamed::from_columns(ColumnsNamed::new(row))
@@ -115,7 +115,7 @@ where
 
 impl<Row> FromColumnsNamed<Row> for PostNamed
 where
-    String: for<'a, 'b> FromSql<&'a Row, &'b str>,
+    String: for<'a, 'b> FromColumn<&'a Row, &'b str>,
     User: FromColumnsNamed<Row>,
 {
     fn from_columns(columns: ColumnsNamed<Row>) -> Result<Self, Error> {

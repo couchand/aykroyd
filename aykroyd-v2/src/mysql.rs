@@ -2,21 +2,21 @@
 
 use super::client::SyncClient;
 use super::query::ToParam;
-use super::{Client, Error, FromRow, FromSql, Query, Statement, StaticQueryText};
+use super::{Client, Error, FromRow, FromColumn, Query, Statement, StaticQueryText};
 
-impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, usize> for T {
+impl<T: mysql::prelude::FromValue> FromColumn<&mysql::Row, usize> for T {
     fn get(row: &mysql::Row, index: usize) -> Result<Self, Error> {
         row.get_opt(index)
-            .ok_or_else(|| Error::FromSql(format!("unknown column {}", index)))?
-            .map_err(|e| Error::FromSql(e.to_string()))
+            .ok_or_else(|| Error::FromColumn(format!("unknown column {}", index)))?
+            .map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
-impl<T: mysql::prelude::FromValue> FromSql<&mysql::Row, &str> for T {
+impl<T: mysql::prelude::FromValue> FromColumn<&mysql::Row, &str> for T {
     fn get(row: &mysql::Row, name: &str) -> Result<Self, Error> {
         row.get_opt(name)
-            .ok_or_else(|| Error::FromSql(format!("unknown column {}", name)))?
-            .map_err(|e| Error::FromSql(e.to_string()))
+            .ok_or_else(|| Error::FromColumn(format!("unknown column {}", name)))?
+            .map_err(|e| Error::FromColumn(e.to_string()))
     }
 }
 
