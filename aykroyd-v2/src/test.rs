@@ -9,7 +9,7 @@ struct FakeRow {
     tuple: Vec<String>,
 }
 
-impl FromColumnIndexed<FakeRow> for String {
+impl FromColumnIndexed<FakeClient> for String {
     fn from_column(row: &FakeRow, index: usize) -> Result<String, Error> {
         row.tuple
             .get(index)
@@ -18,7 +18,7 @@ impl FromColumnIndexed<FakeRow> for String {
     }
 }
 
-impl FromColumnNamed<FakeRow> for String {
+impl FromColumnNamed<FakeClient> for String {
     fn from_column(row: &FakeRow, name: &str) -> Result<String, Error> {
         row.columns
             .iter()
@@ -41,7 +41,7 @@ struct User {
 
 impl<C: Client> FromColumnsIndexed<C> for User
 where
-    String: for<'a> FromColumnIndexed<C::Row<'a>>,
+    String: FromColumnIndexed<C>,
 {
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
         Ok(User {
@@ -52,7 +52,7 @@ where
 
 impl<C: Client> FromColumnsNamed<C> for User
 where
-    String: for<'a> FromColumnNamed<C::Row<'a>>,
+    String: FromColumnNamed<C>,
 {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {
         Ok(User {
@@ -68,7 +68,7 @@ struct PostIndexed {
 
 impl<C: Client> FromRow<C> for PostIndexed
 where
-    String: for<'a> FromColumnIndexed<C::Row<'a>>,
+    String: FromColumnIndexed<C>,
 {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
@@ -77,7 +77,7 @@ where
 
 impl<C: Client> FromColumnsIndexed<C> for PostIndexed
 where
-    String: for<'a> FromColumnIndexed<C::Row<'a>>,
+    String: FromColumnIndexed<C>,
     User: FromColumnsIndexed<C>,
 {
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error> {
@@ -106,7 +106,7 @@ struct PostNamed {
 
 impl<C: Client> FromRow<C> for PostNamed
 where
-    String: for<'a> FromColumnNamed<C::Row<'a>>,
+    String: FromColumnNamed<C>,
 {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error> {
         FromColumnsNamed::from_columns(ColumnsNamed::new(row))
@@ -115,7 +115,7 @@ where
 
 impl<C: Client> FromColumnsNamed<C> for PostNamed
 where
-    String: for<'a> FromColumnNamed<C::Row<'a>>,
+    String: FromColumnNamed<C>,
     User: FromColumnsNamed<C>,
 {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error> {

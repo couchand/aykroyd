@@ -16,7 +16,7 @@ impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
 
     pub fn get<T>(&self, index: usize) -> Result<T, Error>
     where
-        T: FromColumnIndexed<C::Row<'b>>,
+        T: FromColumnIndexed<C>,
     {
         FromColumnIndexed::from_column(self.row, self.offset + index)
     }
@@ -46,7 +46,7 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
 
     pub fn get<T>(&self, name: &str) -> Result<T, Error>
     where
-        T: FromColumnNamed<C::Row<'b>>,
+        T: FromColumnNamed<C>,
     {
         let name = {
             let mut s = self.prefix.clone();

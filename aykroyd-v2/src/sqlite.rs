@@ -5,7 +5,7 @@ use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
 
-impl<T> FromColumnIndexed<rusqlite::Row<'_>> for T
+impl<T> FromColumnIndexed<rusqlite::Connection> for T
 where
     T: rusqlite::types::FromSql,
 {
@@ -14,7 +14,7 @@ where
     }
 }
 
-impl<T> FromColumnNamed<rusqlite::Row<'_>> for T
+impl<T> FromColumnNamed<rusqlite::Connection> for T
 where
     T: rusqlite::types::FromSql,
 {

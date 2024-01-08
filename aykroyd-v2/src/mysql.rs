@@ -5,7 +5,7 @@ use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
 
-impl<T> FromColumnIndexed<mysql::Row> for T
+impl<T> FromColumnIndexed<mysql::Conn> for T
 where
     T: mysql::prelude::FromValue,
 {
@@ -16,7 +16,7 @@ where
     }
 }
 
-impl<T> FromColumnNamed<mysql::Row> for T
+impl<T> FromColumnNamed<mysql::Conn> for T
 where
     T: mysql::prelude::FromValue,
 {

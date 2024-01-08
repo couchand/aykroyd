@@ -5,7 +5,7 @@ use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
 
-impl<T> FromColumnIndexed<tokio_postgres::Row> for T
+impl<T> FromColumnIndexed<PostgresAsyncClient> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
@@ -15,7 +15,7 @@ where
     }
 }
 
-impl<T> FromColumnNamed<tokio_postgres::Row> for T
+impl<T> FromColumnNamed<PostgresAsyncClient> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
