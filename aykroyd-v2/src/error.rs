@@ -53,6 +53,16 @@ impl<ClientError> Error<ClientError> {
             inner,
         }
     }
+
+    pub fn transaction_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
+        let kind = ErrorKind::Transaction;
+        let message = message.into();
+        Error {
+            message,
+            kind,
+            inner,
+        }
+    }
 }
 
 impl<ClientError: std::fmt::Display> Error<ClientError> {
@@ -70,6 +80,11 @@ impl<ClientError: std::fmt::Display> Error<ClientError> {
         let message = inner.to_string();
         Self::query_str(message, Some(inner))
     }
+
+    pub fn transaction(inner: ClientError) -> Self {
+        let message = inner.to_string();
+        Self::transaction_str(message, Some(inner))
+    }
 }
 
 /// What operation prompted the error?
@@ -83,6 +98,9 @@ pub enum ErrorKind {
 
     /// Bad conversion from a database column.
     FromColumn,
+
+    /// Error in transaction control.
+    Transaction,
 }
 
 impl<ClientError> std::fmt::Display for Error<ClientError> {

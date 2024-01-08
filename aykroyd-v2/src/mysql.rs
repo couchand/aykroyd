@@ -1,6 +1,6 @@
 //! MySQL bindings.
 
-use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
@@ -100,6 +100,61 @@ impl SyncClient for Client {
         let statement = self.as_mut().prep(statement.query_text()).map_err(Error::prepare)?;
 
         mysql::prelude::Queryable::exec_drop(self.as_mut(), &statement, params).map_err(Error::query)?;
+
+        Ok(self.0.affected_rows())
+    }
+
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
+        use mysql::prelude::Queryable;
+        self.0.prep(S::QUERY_TEXT).map_err(Error::prepare)?;
+        Ok(())
+    }
+
+    type Transaction<'a> = Transaction<'a>;
+
+    fn transaction(&mut self) -> Result<Transaction<'_>, Error<mysql::Error>> {
+        Ok(Transaction(self.0.start_transaction(mysql::TxOpts::default()).map_err(Error::transaction)?))
+    }
+}
+
+pub struct Transaction<'a>(mysql::Transaction<'a>);
+
+impl<'a> SyncTransaction<Client> for Transaction<'a> {
+    fn commit(self) -> Result<(), Error<mysql::Error>> {
+        self.0.commit().map_err(Error::transaction)
+    }
+
+    fn rollback(self) -> Result<(), Error<mysql::Error>> {
+        self.0.rollback().map_err(Error::transaction)
+    }
+
+    fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+        use mysql::prelude::Queryable;
+
+        let params = query.to_params();
+        let params = match params.len() {
+            0 => mysql::Params::Empty,
+            _ => mysql::Params::Positional(params),
+        };
+        let query = self.0.prep(query.query_text()).map_err(Error::prepare)?;
+
+        let rows: Vec<mysql::Row> =
+            mysql::prelude::Queryable::exec(&mut self.0, &query, params).map_err(Error::query)?;
+
+        FromRow::from_rows(&rows)
+    }
+
+    fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
+        use mysql::prelude::Queryable;
+
+        let params = statement.to_params();
+        let params = match params.len() {
+            0 => mysql::Params::Empty,
+            _ => mysql::Params::Positional(params),
+        };
+        let statement = self.0.prep(statement.query_text()).map_err(Error::prepare)?;
+
+        mysql::prelude::Queryable::exec_drop(&mut self.0, &statement, params).map_err(Error::query)?;
 
         Ok(self.0.affected_rows())
     }

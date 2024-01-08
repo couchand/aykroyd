@@ -1,6 +1,6 @@
 //! Sqlite bindings.
 
-use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
@@ -101,6 +101,59 @@ impl SyncClient for Client {
 
     fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
         self.as_mut().prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
+        Ok(())
+    }
+
+    type Transaction<'a> = Transaction<'a>;
+
+    fn transaction(&mut self) -> Result<Transaction<'_>, Error<rusqlite::Error>> {
+        Ok(Transaction(self.0.transaction().map_err(Error::transaction)?))
+    }
+}
+
+pub struct Transaction<'a>(rusqlite::Transaction<'a>);
+
+impl<'a> SyncTransaction<Client> for Transaction<'a> {
+    fn commit(self) -> Result<(), Error<rusqlite::Error>> {
+        self.0.commit().map_err(Error::transaction)
+    }
+
+    fn rollback(self) -> Result<(), Error<rusqlite::Error>> {
+        self.0.rollback().map_err(Error::transaction)
+    }
+
+    fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
+        let params = query.to_params();
+
+        let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
+            .map_err(Error::prepare)?;
+
+        let mut rows = statement.query(&params[..]).map_err(Error::query)?;
+
+        let mut result = vec![];
+        while let Some(row) = rows.next().map_err(Error::query)? {
+            result.push(FromRow::from_row(row)?);
+        }
+
+        Ok(result)
+    }
+
+    fn execute<S: Statement<Client>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<rusqlite::Error>> {
+        let params = statement.to_params();
+
+        let mut statement = rusqlite::Connection::prepare_cached(&self.0, &statement.query_text())
+            .map_err(Error::prepare)?;
+
+        let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
+
+        Ok(rows_affected.try_into().unwrap_or_default())
+    }
+
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
+        self.0.prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())
     }
 }

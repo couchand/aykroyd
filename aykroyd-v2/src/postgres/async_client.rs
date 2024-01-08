@@ -1,6 +1,6 @@
 //! An asynchronous, pipelined, PostgreSQL client.
 
-use crate::client::{AsyncClient, FromColumnIndexed, FromColumnNamed, ToParam};
+use crate::client::{AsyncClient, AsyncTransaction, FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
 use crate::row::FromRow;
@@ -138,6 +138,87 @@ impl AsyncClient for Client {
 
         let rows_affected = self
             .client
+            .execute(&statement, &params)
+            .await
+            .map_err(Error::query)?;
+
+        Ok(rows_affected)
+    }
+
+    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+        self.prepare_internal(S::QUERY_TEXT).await?;
+        Ok(())
+    }
+
+    type Transaction<'a> = Transaction<'a>;
+
+    async fn transaction(&mut self) -> Result<Transaction, Error<tokio_postgres::Error>> {
+        Ok(Transaction {
+            txn: self.client.transaction().await.map_err(Error::transaction)?,
+            statements: &mut self.statements,
+        })
+    }
+}
+
+pub struct Transaction<'a> {
+    txn: tokio_postgres::Transaction<'a>,
+    statements: &'a mut std::collections::HashMap<String, tokio_postgres::Statement>,
+}
+
+impl<'a> Transaction<'a> {
+    async fn prepare_internal<S: Into<String>>(
+        &mut self,
+        query_text: S,
+    ) -> Result<tokio_postgres::Statement, Error<tokio_postgres::Error>> {
+        match self.statements.entry(query_text.into()) {
+            std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let statement = self
+                    .txn
+                    .prepare(entry.key())
+                    .await
+                    .map_err(Error::prepare)?;
+                Ok(entry.insert(statement).clone())
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<'a> AsyncTransaction<Client> for Transaction<'a> {
+    async fn commit(self) -> Result<(), Error<tokio_postgres::Error>> {
+        self.txn.commit().await.map_err(Error::transaction)
+    }
+
+    async fn rollback(self) -> Result<(), Error<tokio_postgres::Error>> {
+        self.txn.rollback().await.map_err(Error::transaction)
+    }
+
+    async fn query<Q: Query<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
+        let params = query.to_params();
+        let statement = self.prepare_internal(query.query_text()).await?;
+
+        let rows = self
+            .txn
+            .query(&statement, &params)
+            .await
+            .map_err(Error::query)?;
+
+        FromRow::from_rows(&rows)
+    }
+
+    async fn execute<S: Statement<Client>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<tokio_postgres::Error>> {
+        let params = statement.to_params();
+        let statement = self.prepare_internal(statement.query_text()).await?;
+
+        let rows_affected = self
+            .txn
             .execute(&statement, &params)
             .await
             .map_err(Error::query)?;

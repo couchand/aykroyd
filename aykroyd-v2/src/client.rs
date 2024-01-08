@@ -16,13 +16,15 @@
 //! [`FromColumnNamed`](./trait.FromColumnNamed.html) for
 //! anything you can retrieve from a database row (by column
 //! index and/or name).  Finally, implement either
-//! [`AsyncClient`](./trait.AsyncClient.html) or
-//! [`SyncClient`](./trait.SyncClient.html) as appropriate.
+//! [`AsyncClient`](./trait.AsyncClient.html) and
+//! [`AsyncTransaction`](./trait.AsyncTransaction.html) or
+//! [`SyncClient`](./trait.SyncClient.html) and
+//! [`SyncTransaction`](./trait.SyncTransaction.html) as appropriate.
 
 use crate::error::Error;
 use crate::query::{Query, QueryOne, Statement, StaticQueryText};
 
-/// A database client's parameter and row types.
+/// A database client's types.
 pub trait Client: Sized {
     /// The database's input parameter type.
     type Param<'a>;
@@ -62,6 +64,10 @@ pub trait ToParam<C: Client> {
 #[async_trait::async_trait]
 #[cfg(feature = "async")]
 pub trait AsyncClient: Client {
+    type Transaction<'a>: AsyncTransaction<Self> where Self: 'a;
+
+    async fn transaction(&mut self) -> Result<Self::Transaction<'_>, Error<Self::Error>>;
+
     async fn query<Q: Query<Self>>(&mut self, query: &Q)
         -> Result<Vec<Q::Row>, Error<Self::Error>>;
 
@@ -87,8 +93,44 @@ pub trait AsyncClient: Client {
     }
 }
 
+/// An asynchronous database transaction
+#[async_trait::async_trait]
+#[cfg(feature = "async")]
+pub trait AsyncTransaction<C: Client> {
+    async fn commit(self) -> Result<(), Error<C::Error>>;
+    async fn rollback(self) -> Result<(), Error<C::Error>>;
+
+    async fn query<Q: Query<C>>(&mut self, query: &Q)
+        -> Result<Vec<Q::Row>, Error<C::Error>>;
+
+    async fn execute<S: Statement<C>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<C::Error>>;
+
+    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<C::Error>>;
+
+    async fn query_opt<Q: QueryOne<C>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error<C::Error>> {
+        self.query(query).await.map(|rows| rows.into_iter().next())
+    }
+
+    async fn query_one<Q: QueryOne<C>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error<C::Error>> {
+        self.query_opt(query).await.map(|row| row.unwrap())
+    }
+}
+
 /// A synchronous database client.
 pub trait SyncClient: Client {
+    type Transaction<'a>: SyncTransaction<Self> where Self: 'a;
+
+    fn transaction(&mut self) -> Result<Self::Transaction<'_>, Error<Self::Error>>;
+
     fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<Self::Error>>;
 
     fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<Self::Error>>;
@@ -103,6 +145,29 @@ pub trait SyncClient: Client {
     }
 
     fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error<Self::Error>> {
+        self.query_opt(query).map(|row| row.unwrap())
+    }
+}
+
+/// A synchronous database transaction.
+pub trait SyncTransaction<C: Client> {
+    fn commit(self) -> Result<(), Error<C::Error>>;
+    fn rollback(self) -> Result<(), Error<C::Error>>;
+
+    fn query<Q: Query<C>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<C::Error>>;
+
+    fn execute<S: Statement<C>>(&mut self, statement: &S) -> Result<u64, Error<C::Error>>;
+
+    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<C::Error>>;
+
+    fn query_opt<Q: QueryOne<C>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error<C::Error>> {
+        self.query(query).map(|rows| rows.into_iter().next())
+    }
+
+    fn query_one<Q: QueryOne<C>>(&mut self, query: &Q) -> Result<Q::Row, Error<C::Error>> {
         self.query_opt(query).map(|row| row.unwrap())
     }
 }
