@@ -1,4 +1,5 @@
-use ::aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed, FromRow, Query};
+use ::aykroyd_v2::{FromRow, Query};
+use ::aykroyd_v2::row::{FromColumnsIndexed, FromColumnsNamed};
 
 #[derive(FromColumnsIndexed, FromColumnsNamed)]
 struct User {

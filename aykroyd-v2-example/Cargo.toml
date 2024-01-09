@@ -4,5 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aykroyd-v2 = { path = "../aykroyd-v2" }
-aykroyd-v2-derive = { path = "../aykroyd-v2-derive" }
+aykroyd-v2 = { path = "../aykroyd-v2", features = ["derive"] }

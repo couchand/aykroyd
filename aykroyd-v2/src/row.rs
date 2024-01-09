@@ -125,3 +125,6 @@ pub trait FromRow<C: Client>: Sized {
         rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 }
+
+#[cfg(feature = "derive")]
+pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed, FromRow};

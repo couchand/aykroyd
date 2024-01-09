@@ -88,3 +88,6 @@ pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
 /// A `QueryOne` is a marker trait, indicating that a `Query`
 /// will only ever return zero or one row.
 pub trait QueryOne<C: Client>: Query<C> {}
+
+#[cfg(feature = "derive")]
+pub use aykroyd_v2_derive::Query;
