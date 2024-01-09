@@ -44,6 +44,8 @@ impl<C: Client> FromColumnsIndexed<C> for User
 where
     String: FromColumnIndexed<C>,
 {
+    const NUM_COLUMNS: usize = 1;
+
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         Ok(User {
             name: columns.get(0)?,
@@ -69,7 +71,7 @@ struct PostIndexed {
 
 impl<C: Client> FromRow<C> for PostIndexed
 where
-    String: FromColumnIndexed<C>,
+    Self: FromColumnsIndexed<C>,
 {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
@@ -81,6 +83,8 @@ where
     String: FromColumnIndexed<C>,
     User: FromColumnsIndexed<C>,
 {
+    const NUM_COLUMNS: usize = 1 + User::NUM_COLUMNS;
+
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         Ok(PostIndexed {
             text: columns.get(0)?,

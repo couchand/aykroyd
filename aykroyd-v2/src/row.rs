@@ -92,12 +92,12 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
 /// - one or more column has an attribute `#[aykroyd(index = <index>)]`
 /// - the type has an attribute `#[aykroyd(indexed)]`
 pub trait FromColumnsIndexed<C: Client>: Sized {
-    //const NUM_COLUMNS: usize;
+    const NUM_COLUMNS: usize;
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>>;
 }
 
 impl<C: Client, T: FromColumnsIndexed<C>> FromColumnsIndexed<C> for Option<T> {
-    //const NUM_COLUMNS: usize = T::NUM_COLUMNS;
+    const NUM_COLUMNS: usize = T::NUM_COLUMNS;
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         T::from_columns(columns).map(Some).or(Ok(None)) // TODO: this is terrible!
     }
