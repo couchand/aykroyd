@@ -18,5 +18,6 @@ pub mod rusqlite;
 #[cfg(test)]
 mod test;
 
+pub use error::Error;
 pub use query::{Query, QueryOne, Statement};
 pub use row::FromRow;

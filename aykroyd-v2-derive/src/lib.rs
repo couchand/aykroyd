@@ -79,7 +79,6 @@ fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) ->
                 quote!(#index)
             }
         };
-        println!("name: {name:?}");
         let ty = &field.ty;
         wheres.push(quote! {
             #ty: ::aykroyd_v2::client::ToParam<C>
