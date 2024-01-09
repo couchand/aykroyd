@@ -84,7 +84,7 @@ where
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
         Ok(PostIndexed {
             text: columns.get(0)?,
-            user: FromColumnsIndexed::from_columns(columns.child(1))?,
+            user: columns.get_nested(1)?,
         })
     }
 }
@@ -122,7 +122,7 @@ where
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>> {
         Ok(PostNamed {
             text: columns.get("text")?,
-            user: FromColumnsNamed::from_columns(columns.child("user_"))?,
+            user: columns.get_nested("user_")?,
         })
     }
 }

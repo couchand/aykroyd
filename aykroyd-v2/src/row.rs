@@ -21,7 +21,14 @@ impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
         FromColumnIndexed::from_column(self.row, self.offset + index)
     }
 
-    pub fn child(&self, offset: usize) -> Self {
+    pub fn get_nested<T>(&self, offset: usize) -> Result<T, Error<C::Error>>
+    where
+        T: FromColumnsIndexed<C>,
+    {
+        FromColumnsIndexed::from_columns(self.child(offset))
+    }
+
+    fn child(&self, offset: usize) -> Self {
         let offset = self.offset + offset;
         ColumnsIndexed {
             row: self.row,
@@ -56,7 +63,14 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
         FromColumnNamed::from_column(self.row, name.as_ref())
     }
 
-    pub fn child(&self, prefix: &str) -> Self {
+    pub fn get_nested<T>(&self, prefix: &str) -> Result<T, Error<C::Error>>
+    where
+        T: FromColumnsNamed<C>,
+    {
+        FromColumnsNamed::from_columns(self.child(prefix))
+    }
+
+    fn child(&self, prefix: &str) -> Self {
         let prefix = {
             let mut s = self.prefix.clone();
             s.push_str(prefix);
