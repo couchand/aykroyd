@@ -128,3 +128,27 @@ pub trait FromRow<C: Client>: Sized {
 
 #[cfg(feature = "derive")]
 pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed, FromRow};
+
+impl<C, T0, T1> FromColumnsIndexed<C> for (T0, T1)
+where
+    C: Client,
+    T0: FromColumnIndexed<C>,
+    T1: FromColumnIndexed<C>,
+{
+    const NUM_COLUMNS: usize = 2;
+
+    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
+        Ok((columns.get(0)?, columns.get(1)?))
+    }
+}
+
+impl<C, T0, T1> FromRow<C> for (T0, T1)
+where
+    C: Client,
+    T0: FromColumnIndexed<C>,
+    T1: FromColumnIndexed<C>,
+{
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
+        FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
+    }
+}

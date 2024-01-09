@@ -1,6 +1,10 @@
 use ::aykroyd_v2::{FromRow, Query};
 use ::aykroyd_v2::row::{FromColumnsIndexed, FromColumnsNamed};
 
+#[derive(Query)]
+#[aykroyd(row((String, Option<String>)), query = "SELECT name, email FROM user")]
+pub struct GetAllUsersAsTuple;
+
 #[derive(Debug, FromColumnsIndexed, FromColumnsNamed)]
 pub struct User {
     pub name: String,
@@ -85,6 +89,15 @@ pub struct AuthoredPostNamed {
 )]
 pub struct QueryPostsByIdNamed(isize);
 
+pub fn query_user_tuples<C: ::aykroyd_v2::client::SyncClient>(
+    client: &mut C,
+) -> Result<Vec<(String, Option<String>)>, ::aykroyd_v2::Error<C::Error>>
+where
+    GetAllUsersAsTuple: ::aykroyd_v2::Query<C, Row = (String, Option<String>)>,
+{
+    client.query(&GetAllUsersAsTuple)
+}
+
 pub fn query_by_id_indexed<C: ::aykroyd_v2::client::SyncClient>(
     client: &mut C,
     id: isize,
@@ -108,6 +121,7 @@ where
 pub fn query_mysql() {
     let url = "mysql://root:password@localhost:3307/db_name";
     let mut client = ::aykroyd_v2::mysql::Client::new(url).unwrap();
+    println!("{:?}", query_user_tuples(&mut client));
     println!("{:?}", query_by_id_indexed(&mut client, 1));
     println!("{:?}", query_by_id_named(&mut client, 2));
 }
