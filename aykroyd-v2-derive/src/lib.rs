@@ -116,6 +116,64 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     body.into()
 }
 
+#[proc_macro_derive(QueryOne, attributes(aykroyd))]
+pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast: syn::DeriveInput = syn::parse(input).unwrap();
+
+    let name = &ast.ident;
+    let generics = &ast.generics;
+    let attr = ast
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("aykroyd"))
+        .unwrap();
+
+    let fields = match &ast.data {
+        syn::Data::Enum(_) => panic!("Cannot derive QueryOne on enum!"),
+        syn::Data::Union(_) => panic!("Cannot derive QueryOne on union!"),
+        syn::Data::Struct(s) => &s.fields,
+    };
+
+    let (query_text, row) = {
+        let mut query_text = None;
+        let mut row = None;
+
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("text") {
+                let value = meta.value()?;
+                let text: syn::LitStr = value.parse()?;
+                query_text = Some(text);
+                return Ok(());
+            }
+
+            if meta.path.is_ident("row") {
+                let content;
+                syn::parenthesized!(content in meta.input);
+                let ty: syn::Type = content.parse()?;
+                row = Some(ty);
+                return Ok(());
+            }
+
+            Err(meta.error("unknown meta path"))
+        })
+        .unwrap();
+
+        match (query_text, row) {
+            (Some(q), Some(r)) => (q, r),
+            (None, _) => panic!("unable to find query text"),
+            (_, None) => panic!("unable to find row"),
+        }
+    };
+
+    let query_text_impl = impl_static_query_text(name, generics, &query_text);
+    let to_params_impl = impl_to_params(name, generics, fields);
+    let query_impl = impl_query(name, generics, &row);
+    let query_one_impl = impl_query_one(name, generics);
+
+    let body = quote!(#query_text_impl #to_params_impl #query_impl #query_one_impl);
+    body.into()
+}
+
 fn simplify(generics: &syn::Generics) -> proc_macro2::TokenStream {
     let params = generics.params.iter().map(|param| {
         use syn::GenericParam::*;
@@ -241,6 +299,23 @@ fn impl_query(
             Self: ::aykroyd_v2::query::ToParams<C>,
         {
             type Row = #row;
+        }
+    }
+}
+
+fn impl_query_one(
+    name: &syn::Ident,
+    generics: &syn::Generics,
+) -> proc_macro2::TokenStream {
+    let generics_simple = simplify(generics);
+    let generics = insert_c(generics);
+    quote! {
+        #[automatically_derived]
+        impl #generics ::aykroyd_v2::QueryOne<C> for #name #generics_simple
+        where
+            C: ::aykroyd_v2::client::Client,
+            Self: ::aykroyd_v2::Query<C>,
+        {
         }
     }
 }

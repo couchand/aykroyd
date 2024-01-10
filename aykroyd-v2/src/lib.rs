@@ -252,4 +252,4 @@ pub use traits::*;
 
 #[cfg(feature = "derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use aykroyd_v2_derive::{FromRow, Query, Statement};
+pub use aykroyd_v2_derive::{FromRow, Query, QueryOne, Statement};
