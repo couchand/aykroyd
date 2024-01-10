@@ -12,7 +12,7 @@ derive = ["dep:aykroyd-v2-derive"]
 mysql = ["dep:mysql"]
 postgres = ["dep:postgres", "dep:tokio-postgres"]
 rusqlite = ["dep:rusqlite"]
-tokio-postgres = ["dep:tokio-postgres", "async"]
+tokio-postgres = ["dep:tokio-postgres", "dep:tokio", "async"]
 
 [dependencies.aykroyd-v2-derive]
 path = "../aykroyd-v2-derive"
@@ -32,6 +32,10 @@ optional = true
 
 [dependencies.rusqlite]
 version = "0.30"
+optional = true
+
+[dependencies.tokio]
+version = "1"
 optional = true
 
 [dependencies.tokio-postgres]
