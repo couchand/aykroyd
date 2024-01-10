@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! An opinionated micro-ORM for Rust.
 //!
 //! Database queries are represented by a plain Rust struct that implements
@@ -231,12 +233,16 @@ pub mod query;
 pub mod row;
 
 #[cfg(feature = "mysql")]
+#[cfg_attr(docsrs, doc(cfg(feature = "mysql")))]
 pub mod mysql;
 #[cfg(feature = "postgres")]
+#[cfg_attr(docsrs, doc(cfg(feature = "postgres")))]
 pub mod postgres;
 #[cfg(feature = "tokio-postgres")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-postgres")))]
 pub mod tokio_postgres;
 #[cfg(feature = "rusqlite")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rusqlite")))]
 pub mod rusqlite;
 
 #[cfg(test)]

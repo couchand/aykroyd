@@ -127,6 +127,7 @@ pub trait FromRow<C: Client>: Sized {
 }
 
 #[cfg(feature = "derive")]
+#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed, FromRow};
 
 impl<C, T0, T1> FromColumnsIndexed<C> for (T0, T1)

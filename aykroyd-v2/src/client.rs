@@ -63,6 +63,7 @@ pub trait ToParam<C: Client> {
 /// An asynchronous database client.
 #[async_trait::async_trait]
 #[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub trait AsyncClient: Client {
     type Transaction<'a>: AsyncTransaction<Self> where Self: 'a;
 
@@ -96,6 +97,7 @@ pub trait AsyncClient: Client {
 /// An asynchronous database transaction
 #[async_trait::async_trait]
 #[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub trait AsyncTransaction<C: Client> {
     async fn commit(self) -> Result<(), Error<C::Error>>;
     async fn rollback(self) -> Result<(), Error<C::Error>>;

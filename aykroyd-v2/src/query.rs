@@ -90,4 +90,5 @@ pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
 pub trait QueryOne<C: Client>: Query<C> {}
 
 #[cfg(feature = "derive")]
+#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use aykroyd_v2_derive::{Query, Statement};
