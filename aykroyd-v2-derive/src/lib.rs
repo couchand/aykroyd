@@ -263,7 +263,7 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         }).unwrap();
     }
 
-    let key = key.unwrap_or_else(|| if tuple_struct { Key::Index } else { Key::Name });
+    let key = key.unwrap_or(if tuple_struct { Key::Index } else { Key::Name });
 
     let from_columns_impl = impl_from_columns(key, name, tuple_struct, &fields[..]);
     let from_row_impl = impl_from_row(key, name);

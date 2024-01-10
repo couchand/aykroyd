@@ -150,7 +150,7 @@ mod test {
 
     #[test]
     fn columns_indexed_get() {
-        fn test<'a, 'b>(columns: &ColumnsIndexed<'a, 'b, TestClient>, index: usize, expected: &str) {
+        fn test(columns: &ColumnsIndexed<TestClient>, index: usize, expected: &str) {
             let actual: String = columns.get(index).unwrap();
             assert_eq!(expected, actual);
         }
@@ -191,7 +191,7 @@ mod test {
             }
         }
 
-        fn test<'a, 'b>(columns: &ColumnsIndexed<'a, 'b, TestClient>, expected: Nested) {
+        fn test(columns: &ColumnsIndexed<TestClient>, expected: Nested) {
             let actual: Nested = columns.get_nested(1).unwrap();
             assert_eq!(expected, actual);
         }
@@ -218,7 +218,7 @@ mod test {
 
     #[test]
     fn columns_named_get() {
-        fn test<'a, 'b>(columns: &ColumnsNamed<'a, 'b, TestClient>, name: &str, expected: &str) {
+        fn test(columns: &ColumnsNamed<TestClient>, name: &str, expected: &str) {
             let actual: String = columns.get(name).unwrap();
             assert_eq!(expected, actual);
         }
@@ -257,7 +257,7 @@ mod test {
             }
         }
 
-        fn test<'a, 'b>(columns: &ColumnsNamed<'a, 'b, TestClient>, expected: Nested) {
+        fn test(columns: &ColumnsNamed<TestClient>, expected: Nested) {
             let actual: Nested = columns.get_nested("character_").unwrap();
             assert_eq!(expected, actual);
         }
