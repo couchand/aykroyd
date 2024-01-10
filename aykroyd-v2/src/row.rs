@@ -152,3 +152,143 @@ where
         FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::test::sync_client::{self, TestClient};
+
+    #[test]
+    fn columns_indexed_get() {
+        fn test<'a, 'b>(columns: &ColumnsIndexed<'a, 'b, TestClient>, index: usize, expected: &str) {
+            let actual: String = columns.get(index).unwrap();
+            assert_eq!(expected, actual);
+        }
+
+        let mut client = TestClient::new();
+        let row = client.row(sync_client::RowInner {
+            names: vec![
+                "name".into(),
+                "age".into(),
+                "superpower".into(),
+            ],
+            values: vec![
+                "Hermes".into(),
+                "42".into(),
+                "Filing".into(),
+            ],
+        });
+        let columns = ColumnsIndexed::new(&row);
+
+        test(&columns, 0, "Hermes");
+        test(&columns, 1, "42");
+        test(&columns, 2, "Filing");
+    }
+
+    #[test]
+    fn columns_indexed_get_nested() {
+        #[derive(PartialEq, Eq, Debug)]
+        struct Nested(String, String, String);
+        impl FromColumnsIndexed<TestClient> for Nested {
+            const NUM_COLUMNS: usize = 3;
+
+            fn from_columns(columns: ColumnsIndexed<TestClient>) -> sync_client::Result<Self> {
+                Ok(Nested(
+                    columns.get(0)?,
+                    columns.get(1)?,
+                    columns.get(2)?,
+                ))
+            }
+        }
+
+        fn test<'a, 'b>(columns: &ColumnsIndexed<'a, 'b, TestClient>, expected: Nested) {
+            let actual: Nested = columns.get_nested(1).unwrap();
+            assert_eq!(expected, actual);
+        }
+
+        let mut client = TestClient::new();
+        let row = client.row(sync_client::RowInner {
+            names: vec![
+                "something_else".into(),
+                "character_name".into(),
+                "character_age".into(),
+                "character_superpower".into(),
+            ],
+            values: vec![
+                "Hello".into(),
+                "Hermes".into(),
+                "42".into(),
+                "Filing".into(),
+            ],
+        });
+        let columns = ColumnsIndexed::new(&row);
+
+        test(&columns, Nested("Hermes".into(), "42".into(), "Filing".into()));
+    }
+
+    #[test]
+    fn columns_named_get() {
+        fn test<'a, 'b>(columns: &ColumnsNamed<'a, 'b, TestClient>, name: &str, expected: &str) {
+            let actual: String = columns.get(name).unwrap();
+            assert_eq!(expected, actual);
+        }
+
+        let mut client = TestClient::new();
+        let row = client.row(sync_client::RowInner {
+            names: vec![
+                "name".into(),
+                "age".into(),
+                "superpower".into(),
+            ],
+            values: vec![
+                "Hermes".into(),
+                "42".into(),
+                "Filing".into(),
+            ],
+        });
+        let columns = ColumnsNamed::new(&row);
+
+        test(&columns, "name", "Hermes");
+        test(&columns, "age", "42");
+        test(&columns, "superpower", "Filing");
+    }
+
+    #[test]
+    fn columns_named_get_nested() {
+        #[derive(PartialEq, Eq, Debug)]
+        struct Nested(String, String, String);
+        impl FromColumnsNamed<TestClient> for Nested {
+            fn from_columns(columns: ColumnsNamed<TestClient>) -> sync_client::Result<Self> {
+                Ok(Nested(
+                    columns.get("name")?,
+                    columns.get("age")?,
+                    columns.get("superpower")?,
+                ))
+            }
+        }
+
+        fn test<'a, 'b>(columns: &ColumnsNamed<'a, 'b, TestClient>, expected: Nested) {
+            let actual: Nested = columns.get_nested("character_").unwrap();
+            assert_eq!(expected, actual);
+        }
+
+        let mut client = TestClient::new();
+        let row = client.row(sync_client::RowInner {
+            names: vec![
+                "something_else".into(),
+                "character_name".into(),
+                "character_age".into(),
+                "character_superpower".into(),
+            ],
+            values: vec![
+                "Hello".into(),
+                "Hermes".into(),
+                "42".into(),
+                "Filing".into(),
+            ],
+        });
+        let columns = ColumnsNamed::new(&row);
+
+        test(&columns, Nested("Hermes".into(), "42".into(), "Filing".into()));
+    }
+}

@@ -18,6 +18,11 @@ impl TestClient {
         TestClient::default()
     }
 
+    pub fn row(&mut self, row: RowInner) -> Row<'_> {
+        let statement = Statement::new(self);
+        statement.execute_one(row)
+    }
+
     pub fn push_query_result(&mut self, result: Result<Vec<RowInner>>) {
         self.query_results.push(result);
     }
