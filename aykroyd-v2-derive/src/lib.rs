@@ -215,7 +215,7 @@ fn impl_query(name: &syn::Ident, generics: &syn::Generics, row: &syn::Type) -> p
         impl #generics ::aykroyd_v2::query::Query<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
-            #row: ::aykroyd_v2::row::FromRow<C>,
+            #row: ::aykroyd_v2::FromRow<C>,
             Self: ::aykroyd_v2::query::ToParams<C>,
         {
             type Row = #row;
@@ -356,7 +356,7 @@ fn impl_from_row(
 
     quote! {
         #[automatically_derived]
-        impl<C> ::aykroyd_v2::row::FromRow<C> for #name
+        impl<C> ::aykroyd_v2::FromRow<C> for #name
         where
             C: ::aykroyd_v2::client::Client,
             Self: ::aykroyd_v2::row::#trait_ty<C>,

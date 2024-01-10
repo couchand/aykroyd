@@ -115,20 +115,9 @@ pub trait FromColumnsNamed<C: Client>: Sized {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>>;
 }
 
-/// A type that can be produced from a database's result row.
-///
-/// Don't implement this directly, use the derive macro.
-pub trait FromRow<C: Client>: Sized {
-    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
-
-    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error<C::Error>> {
-        rows.iter().map(|row| FromRow::from_row(row)).collect()
-    }
-}
-
 #[cfg(feature = "derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed, FromRow};
+pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed};
 
 impl<C, T0, T1> FromColumnsIndexed<C> for (T0, T1)
 where
@@ -143,7 +132,7 @@ where
     }
 }
 
-impl<C, T0, T1> FromRow<C> for (T0, T1)
+impl<C, T0, T1> crate::FromRow<C> for (T0, T1)
 where
     C: Client,
     T0: FromColumnIndexed<C>,

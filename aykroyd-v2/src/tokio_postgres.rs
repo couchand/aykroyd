@@ -3,7 +3,7 @@
 use crate::client::{AsyncClient, AsyncTransaction, FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
-use crate::row::FromRow;
+use crate::FromRow;
 
 /// A convenience function which parses a connection string and connects to the database.
 ///

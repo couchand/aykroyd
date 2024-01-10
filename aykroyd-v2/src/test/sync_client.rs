@@ -1,4 +1,4 @@
-use crate::{client, error, query, row};
+use crate::{client, error, query, FromRow};
 
 #[derive(Debug, Default, Clone)]
 pub struct TestClient {
@@ -140,7 +140,7 @@ impl client::SyncClient for TestClient {
         });
         self.query_results.pop().unwrap().and_then(|rows| {
             let statement = Statement::new(self);
-            row::FromRow::from_rows(&statement.execute(rows))
+            FromRow::from_rows(&statement.execute(rows))
         })
     }
 
@@ -153,7 +153,7 @@ impl client::SyncClient for TestClient {
         self.query_opt_results.pop().transpose().and_then(|maybe_maybe_row| {
             let statement = Statement::new(self);
             Ok(match maybe_maybe_row {
-                Some(Some(row)) => Some(row::FromRow::from_row(&statement.execute_one(row))?),
+                Some(Some(row)) => Some(FromRow::from_row(&statement.execute_one(row))?),
                 _ => None,
             })
         })
@@ -167,7 +167,7 @@ impl client::SyncClient for TestClient {
         });
         self.query_one_results.pop().unwrap().and_then(|row| {
             let statement = Statement::new(self);
-            row::FromRow::from_row(&statement.execute_one(row))
+            FromRow::from_row(&statement.execute_one(row))
         })
     }
 

@@ -4,7 +4,7 @@
 //! the tools needed to define database queries.
 
 use crate::client::Client;
-use crate::row::FromRow;
+use crate::FromRow;
 
 /// The text of a given `Query` or `Statement`.
 ///

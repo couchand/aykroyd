@@ -2,7 +2,7 @@
 
 use crate::client::Client;
 use crate::query::{Query, QueryOne, QueryText, Statement, ToParams};
-use crate::row::FromRow;
+use crate::FromRow;
 
 /// A query that could be one of two options.
 pub enum Either<A, B> {

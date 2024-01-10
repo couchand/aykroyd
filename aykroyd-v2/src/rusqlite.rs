@@ -3,7 +3,7 @@
 use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
 use crate::error::Error;
 use crate::query::{Query, Statement, StaticQueryText};
-use crate::row::FromRow;
+use crate::FromRow;
 
 impl<T> FromColumnIndexed<Client> for T
 where

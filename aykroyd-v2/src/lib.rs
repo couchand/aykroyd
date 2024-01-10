@@ -18,7 +18,7 @@
 //! In addition, the `Query` trait has an associated type `Row` which must
 //! implement:
 //!
-//! * [`FromRow`](row::FromRow), to be deserialized from database rows.
+//! * [`FromRow`], to be deserialized from database rows.
 //!
 //! All of these traits can be derived automatically, so the usual
 //! gnarly database access code is reduced to simple struct definitions.
@@ -250,4 +250,18 @@ mod test;
 
 pub use error::Error;
 pub use query::{Query, QueryOne, Statement};
-pub use row::FromRow;
+
+#[cfg(feature = "derive")]
+#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
+pub use aykroyd_v2_derive::FromRow;
+
+/// A type that can be produced from a database's result row.
+///
+/// Don't implement this directly, use the derive macro.
+pub trait FromRow<C: crate::client::Client>: Sized {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
+
+    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error<C::Error>> {
+        rows.iter().map(|row| FromRow::from_row(row)).collect()
+    }
+}
