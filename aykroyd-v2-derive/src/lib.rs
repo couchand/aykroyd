@@ -552,8 +552,10 @@ fn impl_from_columns(
 
     let field_list = if !tuple_struct {
         quote!({#(#field_puts),*})
-    } else {
+    } else if !field_puts.is_empty() {
         quote!((#(#field_puts),*))
+    } else {
+        quote!()
     };
     let num_const = syn::LitInt::new(&format!("{num_const}usize"), proc_macro2::Span::call_site());
 
