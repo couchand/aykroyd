@@ -108,6 +108,9 @@ struct Pet {
 struct GetPets;
 ```
 "##)]
+///
+/// See [`FromColumnsIndexed`] and [`FromColumnsNamed`](crate::row::FromColumnsNamed)
+/// for more details.
 pub trait FromRow<C: Client>: Sized {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
 

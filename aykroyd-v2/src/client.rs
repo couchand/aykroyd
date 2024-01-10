@@ -7,7 +7,7 @@
 //!
 //! To implement a new database driver, start with
 //! [`Client`](./trait.Client.html), where you'll define the
-//! database's input `Param` output `Row`, and `Error` types.
+//! database's input `Param`, output `Row`, and `Error` types.
 //! Then add appropriate implementations of
 //! [`ToParam`](./trait.ToParam.html) for
 //! anything you can convert to your client `Param` type,
