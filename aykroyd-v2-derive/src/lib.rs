@@ -198,7 +198,7 @@ fn impl_statement(name: &syn::Ident, generics: &syn::Generics) -> proc_macro2::T
     let generics = insert_c(generics);
     quote! {
         #[automatically_derived]
-        impl #generics ::aykroyd_v2::query::Statement<C> for #name #generics_simple
+        impl #generics ::aykroyd_v2::Statement<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
             Self: ::aykroyd_v2::query::ToParams<C>,
@@ -212,7 +212,7 @@ fn impl_query(name: &syn::Ident, generics: &syn::Generics, row: &syn::Type) -> p
     let generics = insert_c(generics);
     quote! {
         #[automatically_derived]
-        impl #generics ::aykroyd_v2::query::Query<C> for #name #generics_simple
+        impl #generics ::aykroyd_v2::Query<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
             #row: ::aykroyd_v2::FromRow<C>,

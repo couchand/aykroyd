@@ -21,8 +21,8 @@
 //! [`SyncClient`](./trait.SyncClient.html) and
 //! [`SyncTransaction`](./trait.SyncTransaction.html) as appropriate.
 
-use crate::error::Error;
-use crate::query::{Query, QueryOne, Statement, StaticQueryText};
+use crate::query::StaticQueryText;
+use crate::{Error, Query, QueryOne, Statement};
 
 /// A database client's types.
 pub trait Client: Sized {

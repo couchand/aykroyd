@@ -1,9 +1,8 @@
 //! An asynchronous, pipelined, PostgreSQL client.
 
 use crate::client::{AsyncClient, AsyncTransaction, FromColumnIndexed, FromColumnNamed, ToParam};
-use crate::error::Error;
-use crate::query::{Query, Statement, StaticQueryText};
-use crate::FromRow;
+use crate::query::StaticQueryText;
+use crate::{Error, FromRow, Query, Statement};
 
 /// A convenience function which parses a connection string and connects to the database.
 ///

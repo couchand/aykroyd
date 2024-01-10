@@ -1,4 +1,4 @@
-use crate::{client, error, query, FromRow};
+use crate::{client, error, query, FromRow, Query, QueryOne, Statement};
 
 #[derive(Debug, Default, Clone)]
 pub struct TestClient {
@@ -19,7 +19,7 @@ impl TestClient {
     }
 
     pub fn row(&mut self, row: RowInner) -> Row<'_> {
-        let statement = Statement::new(self);
+        let statement = TestStatement::new(self);
         statement.execute_one(row)
     }
 
@@ -41,11 +41,11 @@ impl TestClient {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Statement<'a>(core::marker::PhantomData<&'a ()>);
+struct TestStatement<'a>(core::marker::PhantomData<&'a ()>);
 
-impl<'a> Statement<'a> {
+impl<'a> TestStatement<'a> {
     fn new<T>(_lifetime: &'a T) -> Self {
-        Statement(core::marker::PhantomData)
+        TestStatement(core::marker::PhantomData)
     }
 
     fn execute_one(self, inner: RowInner) -> Row<'a> {
@@ -58,7 +58,7 @@ impl<'a> Statement<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Row<'a>(Statement<'a>, RowInner);
+pub struct Row<'a>(TestStatement<'a>, RowInner);
 
 #[derive(Debug, Default, Clone)]
 pub struct RowInner {
@@ -132,26 +132,26 @@ impl client::SyncClient for TestClient {
         self.prepare_results.pop().unwrap_or(Ok(()))
     }
 
-    fn query<Q: query::Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
+    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
             kind: Kind::Query,
         });
         self.query_results.pop().unwrap().and_then(|rows| {
-            let statement = Statement::new(self);
+            let statement = TestStatement::new(self);
             FromRow::from_rows(&statement.execute(rows))
         })
     }
 
-    fn query_opt<Q: query::QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
+    fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
             kind: Kind::QueryOpt,
         });
         self.query_opt_results.pop().transpose().and_then(|maybe_maybe_row| {
-            let statement = Statement::new(self);
+            let statement = TestStatement::new(self);
             Ok(match maybe_maybe_row {
                 Some(Some(row)) => Some(FromRow::from_row(&statement.execute_one(row))?),
                 _ => None,
@@ -159,19 +159,19 @@ impl client::SyncClient for TestClient {
         })
     }
 
-    fn query_one<Q: query::QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
+    fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
             kind: Kind::QueryOne,
         });
         self.query_one_results.pop().unwrap().and_then(|row| {
-            let statement = Statement::new(self);
+            let statement = TestStatement::new(self);
             FromRow::from_row(&statement.execute_one(row))
         })
     }
 
-    fn execute<S: query::Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
+    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
         self.records.push(Record {
             text: statement.query_text(),
             params: Some(statement.to_params().into_iter().map(ToParam::to_param).collect()),
@@ -227,22 +227,22 @@ impl<'a> client::SyncTransaction<TestClient> for Transaction<'a> {
         self.as_mut().prepare::<S>()
     }
 
-    fn query<Q: query::Query<TestClient>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
+    fn query<Q: Query<TestClient>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         use client::SyncClient;
         self.as_mut().query(query)
     }
 
-    fn query_opt<Q: query::QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
+    fn query_opt<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         use client::SyncClient;
         self.as_mut().query_opt(query)
     }
 
-    fn query_one<Q: query::QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Q::Row> {
+    fn query_one<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Q::Row> {
         use client::SyncClient;
         self.as_mut().query_one(query)
     }
 
-    fn execute<S: query::Statement<TestClient>>(&mut self, statement: &S) -> Result<u64> {
+    fn execute<S: Statement<TestClient>>(&mut self, statement: &S) -> Result<u64> {
         use client::SyncClient;
         self.as_mut().execute(statement)
     }

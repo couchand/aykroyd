@@ -1,8 +1,8 @@
 //! Query combinators.
 
 use crate::client::Client;
-use crate::query::{Query, QueryOne, QueryText, Statement, ToParams};
-use crate::FromRow;
+use crate::query::{QueryText, ToParams};
+use crate::{FromRow, Query, QueryOne, Statement};
 
 /// A query that could be one of two options.
 pub enum Either<A, B> {

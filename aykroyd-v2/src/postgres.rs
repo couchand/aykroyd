@@ -1,9 +1,8 @@
 //! A synchronous client for PostgreSQL.
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
-use crate::error::Error;
-use crate::query::{Query, Statement, StaticQueryText};
-use crate::FromRow;
+use crate::query::StaticQueryText;
+use crate::{Error, FromRow, Query, Statement};
 
 impl<T> FromColumnIndexed<Client> for T
 where

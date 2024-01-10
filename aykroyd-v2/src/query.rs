@@ -4,7 +4,6 @@
 //! the tools needed to define database queries.
 
 use crate::client::Client;
-use crate::FromRow;
 
 /// The text of a given `Query` or `Statement`.
 ///
@@ -45,50 +44,3 @@ impl<S: StaticQueryText> QueryText for S {
 pub trait ToParams<C: Client>: Sync {
     fn to_params(&self) -> Vec<C::Param<'_>>;
 }
-
-/// A database statement which returns no results.
-///
-/// A `Statement` is something that has `QueryText`, and can be
-/// converted to the parameters of some database `Client`.
-///
-/// You can use the derive macro to produce each of these parts:
-///
-/// ```ignore
-/// #[derive(Statement)]
-/// #[aykroyd(text = "UPDATE todo SET label = $1 WHERE id = $2")]
-/// struct UpdateTodo(String, isize);
-/// ```
-pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
-
-/// A database query that returns zero or more result rows.
-///
-/// A `Query` is something that has `QueryText`, can be converted
-/// to the parameters of some database `Client`, and has a result
-/// type that can be produced from that `Client`'s rows.
-///
-/// You can use the derive macro to produce each of these parts:
-///
-/// ```ignore
-/// #[derive(FromRow)]
-/// struct Todo {
-///     id: isize,
-///     label: String,
-/// }
-///
-/// #[derive(Query)]
-/// #[aykroyd(row(Todo), text = "SELECT id, label FROM todo")]
-/// struct GetAllTodos;
-/// ```
-pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
-    type Row: FromRow<C>;
-}
-
-/// A marker trait that a query only returns zero or one row.
-///
-/// A `QueryOne` is a marker trait, indicating that a `Query`
-/// will only ever return zero or one row.
-pub trait QueryOne<C: Client>: Query<C> {}
-
-#[cfg(feature = "derive")]
-#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use aykroyd_v2_derive::{Query, Statement};
