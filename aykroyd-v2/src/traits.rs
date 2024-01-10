@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::error::Error;
 use crate::query::{QueryText, ToParams};
+use crate::row::{ColumnsIndexed, FromColumnsIndexed};
 
 /// A type that can be produced from a database's result row.
 ///
@@ -66,6 +67,39 @@ pub trait FromRow<C: Client>: Sized {
         rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 }
+
+macro_rules! impl_tuple_from_row {
+    (
+        $(
+            $name:ident
+        ),+
+        $(,)?
+    ) => {
+        impl<
+            C,
+            $(
+                $name,
+            )+
+        > FromRow<C> for ($($name,)+)
+        where
+            C: Client,
+            ($($name,)+): FromColumnsIndexed<C>,
+        {
+            fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
+                FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
+            }
+        }
+    };
+}
+
+impl_tuple_from_row!(T0);
+impl_tuple_from_row!(T0, T1);
+impl_tuple_from_row!(T0, T1, T2);
+impl_tuple_from_row!(T0, T1, T2, T3);
+impl_tuple_from_row!(T0, T1, T2, T3, T4);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6, T7);
 
 /// A database statement which returns no results.
 ///

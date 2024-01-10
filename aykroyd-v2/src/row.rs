@@ -119,29 +119,47 @@ pub trait FromColumnsNamed<C: Client>: Sized {
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed};
 
-impl<C, T0, T1> FromColumnsIndexed<C> for (T0, T1)
-where
-    C: Client,
-    T0: FromColumnIndexed<C>,
-    T1: FromColumnIndexed<C>,
-{
-    const NUM_COLUMNS: usize = 2;
+macro_rules! impl_tuple_from_columns_indexed {
+    (
+        $num_columns:literal :
+        $(
+            $name:ident $index:literal
+        ),+
+        $(,)?
+    ) => {
+        impl<
+            C,
+            $(
+                $name,
+            )+
+        > FromColumnsIndexed<C> for ($($name,)+)
+        where
+            C: Client,
+            $(
+                $name: FromColumnIndexed<C>,
+            )+
+        {
+            const NUM_COLUMNS: usize = $num_columns;
 
-    fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>> {
-        Ok((columns.get(0)?, columns.get(1)?))
-    }
+            fn from_columns(
+                columns: ColumnsIndexed<C>,
+            ) -> Result<Self, Error<C::Error>> {
+                Ok(($(
+                    columns.get($index)?,
+                )+))
+            }
+        }
+    };
 }
 
-impl<C, T0, T1> crate::FromRow<C> for (T0, T1)
-where
-    C: Client,
-    T0: FromColumnIndexed<C>,
-    T1: FromColumnIndexed<C>,
-{
-    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
-        FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
-    }
-}
+impl_tuple_from_columns_indexed!(1: T0 0);
+impl_tuple_from_columns_indexed!(2: T0 0, T1 1);
+impl_tuple_from_columns_indexed!(3: T0 0, T1 1, T2 2);
+impl_tuple_from_columns_indexed!(4: T0 0, T1 1, T2 2, T3 3);
+impl_tuple_from_columns_indexed!(5: T0 0, T1 1, T2 2, T3 3, T4 4);
+impl_tuple_from_columns_indexed!(6: T0 0, T1 1, T2 2, T3 3, T4 4, T5 5);
+impl_tuple_from_columns_indexed!(7: T0 0, T1 1, T2 2, T3 3, T4 4, T5 5, T6 6);
+impl_tuple_from_columns_indexed!(8: T0 0, T1 1, T2 2, T3 3, T4 4, T5 5, T6 6, T7 7);
 
 #[cfg(test)]
 mod test {
