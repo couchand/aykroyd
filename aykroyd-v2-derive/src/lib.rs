@@ -12,22 +12,60 @@ enum Delegate {
     FromColumns,
 }
 
+#[proc_macro_derive(Statement, attributes(aykroyd))]
+pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast: syn::DeriveInput = syn::parse(input).unwrap();
+
+    let name = &ast.ident;
+    let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
+
+    let fields = match &ast.data {
+        syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
+        syn::Data::Union(_) => panic!("Cannot derive Statement on union!"),
+        syn::Data::Struct(s) => &s.fields,
+    };
+
+    let query_text = {
+        let mut query_text = None;
+
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("query") {
+                let value = meta.value()?;
+                let text: syn::LitStr = value.parse()?;
+                query_text = Some(text);
+                return Ok(());
+            }
+
+            Err(meta.error("unknown meta path"))
+        }).unwrap();
+
+        match query_text {
+            Some(q) => q,
+            None => panic!("unable to find query text"),
+        }
+    };
+
+    let query_text_impl = impl_static_query_text(name, &query_text);
+    let to_params_impl = impl_to_params(name, fields);
+    let statement_impl = impl_statement(name);
+
+    let body = quote!(#query_text_impl, #to_params_impl #statement_impl);
+    body.into()
+}
+
 #[proc_macro_derive(Query, attributes(aykroyd))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
     let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
-    let body = match &ast.data {
+
+    let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Query on enum!"),
         syn::Data::Union(_) => panic!("Cannot derive Query on union!"),
-        syn::Data::Struct(s) => impl_query(name, attr, &s.fields),
+        syn::Data::Struct(s) => &s.fields,
     };
 
-    body.into()
-}
-
-fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) -> proc_macro2::TokenStream {
     let (query_text, row) = {
         let mut query_text = None;
         let mut row = None;
@@ -58,6 +96,24 @@ fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) ->
         }
     };
 
+    let query_text_impl = impl_static_query_text(name, &query_text);
+    let to_params_impl = impl_to_params(name, fields);
+    let query_impl = impl_query(name, &row);
+
+    let body = quote!(#query_text_impl #to_params_impl #query_impl);
+    body.into()
+}
+
+fn impl_static_query_text(name: &syn::Ident, query_text: &syn::LitStr) -> proc_macro2::TokenStream {
+    quote! {
+        #[automatically_derived]
+        impl ::aykroyd_v2::query::StaticQueryText for #name {
+            const QUERY_TEXT: &'static str = #query_text;
+        }
+    }
+}
+
+fn impl_to_params(name: &syn::Ident, fields: &syn::Fields) -> proc_macro2::TokenStream {
     let fields = match &fields {
         syn::Fields::Unit => vec![],
         syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
@@ -66,8 +122,8 @@ fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) ->
         }
     };
 
-    let mut wheres = vec![];
     let mut params = vec![];
+    let mut wheres = vec![];
 
     for (index, field) in fields.iter().enumerate() {
         let name = match &field.ident {
@@ -79,21 +135,16 @@ fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) ->
                 quote!(#index)
             }
         };
+        params.push(quote! {
+            ::aykroyd_v2::client::ToParam::to_param(&self.#name)
+        });
+
         let ty = &field.ty;
         wheres.push(quote! {
             #ty: ::aykroyd_v2::client::ToParam<C>
         });
-        params.push(quote! {
-            ::aykroyd_v2::client::ToParam::to_param(&self.#name)
-        });
     }
-
     quote! {
-        #[automatically_derived]
-        impl ::aykroyd_v2::query::StaticQueryText for #name {
-            const QUERY_TEXT: &'static str = #query_text;
-        }
-
         #[automatically_derived]
         impl<C> ::aykroyd_v2::query::ToParams<C> for #name
         where
@@ -106,13 +157,29 @@ fn impl_query(name: &syn::Ident, attr: &syn::Attribute, fields: &syn::Fields) ->
                 ].into()
             }
         }
+    }
+}
 
+fn impl_statement(name: &syn::Ident) -> proc_macro2::TokenStream {
+    quote! {
+        #[automatically_derived]
+        impl<C> ::aykroyd_v2::query::Statement<C> for #name
+        where
+            C: ::aykroyd_v2::client::Client,
+            Self: ::aykroyd_v2::query::ToParams<C>,
+        {
+        }
+    }
+}
+
+fn impl_query(name: &syn::Ident, row: &syn::Type) -> proc_macro2::TokenStream {
+    quote! {
         #[automatically_derived]
         impl<C> ::aykroyd_v2::query::Query<C> for #name
         where
             C: ::aykroyd_v2::client::Client,
             #row: ::aykroyd_v2::row::FromRow<C>,
-            #(#wheres),*
+            Self: ::aykroyd_v2::query::ToParams<C>,
         {
             type Row = #row;
         }
