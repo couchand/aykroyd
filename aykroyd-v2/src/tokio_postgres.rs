@@ -2,7 +2,7 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, QueryOne, Statement};
 
 pub type Error = error::Error<tokio_postgres::Error>;
 
@@ -194,6 +194,99 @@ impl Client {
         FromRow::from_rows(&rows)
     }
 
+    /// Executes a statement which returns a single row, returning it.
+    ///
+    /// Returns an error if the query does not return exactly one row.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{QueryOne, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(QueryOne)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
+    /// pub struct GetCustomerById(i32);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    ///
+    /// // Run the query returning a single row.
+    /// let customer = client.query_one(&GetCustomerById(42)).await?;
+    /// println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text()).await?;
+
+        let row = self
+            .client
+            .query_one(&statement, params)
+            .await
+            .map_err(Error::query)?;
+
+        FromRow::from_row(&row)
+    }
+
+    /// Executes a statement which returns zero or one rows, returning it.
+    ///
+    /// Returns an error if the query returns more than one row.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{QueryOne, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(QueryOne)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
+    /// pub struct GetCustomerById(i32);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    ///
+    /// // Run the query, possibly returning a single row.
+    /// if let Some(customer) = client.query_opt(&GetCustomerById(42)).await? {
+    ///     println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text()).await?;
+
+        let row = self
+            .client
+            .query_opt(&statement, params)
+            .await
+            .map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
+    }
+
     /// Executes a statement, returning the number of rows modified.
     ///
     /// If the statement does not modify any rows (e.g. SELECT), 0 is returned.  We'll prepare the statement first if we haven't yet.
@@ -367,6 +460,101 @@ impl<'a> Transaction<'a> {
             .map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
+    }
+
+    /// Executes a statement which returns a single row, returning it.
+    ///
+    /// Returns an error if the query does not return exactly one row.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{QueryOne, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(QueryOne)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
+    /// pub struct GetCustomerById(i32);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let mut txn = client.transaction().await?;
+    ///
+    /// // Run the query returning a single row.
+    /// let customer = txn.query_one(&GetCustomerById(42)).await?;
+    /// println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn query_one<Q: QueryOne<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text()).await?;
+
+        let row = self
+            .txn
+            .query_one(&statement, params)
+            .await
+            .map_err(Error::query)?;
+
+        FromRow::from_row(&row)
+    }
+
+    /// Executes a statement which returns zero or one rows, returning it.
+    ///
+    /// Returns an error if the query returns more than one row.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{QueryOne, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(QueryOne)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
+    /// pub struct GetCustomerById(i32);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let mut txn = client.transaction().await?;
+    ///
+    /// // Run the query, possibly returning a single row.
+    /// if let Some(customer) = txn.query_opt(&GetCustomerById(42)).await? {
+    ///     println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn query_opt<Q: QueryOne<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text()).await?;
+
+        let row = self
+            .txn
+            .query_opt(&statement, params)
+            .await
+            .map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
     }
 
     /// Executes a statement, returning the number of rows modified.
