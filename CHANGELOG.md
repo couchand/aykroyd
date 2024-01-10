@@ -9,7 +9,13 @@ Like most crates in the Rust ecosystem this project adheres to
 
 ## [Unreleased]
 
-- *nothing yet*
+- Support for the MySQL and SQLite databases, in addition to
+  PostgreSQL.
+- `FromRow` for nested structs using `FromColumnsIndexed` od
+  `FromColumnsNamed`.
+- The `Either` combinator, for dynamic query choice.
+- Explicit column names and indexes and parameter indexes have
+  been removed temporarily.  Expect to see them again soon!
 
 ## [v0.2.0] - 2023-04-18 ([Log][v0.2.0-log])
 
