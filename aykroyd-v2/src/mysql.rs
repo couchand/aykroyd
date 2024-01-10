@@ -75,10 +75,9 @@ impl Client {
     pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
-        let params = query.to_params();
-        let params = match params.len() {
-            0 => mysql::Params::Empty,
-            _ => mysql::Params::Positional(params),
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
         };
         let query = self
             .as_mut()
@@ -97,10 +96,9 @@ impl Client {
     ) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
-        let params = statement.to_params();
-        let params = match params.len() {
-            0 => mysql::Params::Empty,
-            _ => mysql::Params::Positional(params),
+        let params = match statement.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
         };
         let statement = self
             .as_mut()
@@ -145,10 +143,9 @@ impl<'a> Transaction<'a> {
     ) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
-        let params = query.to_params();
-        let params = match params.len() {
-            0 => mysql::Params::Empty,
-            _ => mysql::Params::Positional(params),
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
         };
         let query = self.0.prep(query.query_text()).map_err(Error::prepare)?;
 
@@ -164,10 +161,9 @@ impl<'a> Transaction<'a> {
     ) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
-        let params = statement.to_params();
-        let params = match params.len() {
-            0 => mysql::Params::Empty,
-            _ => mysql::Params::Positional(params),
+        let params = match statement.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
         };
         let statement = self
             .0

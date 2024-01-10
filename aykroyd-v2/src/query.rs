@@ -42,5 +42,5 @@ impl<S: StaticQueryText> QueryText for S {
 /// Don't implement this trait directly, use the
 /// derive macro for `Query` or `Statement`.
 pub trait ToParams<C: Client>: Sync {
-    fn to_params(&self) -> Vec<C::Param<'_>>;
+    fn to_params(&self) -> Option<Vec<C::Param<'_>>>;
 }

@@ -73,12 +73,13 @@ impl Client {
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
         let mut statement =
             rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
                 .map_err(Error::prepare)?;
 
-        let mut rows = statement.query(&params[..]).map_err(Error::query)?;
+        let mut rows = statement.query(params).map_err(Error::query)?;
 
         let mut result = vec![];
         while let Some(row) = rows.next().map_err(Error::query)? {
@@ -93,12 +94,13 @@ impl Client {
         statement: &S,
     ) -> Result<u64, Error> {
         let params = statement.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
         let mut statement =
             rusqlite::Connection::prepare_cached(self.as_mut(), &statement.query_text())
                 .map_err(Error::prepare)?;
 
-        let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
+        let rows_affected = statement.execute(params).map_err(Error::query)?;
 
         Ok(rows_affected.try_into().unwrap_or_default())
     }
@@ -133,11 +135,12 @@ impl<'a> Transaction<'a> {
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
         let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
             .map_err(Error::prepare)?;
 
-        let mut rows = statement.query(&params[..]).map_err(Error::query)?;
+        let mut rows = statement.query(params).map_err(Error::query)?;
 
         let mut result = vec![];
         while let Some(row) = rows.next().map_err(Error::query)? {
@@ -152,11 +155,12 @@ impl<'a> Transaction<'a> {
         statement: &S,
     ) -> Result<u64, Error> {
         let params = statement.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
         let mut statement = rusqlite::Connection::prepare_cached(&self.0, &statement.query_text())
             .map_err(Error::prepare)?;
 
-        let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
+        let rows_affected = statement.execute(params).map_err(Error::query)?;
 
         Ok(rows_affected.try_into().unwrap_or_default())
     }

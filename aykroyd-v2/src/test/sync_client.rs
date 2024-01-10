@@ -141,13 +141,12 @@ impl TestClient {
     pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(
-                query
-                    .to_params()
+            params: query.to_params().map(|params| {
+                params
                     .into_iter()
                     .map(ToParam::to_param)
-                    .collect(),
-            ),
+                    .collect()
+            }),
             kind: Kind::Query,
         });
         self.query_results.pop().unwrap().and_then(|rows| {
@@ -159,13 +158,12 @@ impl TestClient {
     pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(
-                query
-                    .to_params()
+            params: query.to_params().map(|params| {
+                params
                     .into_iter()
                     .map(ToParam::to_param)
-                    .collect(),
-            ),
+                    .collect()
+            }),
             kind: Kind::QueryOpt,
         });
         self.query_opt_results
@@ -183,13 +181,12 @@ impl TestClient {
     pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(
-                query
-                    .to_params()
+            params: query.to_params().map(|params| {
+                params
                     .into_iter()
                     .map(ToParam::to_param)
-                    .collect(),
-            ),
+                    .collect()
+            }),
             kind: Kind::QueryOne,
         });
         self.query_one_results.pop().unwrap().and_then(|row| {
@@ -201,13 +198,12 @@ impl TestClient {
     pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
         self.records.push(Record {
             text: statement.query_text(),
-            params: Some(
-                statement
-                    .to_params()
+            params: statement.to_params().map(|params| {
+                params
                     .into_iter()
                     .map(ToParam::to_param)
-                    .collect(),
-            ),
+                    .collect()
+            }),
             kind: Kind::Statement,
         });
         self.execute_results.pop().unwrap_or(Ok(0))

@@ -254,6 +254,13 @@ fn impl_to_params(
             #ty: ::aykroyd_v2::client::ToParam<C>
         });
     }
+
+    let body = if params.is_empty() {
+        quote!(None)
+    } else {
+        quote!(Some(vec![#(#params,)*]))
+    };
+
     let generics_simple = simplify(generics);
     let generics = insert_c(generics);
     quote! {
@@ -263,10 +270,8 @@ fn impl_to_params(
             C: ::aykroyd_v2::client::Client,
             #(#wheres,)*
         {
-            fn to_params(&self) -> Vec<<C as ::aykroyd_v2::client::Client>::Param<'_>> {
-                [
-                    #(#params,)*
-                ].into()
+            fn to_params(&self) -> Option<Vec<<C as ::aykroyd_v2::client::Client>::Param<'_>>> {
+                #body
             }
         }
     }

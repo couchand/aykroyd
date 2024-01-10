@@ -61,8 +61,8 @@ struct GetTreesNamed<'a>(&'a str);
 //! #     const QUERY_TEXT: &'static str = "";
 //! # }
 //! # impl<C: Client> ToParams<C> for GetTreesOver {
-//! #     fn to_params(&self) -> Vec<C::Param<'_>> {
-//! #         vec![]
+//! #     fn to_params(&self) -> Option<Vec<C::Param<'_>>> {
+//! #         None
 //! #     }
 //! # }
 //! # impl<C: Client> Query<C> for GetTreesOver {
@@ -73,8 +73,8 @@ struct GetTreesNamed<'a>(&'a str);
 //! #     const QUERY_TEXT: &'static str = "";
 //! # }
 //! # impl<'a, C: Client> ToParams<C> for GetTreesNamed<'a> {
-//! #     fn to_params(&self) -> Vec<C::Param<'_>> {
-//! #         vec![]
+//! #     fn to_params(&self) -> Option<Vec<C::Param<'_>>> {
+//! #         None
 //! #     }
 //! # }
 //! # impl<'a, C: Client> Query<C> for GetTreesNamed<'a> {
@@ -134,7 +134,7 @@ where
     A: ToParams<C>,
     B: ToParams<C>,
 {
-    fn to_params(&self) -> Vec<C::Param<'_>> {
+    fn to_params(&self) -> Option<Vec<C::Param<'_>>> {
         match self {
             Either::Left(a) => a.to_params(),
             Either::Right(b) => b.to_params(),
@@ -208,20 +208,20 @@ mod test {
 
         struct A;
         impl ToParams<TestClient> for A {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![ToParam::to_param(&Param(1))]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                Some(vec![ToParam::to_param(&Param(1))])
             }
         }
 
         struct B;
         impl ToParams<TestClient> for B {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![ToParam::to_param(&Param(2))]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                Some(vec![ToParam::to_param(&Param(2))])
             }
         }
 
         fn test(either: &Either<A, B>, expected: &str) {
-            let params = ToParams::to_params(either);
+            let params = ToParams::to_params(either).unwrap();
             assert_eq!(1, params.len());
             assert_eq!(expected, params[0].to_param());
         }
@@ -234,8 +234,8 @@ mod test {
     fn statement() {
         struct A;
         impl ToParams<TestClient> for A {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for A {
@@ -245,8 +245,8 @@ mod test {
 
         struct B;
         impl ToParams<TestClient> for B {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for B {
@@ -278,8 +278,8 @@ mod test {
 
         struct A;
         impl ToParams<TestClient> for A {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for A {
@@ -291,8 +291,8 @@ mod test {
 
         struct B;
         impl ToParams<TestClient> for B {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for B {
@@ -327,8 +327,8 @@ mod test {
 
         struct A;
         impl ToParams<TestClient> for A {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for A {
@@ -341,8 +341,8 @@ mod test {
 
         struct B;
         impl ToParams<TestClient> for B {
-            fn to_params(&self) -> Vec<<TestClient as Client>::Param<'_>> {
-                vec![]
+            fn to_params(&self) -> Option<Vec<<TestClient as Client>::Param<'_>>> {
+                None
             }
         }
         impl StaticQueryText for B {

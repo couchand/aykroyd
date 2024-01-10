@@ -179,8 +179,8 @@ impl<C: Client> ToParams<C> for GetPostsByUser
 where
     String: ToParam<C>,
 {
-    fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![self.0.to_param()]
+    fn to_params(&self) -> Option<Vec<C::Param<'_>>> {
+        Some(vec![self.0.to_param()])
     }
 }
 
@@ -203,7 +203,7 @@ impl Client for FakeClient {
 #[test]
 fn smoke_to_params() {
     let query = GetPostsByUser("foobar".into());
-    let row = <GetPostsByUser as ToParams<FakeClient>>::to_params(&query);
+    let row = <GetPostsByUser as ToParams<FakeClient>>::to_params(&query).unwrap();
     assert_eq!(1, row.len());
     assert_eq!("foobar", row[0]);
 }
@@ -218,7 +218,7 @@ impl FakeClient {
     }
 
     fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<String>> {
-        let params = statement.to_params();
+        let params = statement.to_params().unwrap();
         assert_eq!(1, params.len());
         let text = params.into_iter().next().unwrap();
 
@@ -263,8 +263,8 @@ impl<C: Client> ToParams<C> for UpdatePost
 where
     String: ToParam<C>,
 {
-    fn to_params(&self) -> Vec<C::Param<'_>> {
-        vec![self.0.to_param()]
+    fn to_params(&self) -> Option<Vec<C::Param<'_>>> {
+        Some(vec![self.0.to_param()])
     }
 }
 

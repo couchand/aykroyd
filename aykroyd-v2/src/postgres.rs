@@ -180,11 +180,12 @@ impl Client {
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
 
         let rows = self
             .client
-            .query(&statement, &params)
+            .query(&statement, params)
             .map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
@@ -218,11 +219,12 @@ impl Client {
         statement: &S,
     ) -> Result<u64, Error> {
         let params = statement.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text())?;
 
         let rows_affected = self
             .client
-            .execute(&statement, &params)
+            .execute(&statement, params)
             .map_err(Error::query)?;
 
         Ok(rows_affected)
@@ -341,9 +343,10 @@ impl<'a> Transaction<'a> {
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
 
-        let rows = self.txn.query(&statement, &params).map_err(Error::query)?;
+        let rows = self.txn.query(&statement, params).map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
     }
@@ -377,11 +380,12 @@ impl<'a> Transaction<'a> {
         statement: &S,
     ) -> Result<u64, Error> {
         let params = statement.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text())?;
 
         let rows_affected = self
             .txn
-            .execute(&statement, &params)
+            .execute(&statement, params)
             .map_err(Error::query)?;
 
         Ok(rows_affected)
