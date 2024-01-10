@@ -93,10 +93,7 @@ impl Client {
         match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
-                let statement = self
-                    .client
-                    .prepare(entry.key())
-                    .map_err(Error::prepare)?;
+                let statement = self.client.prepare(entry.key()).map_err(Error::prepare)?;
                 Ok(entry.insert(statement).clone())
             }
         }
@@ -158,10 +155,7 @@ impl<'a> Transaction<'a> {
         match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
-                let statement = self
-                    .txn
-                    .prepare(entry.key())
-                    .map_err(Error::prepare)?;
+                let statement = self.txn.prepare(entry.key()).map_err(Error::prepare)?;
                 Ok(entry.insert(statement).clone())
             }
         }
@@ -182,10 +176,7 @@ impl<'a> Transaction<'a> {
         let params = query.to_params();
         let statement = self.prepare_internal(query.query_text())?;
 
-        let rows = self
-            .txn
-            .query(&statement, &params)
-            .map_err(Error::query)?;
+        let rows = self.txn.query(&statement, &params).map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
     }

@@ -103,7 +103,13 @@ impl client::FromColumnIndexed<TestClient> for String {
 
 impl client::FromColumnNamed<TestClient> for String {
     fn from_column(row: &Row<'_>, name: &str) -> Result<Self> {
-        let index = row.1.names.iter().enumerate().find(|(_, n)| *n == name).map(|(i, _)| i);
+        let index = row
+            .1
+            .names
+            .iter()
+            .enumerate()
+            .find(|(_, n)| *n == name)
+            .map(|(i, _)| i);
         Ok(row.1.values[index.unwrap()].clone()) // TODO: not panic
     }
 }
@@ -135,7 +141,13 @@ impl TestClient {
     pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
+            params: Some(
+                query
+                    .to_params()
+                    .into_iter()
+                    .map(ToParam::to_param)
+                    .collect(),
+            ),
             kind: Kind::Query,
         });
         self.query_results.pop().unwrap().and_then(|rows| {
@@ -147,22 +159,37 @@ impl TestClient {
     pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
+            params: Some(
+                query
+                    .to_params()
+                    .into_iter()
+                    .map(ToParam::to_param)
+                    .collect(),
+            ),
             kind: Kind::QueryOpt,
         });
-        self.query_opt_results.pop().transpose().and_then(|maybe_maybe_row| {
-            let statement = TestStatement::new(self);
-            Ok(match maybe_maybe_row {
-                Some(Some(row)) => Some(FromRow::from_row(&statement.execute_one(row))?),
-                _ => None,
+        self.query_opt_results
+            .pop()
+            .transpose()
+            .and_then(|maybe_maybe_row| {
+                let statement = TestStatement::new(self);
+                Ok(match maybe_maybe_row {
+                    Some(Some(row)) => Some(FromRow::from_row(&statement.execute_one(row))?),
+                    _ => None,
+                })
             })
-        })
     }
 
     pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
         self.records.push(Record {
             text: query.query_text(),
-            params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
+            params: Some(
+                query
+                    .to_params()
+                    .into_iter()
+                    .map(ToParam::to_param)
+                    .collect(),
+            ),
             kind: Kind::QueryOne,
         });
         self.query_one_results.pop().unwrap().and_then(|row| {
@@ -174,7 +201,13 @@ impl TestClient {
     pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
         self.records.push(Record {
             text: statement.query_text(),
-            params: Some(statement.to_params().into_iter().map(ToParam::to_param).collect()),
+            params: Some(
+                statement
+                    .to_params()
+                    .into_iter()
+                    .map(ToParam::to_param)
+                    .collect(),
+            ),
             kind: Kind::Statement,
         });
         self.execute_results.pop().unwrap_or(Ok(0))

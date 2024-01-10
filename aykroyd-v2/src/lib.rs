@@ -235,12 +235,12 @@ pub mod mysql;
 #[cfg(feature = "postgres")]
 #[cfg_attr(docsrs, doc(cfg(feature = "postgres")))]
 pub mod postgres;
-#[cfg(feature = "tokio-postgres")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio-postgres")))]
-pub mod tokio_postgres;
 #[cfg(feature = "rusqlite")]
 #[cfg_attr(docsrs, doc(cfg(feature = "rusqlite")))]
 pub mod rusqlite;
+#[cfg(feature = "tokio-postgres")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-postgres")))]
+pub mod tokio_postgres;
 
 #[cfg(test)]
 mod test;

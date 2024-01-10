@@ -141,14 +141,20 @@ impl Client {
         Ok(rows_affected)
     }
 
-    pub async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub async fn prepare<S: StaticQueryText>(
+        &mut self,
+    ) -> Result<(), Error<tokio_postgres::Error>> {
         self.prepare_internal(S::QUERY_TEXT).await?;
         Ok(())
     }
 
     pub async fn transaction(&mut self) -> Result<Transaction, Error<tokio_postgres::Error>> {
         Ok(Transaction {
-            txn: self.client.transaction().await.map_err(Error::transaction)?,
+            txn: self
+                .client
+                .transaction()
+                .await
+                .map_err(Error::transaction)?,
             statements: &mut self.statements,
         })
     }
@@ -217,7 +223,9 @@ impl<'a> Transaction<'a> {
         Ok(rows_affected)
     }
 
-    pub async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub async fn prepare<S: StaticQueryText>(
+        &mut self,
+    ) -> Result<(), Error<tokio_postgres::Error>> {
         self.prepare_internal(S::QUERY_TEXT).await?;
         Ok(())
     }

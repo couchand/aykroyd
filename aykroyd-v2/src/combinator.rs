@@ -132,8 +132,7 @@ mod test {
         impl StaticQueryText for A {
             const QUERY_TEXT: &'static str = "A";
         }
-        impl Statement<TestClient> for A {
-        }
+        impl Statement<TestClient> for A {}
 
         struct B;
         impl ToParams<TestClient> for B {
@@ -144,8 +143,7 @@ mod test {
         impl StaticQueryText for B {
             const QUERY_TEXT: &'static str = "B";
         }
-        impl Statement<TestClient> for B {
-        }
+        impl Statement<TestClient> for B {}
 
         fn test<S: Statement<TestClient>>(statement: &S, expected: &str) {
             let mut client = TestClient::new();
@@ -230,8 +228,7 @@ mod test {
         impl Query<TestClient> for A {
             type Row = Row;
         }
-        impl QueryOne<TestClient> for A {
-        }
+        impl QueryOne<TestClient> for A {}
 
         struct B;
         impl ToParams<TestClient> for B {
@@ -245,8 +242,7 @@ mod test {
         impl Query<TestClient> for B {
             type Row = Row;
         }
-        impl QueryOne<TestClient> for B {
-        }
+        impl QueryOne<TestClient> for B {}
 
         fn test<Q: QueryOne<TestClient>>(query: &Q, expected: &str) {
             let mut client = TestClient::new();

@@ -66,11 +66,15 @@ impl Client {
         rusqlite::Connection::open_in_memory().map(Client)
     }
 
-    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
+    pub fn query<Q: Query<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
         let params = query.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
-            .map_err(Error::prepare)?;
+        let mut statement =
+            rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
+                .map_err(Error::prepare)?;
 
         let mut rows = statement.query(&params[..]).map_err(Error::query)?;
 
@@ -88,8 +92,9 @@ impl Client {
     ) -> Result<u64, Error<rusqlite::Error>> {
         let params = statement.to_params();
 
-        let mut statement = rusqlite::Connection::prepare_cached(self.as_mut(), &statement.query_text())
-            .map_err(Error::prepare)?;
+        let mut statement =
+            rusqlite::Connection::prepare_cached(self.as_mut(), &statement.query_text())
+                .map_err(Error::prepare)?;
 
         let rows_affected = statement.execute(&params[..]).map_err(Error::query)?;
 
@@ -97,12 +102,16 @@ impl Client {
     }
 
     pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
-        self.as_mut().prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
+        self.as_mut()
+            .prepare_cached(S::QUERY_TEXT)
+            .map_err(Error::prepare)?;
         Ok(())
     }
 
     pub fn transaction(&mut self) -> Result<Transaction<'_>, Error<rusqlite::Error>> {
-        Ok(Transaction(self.0.transaction().map_err(Error::transaction)?))
+        Ok(Transaction(
+            self.0.transaction().map_err(Error::transaction)?,
+        ))
     }
 }
 
@@ -117,7 +126,10 @@ impl<'a> Transaction<'a> {
         self.0.rollback().map_err(Error::transaction)
     }
 
-    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
+    pub fn query<Q: Query<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
         let params = query.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
@@ -148,7 +160,9 @@ impl<'a> Transaction<'a> {
     }
 
     pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
-        self.0.prepare_cached(S::QUERY_TEXT).map_err(Error::prepare)?;
+        self.0
+            .prepare_cached(S::QUERY_TEXT)
+            .map_err(Error::prepare)?;
         Ok(())
     }
 }

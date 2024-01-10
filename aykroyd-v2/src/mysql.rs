@@ -78,7 +78,10 @@ impl Client {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let query = self.as_mut().prep(query.query_text()).map_err(Error::prepare)?;
+        let query = self
+            .as_mut()
+            .prep(query.query_text())
+            .map_err(Error::prepare)?;
 
         let rows: Vec<mysql::Row> =
             mysql::prelude::Queryable::exec(self.as_mut(), &query, params).map_err(Error::query)?;
@@ -86,7 +89,10 @@ impl Client {
         FromRow::from_rows(&rows)
     }
 
-    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
+    pub fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -94,9 +100,13 @@ impl Client {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let statement = self.as_mut().prep(statement.query_text()).map_err(Error::prepare)?;
+        let statement = self
+            .as_mut()
+            .prep(statement.query_text())
+            .map_err(Error::prepare)?;
 
-        mysql::prelude::Queryable::exec_drop(self.as_mut(), &statement, params).map_err(Error::query)?;
+        mysql::prelude::Queryable::exec_drop(self.as_mut(), &statement, params)
+            .map_err(Error::query)?;
 
         Ok(self.0.affected_rows())
     }
@@ -108,7 +118,11 @@ impl Client {
     }
 
     pub fn transaction(&mut self) -> Result<Transaction<'_>, Error<mysql::Error>> {
-        Ok(Transaction(self.0.start_transaction(mysql::TxOpts::default()).map_err(Error::transaction)?))
+        Ok(Transaction(
+            self.0
+                .start_transaction(mysql::TxOpts::default())
+                .map_err(Error::transaction)?,
+        ))
     }
 }
 
@@ -123,7 +137,10 @@ impl<'a> Transaction<'a> {
         self.0.rollback().map_err(Error::transaction)
     }
 
-    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+    pub fn query<Q: Query<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -139,7 +156,10 @@ impl<'a> Transaction<'a> {
         FromRow::from_rows(&rows)
     }
 
-    pub fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
+    pub fn execute<S: Statement<Client>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -147,9 +167,13 @@ impl<'a> Transaction<'a> {
             0 => mysql::Params::Empty,
             _ => mysql::Params::Positional(params),
         };
-        let statement = self.0.prep(statement.query_text()).map_err(Error::prepare)?;
+        let statement = self
+            .0
+            .prep(statement.query_text())
+            .map_err(Error::prepare)?;
 
-        mysql::prelude::Queryable::exec_drop(&mut self.0, &statement, params).map_err(Error::query)?;
+        mysql::prelude::Queryable::exec_drop(&mut self.0, &statement, params)
+            .map_err(Error::query)?;
 
         Ok(self.0.affected_rows())
     }

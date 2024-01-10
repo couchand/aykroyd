@@ -18,7 +18,11 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
+    let attr = ast
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("aykroyd"))
+        .unwrap();
 
     let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
@@ -38,7 +42,8 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
             }
 
             Err(meta.error("unknown meta path"))
-        }).unwrap();
+        })
+        .unwrap();
 
         match query_text {
             Some(q) => q,
@@ -60,7 +65,11 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
+    let attr = ast
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("aykroyd"))
+        .unwrap();
 
     let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Query on enum!"),
@@ -85,11 +94,12 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 syn::parenthesized!(content in meta.input);
                 let ty: syn::Type = content.parse()?;
                 row = Some(ty);
-                return Ok(())
+                return Ok(());
             }
 
             Err(meta.error("unknown meta path"))
-        }).unwrap();
+        })
+        .unwrap();
 
         match (query_text, row) {
             (Some(q), Some(r)) => (q, r),
@@ -134,7 +144,11 @@ fn insert_c(generics: &syn::Generics) -> syn::Generics {
     generics
 }
 
-fn impl_static_query_text(name: &syn::Ident, generics: &syn::Generics, query_text: &syn::LitStr) -> proc_macro2::TokenStream {
+fn impl_static_query_text(
+    name: &syn::Ident,
+    generics: &syn::Generics,
+    query_text: &syn::LitStr,
+) -> proc_macro2::TokenStream {
     let generics_simple = simplify(generics);
     quote! {
         #[automatically_derived]
@@ -144,13 +158,17 @@ fn impl_static_query_text(name: &syn::Ident, generics: &syn::Generics, query_tex
     }
 }
 
-fn impl_to_params(name: &syn::Ident, generics: &syn::Generics, fields: &syn::Fields) -> proc_macro2::TokenStream {
+fn impl_to_params(
+    name: &syn::Ident,
+    generics: &syn::Generics,
+    fields: &syn::Fields,
+) -> proc_macro2::TokenStream {
     let fields = match &fields {
         syn::Fields::Unit => vec![],
-        syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
-            syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed: fields, .. }) => {
-            fields.into_iter().collect()
-        }
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.into_iter().collect(),
     };
 
     let mut params = vec![];
@@ -207,7 +225,11 @@ fn impl_statement(name: &syn::Ident, generics: &syn::Generics) -> proc_macro2::T
     }
 }
 
-fn impl_query(name: &syn::Ident, generics: &syn::Generics, row: &syn::Type) -> proc_macro2::TokenStream {
+fn impl_query(
+    name: &syn::Ident,
+    generics: &syn::Generics,
+    row: &syn::Type,
+) -> proc_macro2::TokenStream {
     let generics_simple = simplify(generics);
     let generics = insert_c(generics);
     quote! {
@@ -239,15 +261,19 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     };
     let fields = match &fields {
         syn::Fields::Unit => vec![],
-        syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
-            syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed: fields, .. }) => {
-            fields.into_iter().collect()
-        }
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.into_iter().collect(),
     };
 
     let mut key = None;
 
-    if let Some(attr) = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")) {
+    if let Some(attr) = ast
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("aykroyd"))
+    {
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("by_index") {
                 key = Some(Key::Index);
@@ -256,11 +282,12 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
             if meta.path.is_ident("by_name") {
                 key = Some(Key::Name);
-                return Ok(())
+                return Ok(());
             }
 
             Err(meta.error("unknown meta path"))
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     let key = key.unwrap_or(if tuple_struct { Key::Index } else { Key::Name });
@@ -288,10 +315,10 @@ pub fn derive_from_columns_indexed(input: proc_macro::TokenStream) -> proc_macro
     };
     let fields = match &fields {
         syn::Fields::Unit => vec![],
-        syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
-            syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed: fields, .. }) => {
-            fields.into_iter().collect()
-        }
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.into_iter().collect(),
     };
 
     let body = impl_from_columns(Key::Index, name, tuple_struct, &fields[..]);
@@ -314,10 +341,10 @@ pub fn derive_from_columns_named(input: proc_macro::TokenStream) -> proc_macro::
     };
     let fields = match &fields {
         syn::Fields::Unit => vec![],
-        syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
-            syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed: fields, .. }) => {
-            fields.into_iter().collect()
-        }
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.into_iter().collect(),
     };
 
     let body = impl_from_columns(Key::Name, name, tuple_struct, &fields[..]);
@@ -335,7 +362,8 @@ fn select_from_columns_delegate(attrs: &[syn::Attribute]) -> Delegate {
 
                 // TODO: centralize parsing!
                 Ok(())
-            }).unwrap();
+            })
+            .unwrap();
             if let Some(delegate) = delegate {
                 return delegate;
             }
@@ -345,10 +373,7 @@ fn select_from_columns_delegate(attrs: &[syn::Attribute]) -> Delegate {
     Delegate::FromColumn
 }
 
-fn impl_from_row(
-    key: Key,
-    name: &syn::Ident,
-) -> proc_macro2::TokenStream {
+fn impl_from_row(key: Key, name: &syn::Ident) -> proc_macro2::TokenStream {
     let (trait_ty, column_ty) = match key {
         Key::Index => (quote!(FromColumnsIndexed), quote!(ColumnsIndexed)),
         Key::Name => (quote!(FromColumnsNamed), quote!(ColumnsNamed)),
@@ -387,8 +412,8 @@ fn impl_from_columns(
         let delegate = select_from_columns_delegate(&field.attrs);
 
         {
-            use Key::*;
             use Delegate::*;
+            use Key::*;
             let delegate = match (key, delegate) {
                 (Index, FromColumn) => quote!(::aykroyd_v2::client::FromColumnIndexed),
                 (Index, FromColumns) => quote!(::aykroyd_v2::row::FromColumnsIndexed),
@@ -414,7 +439,8 @@ fn impl_from_columns(
                 }
                 Key::Name => {
                     // TODO: explicit name
-                    let name = field.ident
+                    let name = field
+                        .ident
                         .as_ref()
                         .map(ToString::to_string)
                         .unwrap_or_else(|| index.to_string());
@@ -441,7 +467,6 @@ fn impl_from_columns(
             Delegate::FromColumn => num_const += 1,
             Delegate::FromColumns => plus_nesteds.push(quote!(+ #ty::NUM_COLUMNS)),
         }
-
     }
 
     let field_list = if !tuple_struct {
@@ -449,10 +474,7 @@ fn impl_from_columns(
     } else {
         quote!((#(#field_puts),*))
     };
-    let num_const = syn::LitInt::new(
-        &format!("{num_const}usize"),
-        proc_macro2::Span::call_site(),
-    );
+    let num_const = syn::LitInt::new(&format!("{num_const}usize"), proc_macro2::Span::call_site());
 
     let (trait_ty, column_ty) = match key {
         Key::Index => (quote!(FromColumnsIndexed), quote!(ColumnsIndexed)),

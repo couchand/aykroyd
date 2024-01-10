@@ -157,16 +157,8 @@ mod test {
 
         let mut client = TestClient::new();
         let row = client.row(sync_client::RowInner {
-            names: vec![
-                "name".into(),
-                "age".into(),
-                "superpower".into(),
-            ],
-            values: vec![
-                "Hermes".into(),
-                "42".into(),
-                "Filing".into(),
-            ],
+            names: vec!["name".into(), "age".into(), "superpower".into()],
+            values: vec!["Hermes".into(), "42".into(), "Filing".into()],
         });
         let columns = ColumnsIndexed::new(&row);
 
@@ -183,11 +175,7 @@ mod test {
             const NUM_COLUMNS: usize = 3;
 
             fn from_columns(columns: ColumnsIndexed<TestClient>) -> sync_client::Result<Self> {
-                Ok(Nested(
-                    columns.get(0)?,
-                    columns.get(1)?,
-                    columns.get(2)?,
-                ))
+                Ok(Nested(columns.get(0)?, columns.get(1)?, columns.get(2)?))
             }
         }
 
@@ -213,7 +201,10 @@ mod test {
         });
         let columns = ColumnsIndexed::new(&row);
 
-        test(&columns, Nested("Hermes".into(), "42".into(), "Filing".into()));
+        test(
+            &columns,
+            Nested("Hermes".into(), "42".into(), "Filing".into()),
+        );
     }
 
     #[test]
@@ -225,16 +216,8 @@ mod test {
 
         let mut client = TestClient::new();
         let row = client.row(sync_client::RowInner {
-            names: vec![
-                "name".into(),
-                "age".into(),
-                "superpower".into(),
-            ],
-            values: vec![
-                "Hermes".into(),
-                "42".into(),
-                "Filing".into(),
-            ],
+            names: vec!["name".into(), "age".into(), "superpower".into()],
+            values: vec!["Hermes".into(), "42".into(), "Filing".into()],
         });
         let columns = ColumnsNamed::new(&row);
 
@@ -279,6 +262,9 @@ mod test {
         });
         let columns = ColumnsNamed::new(&row);
 
-        test(&columns, Nested("Hermes".into(), "42".into(), "Filing".into()));
+        test(
+            &columns,
+            Nested("Hermes".into(), "42".into(), "Filing".into()),
+        );
     }
 }
