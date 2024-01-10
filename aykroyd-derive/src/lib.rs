@@ -211,6 +211,8 @@ fn impl_static_query_text(
     query_text: &syn::LitStr,
 ) -> proc_macro2::TokenStream {
     let generics_simple = simplify(generics);
+    let query_text = query_text.value();
+    let query_text = query_text.trim();
     quote! {
         #[automatically_derived]
         impl #generics ::aykroyd::query::StaticQueryText for #name #generics_simple {

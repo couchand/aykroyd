@@ -23,6 +23,22 @@ pub trait QueryText {
 ///
 /// Don't implement this trait directly, use the
 /// derive macro for `Query` or `Statement`.
+///
+/// Query text is trimmed by the derive macro:
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Statement;
+# use aykroyd::query::StaticQueryText;
+#[derive(Statement)]
+#[aykroyd(text = "     A      ")]
+struct A;
+
+assert_eq!("A", A::QUERY_TEXT);
+```
+"##)]
 pub trait StaticQueryText {
     const QUERY_TEXT: &'static str;
 }
