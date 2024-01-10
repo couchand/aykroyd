@@ -8,7 +8,7 @@ pub type Error = error::Error<tokio_postgres::Error>;
 
 /// A convenience function which parses a connection string and connects to the database.
 ///
-/// See the documentation for tokio_postgres::Config for details on the connection string format.
+/// See the documentation for [`tokio_postgres::Config`] for details on the connection string format.
 pub async fn connect<T>(
     config: &str,
     tls: T,
@@ -61,6 +61,7 @@ where
     }
 }
 
+/// An asynchronous PostgreSQL client.
 pub struct Client {
     client: tokio_postgres::Client,
     statements: std::collections::HashMap<String, tokio_postgres::Statement>,
@@ -91,6 +92,7 @@ impl From<tokio_postgres::Client> for Client {
 }
 
 impl Client {
+    /// Create a new `Client` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
         let statements = std::collections::HashMap::new();
         Client { client, statements }
@@ -113,6 +115,68 @@ impl Client {
         }
     }
 
+    /// Creates a new prepared statement.
+    ///
+    /// Everything required to prepare the statement is available on the
+    /// type argument, so no runtime input is needed:
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Query, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer;
+    /// #[derive(Query)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
+    /// pub struct GetCustomersByFirstName<'a>(&'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    ///
+    /// // Prepare the query in the database.
+    /// client.prepare::<GetCustomersByFirstName>().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn prepare<S: StaticQueryText>(
+        &mut self,
+    ) -> Result<(), Error> {
+        self.prepare_internal(S::QUERY_TEXT).await?;
+        Ok(())
+    }
+
+    /// Executes a statement, returning the resulting rows.
+    ///
+    /// We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Query, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(Query)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
+    /// pub struct GetCustomersByFirstName<'a>(&'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    ///
+    /// // Run the query and iterate over the results.
+    /// for customer in client.query(&GetCustomersByFirstName("Sammy")).await? {
+    ///     println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
@@ -130,6 +194,29 @@ impl Client {
         FromRow::from_rows(&rows)
     }
 
+    /// Executes a statement, returning the number of rows modified.
+    ///
+    /// If the statement does not modify any rows (e.g. SELECT), 0 is returned.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Statement};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// #[derive(Statement)]
+    /// #[aykroyd(text = "
+    ///     UPDATE customers SET first = $2, last = $3 WHERE id = $1
+    /// ")]
+    /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    ///
+    /// // Execute the statement, returning the number of rows modified.
+    /// let rows_affected = client.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
+    /// assert_eq!(rows_affected, 1);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
@@ -147,13 +234,9 @@ impl Client {
         Ok(rows_affected)
     }
 
-    pub async fn prepare<S: StaticQueryText>(
-        &mut self,
-    ) -> Result<(), Error> {
-        self.prepare_internal(S::QUERY_TEXT).await?;
-        Ok(())
-    }
-
+    /// Begins a new database transaction.
+    ///
+    /// The transaction will roll back by default - use the `commit` method to commit it.
     pub async fn transaction(&mut self) -> Result<Transaction, Error> {
         Ok(Transaction {
             txn: self
@@ -166,6 +249,10 @@ impl Client {
     }
 }
 
+/// An asynchronous PostgreSQL database transaction.
+///
+/// Transactions will implicitly roll back by default when dropped. Use the
+/// `commit` method to commit the changes made in the transaction.
 pub struct Transaction<'a> {
     txn: tokio_postgres::Transaction<'a>,
     statements: &'a mut std::collections::HashMap<String, tokio_postgres::Statement>,
@@ -189,14 +276,82 @@ impl<'a> Transaction<'a> {
         }
     }
 
+    /// Consumes the transaction, committing all changes made within it.
     pub async fn commit(self) -> Result<(), Error> {
         self.txn.commit().await.map_err(Error::transaction)
     }
 
+    /// Rolls the transaction back, discarding all changes made within it.
+    ///
+    /// This is equivalent to `Transaction`'s `Drop` implementation, but provides any error encountered to the caller.
     pub async fn rollback(self) -> Result<(), Error> {
         self.txn.rollback().await.map_err(Error::transaction)
     }
 
+    /// Creates a new prepared statement.
+    ///
+    /// Everything required to prepare the statement is available on the
+    /// type argument, so no runtime input is needed:
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Query, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer;
+    /// #[derive(Query)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
+    /// pub struct GetCustomersByFirstName<'a>(&'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let mut txn = client.transaction().await?;
+    ///
+    /// // Prepare the query in the database.
+    /// txn.prepare::<GetCustomersByFirstName>().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn prepare<S: StaticQueryText>(
+        &mut self,
+    ) -> Result<(), Error> {
+        self.prepare_internal(S::QUERY_TEXT).await?;
+        Ok(())
+    }
+
+    /// Executes a statement, returning the resulting rows.
+    ///
+    /// We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Query, FromRow};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// # #[derive(FromRow)]
+    /// # pub struct Customer {
+    /// #   id: i32,
+    /// #   first: String,
+    /// #   last: String,
+    /// # }
+    /// #[derive(Query)]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
+    /// pub struct GetCustomersByFirstName<'a>(&'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let mut txn = client.transaction().await?;
+    ///
+    /// // Run the query and iterate over the results.
+    /// for customer in txn.query(&GetCustomersByFirstName("Sammy")).await? {
+    ///     println!("Got customer {} {} with id {}", customer.first, customer.last, customer.id);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn query<Q: Query<Client>>(
         &mut self,
         query: &Q,
@@ -214,6 +369,30 @@ impl<'a> Transaction<'a> {
         FromRow::from_rows(&rows)
     }
 
+    /// Executes a statement, returning the number of rows modified.
+    ///
+    /// If the statement does not modify any rows (e.g. SELECT), 0 is returned.  We'll prepare the statement first if we haven't yet.
+    ///
+    /// ```no_run
+    /// # async fn xmain() -> Result<(), aykroyd_v2::tokio_postgres::Error> {
+    /// # use aykroyd_v2::{Statement};
+    /// # use aykroyd_v2::tokio_postgres::connect;
+    /// # use tokio_postgres::NoTls;
+    /// #[derive(Statement)]
+    /// #[aykroyd(text = "
+    ///     UPDATE customers SET first = $2, last = $3 WHERE id = $1
+    /// ")]
+    /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
+    ///
+    /// let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
+    /// let mut txn = client.transaction().await?;
+    ///
+    /// // Execute the statement, returning the number of rows modified.
+    /// let rows_affected = txn.execute(&UpdateCustomerName(42, "Anakin", "Skywalker")).await?;
+    /// assert_eq!(rows_affected, 1);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn execute<S: Statement<Client>>(
         &mut self,
         statement: &S,
@@ -229,12 +408,5 @@ impl<'a> Transaction<'a> {
             .map_err(Error::query)?;
 
         Ok(rows_affected)
-    }
-
-    pub async fn prepare<S: StaticQueryText>(
-        &mut self,
-    ) -> Result<(), Error> {
-        self.prepare_internal(S::QUERY_TEXT).await?;
-        Ok(())
     }
 }
