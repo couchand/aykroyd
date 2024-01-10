@@ -17,6 +17,7 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
+    let generics = &ast.generics;
     let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
 
     let fields = match &ast.data {
@@ -45,11 +46,11 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         }
     };
 
-    let query_text_impl = impl_static_query_text(name, &query_text);
-    let to_params_impl = impl_to_params(name, fields);
-    let statement_impl = impl_statement(name);
+    let query_text_impl = impl_static_query_text(name, generics, &query_text);
+    let to_params_impl = impl_to_params(name, generics, fields);
+    let statement_impl = impl_statement(name, generics);
 
-    let body = quote!(#query_text_impl, #to_params_impl #statement_impl);
+    let body = quote!(#query_text_impl #to_params_impl #statement_impl);
     body.into()
 }
 
@@ -58,6 +59,7 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
 
     let name = &ast.ident;
+    let generics = &ast.generics;
     let attr = ast.attrs.iter().find(|attr| attr.path().is_ident("aykroyd")).unwrap();
 
     let fields = match &ast.data {
@@ -96,24 +98,53 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
     };
 
-    let query_text_impl = impl_static_query_text(name, &query_text);
-    let to_params_impl = impl_to_params(name, fields);
-    let query_impl = impl_query(name, &row);
+    let query_text_impl = impl_static_query_text(name, generics, &query_text);
+    let to_params_impl = impl_to_params(name, generics, fields);
+    let query_impl = impl_query(name, generics, &row);
 
     let body = quote!(#query_text_impl #to_params_impl #query_impl);
     body.into()
 }
 
-fn impl_static_query_text(name: &syn::Ident, query_text: &syn::LitStr) -> proc_macro2::TokenStream {
+fn simplify(generics: &syn::Generics) -> proc_macro2::TokenStream {
+    let params = generics.params.iter().map(|param| {
+        use syn::GenericParam::*;
+        match param {
+            Lifetime(syn::LifetimeParam { lifetime, .. }) => quote!(#lifetime),
+            Type(syn::TypeParam { ident, .. }) => quote!(#ident),
+            Const(syn::ConstParam { ident, .. }) => quote!(#ident),
+        }
+    });
+
+    quote!(<#(#params)*>)
+}
+
+fn insert_c(generics: &syn::Generics) -> syn::Generics {
+    let param = syn::TypeParam {
+        attrs: vec![],
+        ident: syn::Ident::new("C", proc_macro2::Span::call_site()),
+        colon_token: None,
+        bounds: syn::punctuated::Punctuated::new(),
+        eq_token: None,
+        default: None,
+    };
+
+    let mut generics = generics.clone();
+    generics.params.insert(0, syn::GenericParam::Type(param));
+    generics
+}
+
+fn impl_static_query_text(name: &syn::Ident, generics: &syn::Generics, query_text: &syn::LitStr) -> proc_macro2::TokenStream {
+    let generics_simple = simplify(generics);
     quote! {
         #[automatically_derived]
-        impl ::aykroyd_v2::query::StaticQueryText for #name {
+        impl #generics ::aykroyd_v2::query::StaticQueryText for #name #generics_simple {
             const QUERY_TEXT: &'static str = #query_text;
         }
     }
 }
 
-fn impl_to_params(name: &syn::Ident, fields: &syn::Fields) -> proc_macro2::TokenStream {
+fn impl_to_params(name: &syn::Ident, generics: &syn::Generics, fields: &syn::Fields) -> proc_macro2::TokenStream {
     let fields = match &fields {
         syn::Fields::Unit => vec![],
         syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) |
@@ -144,9 +175,11 @@ fn impl_to_params(name: &syn::Ident, fields: &syn::Fields) -> proc_macro2::Token
             #ty: ::aykroyd_v2::client::ToParam<C>
         });
     }
+    let generics_simple = simplify(generics);
+    let generics = insert_c(generics);
     quote! {
         #[automatically_derived]
-        impl<C> ::aykroyd_v2::query::ToParams<C> for #name
+        impl #generics ::aykroyd_v2::query::ToParams<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
             #(#wheres,)*
@@ -160,10 +193,12 @@ fn impl_to_params(name: &syn::Ident, fields: &syn::Fields) -> proc_macro2::Token
     }
 }
 
-fn impl_statement(name: &syn::Ident) -> proc_macro2::TokenStream {
+fn impl_statement(name: &syn::Ident, generics: &syn::Generics) -> proc_macro2::TokenStream {
+    let generics_simple = simplify(generics);
+    let generics = insert_c(generics);
     quote! {
         #[automatically_derived]
-        impl<C> ::aykroyd_v2::query::Statement<C> for #name
+        impl #generics ::aykroyd_v2::query::Statement<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
             Self: ::aykroyd_v2::query::ToParams<C>,
@@ -172,10 +207,12 @@ fn impl_statement(name: &syn::Ident) -> proc_macro2::TokenStream {
     }
 }
 
-fn impl_query(name: &syn::Ident, row: &syn::Type) -> proc_macro2::TokenStream {
+fn impl_query(name: &syn::Ident, generics: &syn::Generics, row: &syn::Type) -> proc_macro2::TokenStream {
+    let generics_simple = simplify(generics);
+    let generics = insert_c(generics);
     quote! {
         #[automatically_derived]
-        impl<C> ::aykroyd_v2::query::Query<C> for #name
+        impl #generics ::aykroyd_v2::query::Query<C> for #name #generics_simple
         where
             C: ::aykroyd_v2::client::Client,
             #row: ::aykroyd_v2::row::FromRow<C>,
