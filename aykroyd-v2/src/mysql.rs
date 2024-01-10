@@ -2,13 +2,15 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{Error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, Statement};
+
+pub type Error = error::Error<mysql::Error>;
 
 impl<T> FromColumnIndexed<Client> for T
 where
     T: mysql::prelude::FromValue,
 {
-    fn from_column(row: &mysql::Row, index: usize) -> Result<Self, Error<mysql::Error>> {
+    fn from_column(row: &mysql::Row, index: usize) -> Result<Self, Error> {
         row.get_opt(index)
             .ok_or_else(|| Error::from_column_str(format!("unknown column {}", index), None))?
             .map_err(|e| Error::from_column_str(e.to_string(), None))
@@ -19,7 +21,7 @@ impl<T> FromColumnNamed<Client> for T
 where
     T: mysql::prelude::FromValue,
 {
-    fn from_column(row: &mysql::Row, name: &str) -> Result<Self, Error<mysql::Error>> {
+    fn from_column(row: &mysql::Row, name: &str) -> Result<Self, Error> {
         row.get_opt(name)
             .ok_or_else(|| Error::from_column_str(format!("unknown column {}", name), None))?
             .map_err(|e| Error::from_column_str(e.to_string(), None))
@@ -70,7 +72,7 @@ impl Client {
         mysql::Conn::new(opts).map(Client)
     }
 
-    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -92,7 +94,7 @@ impl Client {
     pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<mysql::Error>> {
+    ) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -111,13 +113,13 @@ impl Client {
         Ok(self.0.affected_rows())
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         use mysql::prelude::Queryable;
         self.0.prep(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())
     }
 
-    pub fn transaction(&mut self) -> Result<Transaction<'_>, Error<mysql::Error>> {
+    pub fn transaction(&mut self) -> Result<Transaction<'_>, Error> {
         Ok(Transaction(
             self.0
                 .start_transaction(mysql::TxOpts::default())
@@ -129,18 +131,18 @@ impl Client {
 pub struct Transaction<'a>(mysql::Transaction<'a>);
 
 impl<'a> Transaction<'a> {
-    pub fn commit(self) -> Result<(), Error<mysql::Error>> {
+    pub fn commit(self) -> Result<(), Error> {
         self.0.commit().map_err(Error::transaction)
     }
 
-    pub fn rollback(self) -> Result<(), Error<mysql::Error>> {
+    pub fn rollback(self) -> Result<(), Error> {
         self.0.rollback().map_err(Error::transaction)
     }
 
     pub fn query<Q: Query<Client>>(
         &mut self,
         query: &Q,
-    ) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+    ) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -159,7 +161,7 @@ impl<'a> Transaction<'a> {
     pub fn execute<S: Statement<Client>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<mysql::Error>> {
+    ) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -178,7 +180,7 @@ impl<'a> Transaction<'a> {
         Ok(self.0.affected_rows())
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         use mysql::prelude::Queryable;
         self.0.prep(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())

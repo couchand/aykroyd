@@ -2,13 +2,15 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{Error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, Statement};
+
+pub type Error = error::Error<rusqlite::Error>;
 
 impl<T> FromColumnIndexed<Client> for T
 where
     T: rusqlite::types::FromSql,
 {
-    fn from_column(row: &rusqlite::Row, index: usize) -> Result<Self, Error<rusqlite::Error>> {
+    fn from_column(row: &rusqlite::Row, index: usize) -> Result<Self, Error> {
         row.get(index).map_err(Error::from_column)
     }
 }
@@ -17,7 +19,7 @@ impl<T> FromColumnNamed<Client> for T
 where
     T: rusqlite::types::FromSql,
 {
-    fn from_column(row: &rusqlite::Row, name: &str) -> Result<Self, Error<rusqlite::Error>> {
+    fn from_column(row: &rusqlite::Row, name: &str) -> Result<Self, Error> {
         row.get(name).map_err(Error::from_column)
     }
 }
@@ -69,7 +71,7 @@ impl Client {
     pub fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
-    ) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
+    ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
 
         let mut statement =
@@ -89,7 +91,7 @@ impl Client {
     pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<rusqlite::Error>> {
+    ) -> Result<u64, Error> {
         let params = statement.to_params();
 
         let mut statement =
@@ -101,14 +103,14 @@ impl Client {
         Ok(rows_affected.try_into().unwrap_or_default())
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.as_mut()
             .prepare_cached(S::QUERY_TEXT)
             .map_err(Error::prepare)?;
         Ok(())
     }
 
-    pub fn transaction(&mut self) -> Result<Transaction<'_>, Error<rusqlite::Error>> {
+    pub fn transaction(&mut self) -> Result<Transaction<'_>, Error> {
         Ok(Transaction(
             self.0.transaction().map_err(Error::transaction)?,
         ))
@@ -118,18 +120,18 @@ impl Client {
 pub struct Transaction<'a>(rusqlite::Transaction<'a>);
 
 impl<'a> Transaction<'a> {
-    pub fn commit(self) -> Result<(), Error<rusqlite::Error>> {
+    pub fn commit(self) -> Result<(), Error> {
         self.0.commit().map_err(Error::transaction)
     }
 
-    pub fn rollback(self) -> Result<(), Error<rusqlite::Error>> {
+    pub fn rollback(self) -> Result<(), Error> {
         self.0.rollback().map_err(Error::transaction)
     }
 
     pub fn query<Q: Query<Client>>(
         &mut self,
         query: &Q,
-    ) -> Result<Vec<Q::Row>, Error<rusqlite::Error>> {
+    ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
@@ -148,7 +150,7 @@ impl<'a> Transaction<'a> {
     pub fn execute<S: Statement<Client>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<rusqlite::Error>> {
+    ) -> Result<u64, Error> {
         let params = statement.to_params();
 
         let mut statement = rusqlite::Connection::prepare_cached(&self.0, &statement.query_text())
@@ -159,7 +161,7 @@ impl<'a> Transaction<'a> {
         Ok(rows_affected.try_into().unwrap_or_default())
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<rusqlite::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.0
             .prepare_cached(S::QUERY_TEXT)
             .map_err(Error::prepare)?;

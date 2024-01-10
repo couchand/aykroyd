@@ -2,7 +2,9 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{Error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, Statement};
+
+pub type Error = error::Error<tokio_postgres::Error>;
 
 impl<T> FromColumnIndexed<Client> for T
 where
@@ -11,7 +13,7 @@ where
     fn from_column(
         row: &tokio_postgres::Row,
         index: usize,
-    ) -> Result<Self, Error<tokio_postgres::Error>> {
+    ) -> Result<Self, Error> {
         row.try_get(index).map_err(Error::from_column)
     }
 }
@@ -23,7 +25,7 @@ where
     fn from_column(
         row: &tokio_postgres::Row,
         name: &str,
-    ) -> Result<Self, Error<tokio_postgres::Error>> {
+    ) -> Result<Self, Error> {
         row.try_get(name).map_err(Error::from_column)
     }
 }
@@ -89,7 +91,7 @@ impl Client {
     fn prepare_internal<S: Into<String>>(
         &mut self,
         query_text: S,
-    ) -> Result<postgres::Statement, Error<tokio_postgres::Error>> {
+    ) -> Result<postgres::Statement, Error> {
         match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
@@ -102,7 +104,7 @@ impl Client {
     pub fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
-    ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
+    ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let statement = self.prepare_internal(query.query_text())?;
 
@@ -117,7 +119,7 @@ impl Client {
     pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<tokio_postgres::Error>> {
+    ) -> Result<u64, Error> {
         let params = statement.to_params();
         let statement = self.prepare_internal(statement.query_text())?;
 
@@ -129,12 +131,12 @@ impl Client {
         Ok(rows_affected)
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
 
-    pub fn transaction(&mut self) -> Result<Transaction, Error<tokio_postgres::Error>> {
+    pub fn transaction(&mut self) -> Result<Transaction, Error> {
         Ok(Transaction {
             txn: self.client.transaction().map_err(Error::transaction)?,
             statements: &mut self.statements,
@@ -151,7 +153,7 @@ impl<'a> Transaction<'a> {
     fn prepare_internal<S: Into<String>>(
         &mut self,
         query_text: S,
-    ) -> Result<tokio_postgres::Statement, Error<tokio_postgres::Error>> {
+    ) -> Result<tokio_postgres::Statement, Error> {
         match self.statements.entry(query_text.into()) {
             std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
             std::collections::hash_map::Entry::Vacant(entry) => {
@@ -161,18 +163,18 @@ impl<'a> Transaction<'a> {
         }
     }
 
-    pub fn commit(self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn commit(self) -> Result<(), Error> {
         self.txn.commit().map_err(Error::transaction)
     }
 
-    pub fn rollback(self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn rollback(self) -> Result<(), Error> {
         self.txn.rollback().map_err(Error::transaction)
     }
 
     pub fn query<Q: Query<Client>>(
         &mut self,
         query: &Q,
-    ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
+    ) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let statement = self.prepare_internal(query.query_text())?;
 
@@ -184,7 +186,7 @@ impl<'a> Transaction<'a> {
     pub fn execute<S: Statement<Client>>(
         &mut self,
         statement: &S,
-    ) -> Result<u64, Error<tokio_postgres::Error>> {
+    ) -> Result<u64, Error> {
         let params = statement.to_params();
         let statement = self.prepare_internal(statement.query_text())?;
 
@@ -196,7 +198,7 @@ impl<'a> Transaction<'a> {
         Ok(rows_affected)
     }
 
-    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
