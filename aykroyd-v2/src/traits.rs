@@ -12,54 +12,70 @@ use crate::row::{ColumnsIndexed, FromColumnsIndexed};
 ///
 /// For structs with named fields, default behavior is to match columns by
 /// their name in the result row.
-///
-/// ```rust
-/// # use aykroyd_v2::FromRow;
-/// #[derive(FromRow)]
-/// pub struct Customer {
-///     id: i32,
-///     first_name: String,
-///     last_name: String,
-/// }
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::FromRow;
+#[derive(FromRow)]
+pub struct Customer {
+    id: i32,
+    first_name: String,
+    last_name: String,
+}
+```
+"##)]
 ///
 /// For tuple structs, the fields are taken from the row in order.  The
 /// order of the query columns must match the tuple struct fields.
-///
-/// ```rust
-/// # use aykroyd_v2::FromRow;
-/// #[derive(FromRow)]
-/// pub struct QueryResults(i32, f32, String);
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::FromRow;
+#[derive(FromRow)]
+pub struct QueryResults(i32, f32, String);
+```
+"##)]
 ///
 /// You can opt-in to loading fields by column order on a struct with
 /// named fields, by using the `by_index` attribute.
-///
-/// ```rust
-/// # use aykroyd_v2::FromRow;
-/// #[derive(FromRow)]
-/// #[aykroyd(by_index)]
-/// pub struct Customer {
-///     id: i32,
-///     first_name: String,
-///     last_name: String,
-/// }
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::FromRow;
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+pub struct Customer {
+    id: i32,
+    first_name: String,
+    last_name: String,
+}
+```
+"##)]
 ///
 /// If you just need the results of an ad-hoc query, consider using an
 /// anonymous tuple instead.
-///
-/// ```rust
-/// # use aykroyd_v2::Query;
-/// use rust_decimal::Decimal;
-///
-/// #[derive(Query)]
-/// #[aykroyd(
-///     text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
-///     row((i32, Decimal))
-/// )]
-/// pub struct SalesByMonth;
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::Query;
+use rust_decimal::Decimal;
+
+#[derive(Query)]
+#[aykroyd(
+    text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
+    row((i32, Decimal))
+)]
+pub struct SalesByMonth;
+```
+"##)]
 pub trait FromRow<C: Client>: Sized {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
 
@@ -103,16 +119,26 @@ impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6, T7);
 
 /// A database statement which returns no results.
 ///
-/// A `Statement` is something that has `QueryText`, and can be
+/// A `Statement` is something that has query text and can be
 /// converted to the parameters of some database `Client`.
 ///
-/// You can use the derive macro to produce each of these parts:
-///
-/// ```ignore
-/// #[derive(Statement)]
-/// #[aykroyd(text = "UPDATE todo SET label = $1 WHERE id = $2")]
-/// struct UpdateTodo(String, isize);
-/// ```
+/// This can generally be derived automatically for structs.  The source
+/// order of the fields corresponds to parameter order: the first field
+/// in source order is `$1`, the second `$2`, and so on.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::Statement;
+#[derive(Statement)]
+#[aykroyd(text = "INSERT INTO customers (first_name, last_name) VALUES ($1, $2)")]
+pub struct InsertCustomer<'a> {
+    first_name: &'a str,
+    last_name: &'a str,
+}
+```
+"##)]
 pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 
 /// A database query that returns zero or more result rows.
@@ -122,18 +148,23 @@ pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 /// type that can be produced from that `Client`'s rows.
 ///
 /// You can use the derive macro to produce each of these parts:
-///
-/// ```ignore
-/// #[derive(FromRow)]
-/// struct Todo {
-///     id: isize,
-///     label: String,
-/// }
-///
-/// #[derive(Query)]
-/// #[aykroyd(row(Todo), text = "SELECT id, label FROM todo")]
-/// struct GetAllTodos;
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::{FromRow, Query};
+#[derive(FromRow)]
+struct Todo {
+    id: isize,
+    label: String,
+}
+
+#[derive(Query)]
+#[aykroyd(row(Todo), text = "SELECT id, label FROM todo")]
+struct GetAllTodos;
+```
+"##)]
 pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
     type Row: FromRow<C>;
 }
