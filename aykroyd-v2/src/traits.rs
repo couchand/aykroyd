@@ -69,11 +69,43 @@ pub struct QueryResults(i32, f32, String);
 use rust_decimal::Decimal;
 
 #[derive(Query)]
-#[aykroyd(
-    text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
-    row((i32, Decimal))
-)]
+#[aykroyd(row((i32, Decimal)), text = "
+    SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales
+")]
 pub struct SalesByMonth;
+```
+"##)]
+///
+/// You can also load nested rows, as long as they use the same
+/// column loading strategy.  Use this to share models between queries,
+/// load associations, etc.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::{FromRow, Query};
+# struct Color;
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+struct Person {
+    name: String,
+    favorite_color: Color,
+}
+
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+struct Pet {
+    name: String,
+    #[aykroyd(nested)]
+    owner: Person,
+}
+
+#[derive(Query)]
+#[aykroyd(row(Pet), text = "
+    SELECT pet.name, owner.name, owner.fav_color FROM pets
+")]
+struct GetPets;
 ```
 "##)]
 pub trait FromRow<C: Client>: Sized {
