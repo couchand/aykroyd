@@ -1,9 +1,16 @@
-use ::aykroyd_v2::{FromRow, Query};
+use ::aykroyd_v2::{FromRow, Query, Statement};
 use ::aykroyd_v2::row::{FromColumnsIndexed, FromColumnsNamed};
 
 #[derive(Query)]
 #[aykroyd(row((String, Option<String>)), query = "SELECT name, email FROM user")]
 pub struct GetAllUsersAsTuple;
+
+#[derive(Statement)]
+#[aykroyd(query = "INSERT INTO user (name, email) VALUES ($1, $2)")]
+pub struct InsertUser<'a> {
+    pub name: &'a str,
+    pub email: &'a str,
+}
 
 #[derive(Debug, FromColumnsIndexed, FromColumnsNamed)]
 pub struct User {
