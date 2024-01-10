@@ -1,10 +1,119 @@
 //! Query combinators.
+//!
+//! Say you have some row type.
+#![cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::FromRow;
+#[derive(Debug, FromRow)]
+struct Tree {
+    height: f32,
+    leaves: u64,
+    name: String,
+}
+```
+"##)]
+//!
+//! Then you might have a few different ways you
+//! could query for your data.
+#![cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::{FromRow, Query};
+# #[derive(FromRow)] struct Tree;
+#[derive(Query)]
+#[aykroyd(row(Tree), text = "
+    SELECT name, height, leaves FROM trees
+    WHERE height > $1
+")]
+struct GetTreesOver(f32);
+
+#[derive(Query)]
+#[aykroyd(row(Tree), text = "
+    SELECT name, height, leaves FROM trees
+    WHERE name = $1
+")]
+struct GetTreesNamed<'a>(&'a str);
+```
+"##)]
+//!
+//! You might then find yourself in a situation where
+//! you want to hold on to a `Tree` query, but you don't
+//! care which one you have.  That's what `Either` is for.
+//!
+//! ```
+//! # use aykroyd_v2::client::Client;
+//! # use aykroyd_v2::query::{StaticQueryText, ToParams};
+//! # use aykroyd_v2::{FromRow, Query};
+//! # #[derive(Debug)]
+//! # struct Tree;
+//! # impl<C: Client> FromRow<C> for Tree {
+//! #     fn from_row(_row: &C::Row<'_>) -> Result<Self, aykroyd_v2::Error<C::Error>> {
+//! #         Ok(Tree)
+//! #     }
+//! # }
+//! # struct GetTreesOver(f32);
+//! # impl StaticQueryText for GetTreesOver {
+//! #     const QUERY_TEXT: &'static str = "";
+//! # }
+//! # impl<C: Client> ToParams<C> for GetTreesOver {
+//! #     fn to_params(&self) -> Vec<C::Param<'_>> {
+//! #         vec![]
+//! #     }
+//! # }
+//! # impl<C: Client> Query<C> for GetTreesOver {
+//! #     type Row = Tree;
+//! # }
+//! # struct GetTreesNamed<'a>(&'a str);
+//! # impl<'a> StaticQueryText for GetTreesNamed<'a> {
+//! #     const QUERY_TEXT: &'static str = "";
+//! # }
+//! # impl<'a, C: Client> ToParams<C> for GetTreesNamed<'a> {
+//! #     fn to_params(&self) -> Vec<C::Param<'_>> {
+//! #         vec![]
+//! #     }
+//! # }
+//! # impl<'a, C: Client> Query<C> for GetTreesNamed<'a> {
+//! #     type Row = Tree;
+//! # }
+//! # struct DbConn;
+//! # impl DbConn {
+//! #     fn query(
+//! #         &mut self,
+//! #         _: &Either<GetTreesOver, GetTreesNamed>,
+//! #     ) -> Result<Vec<Tree>, String> {
+//! #         Ok(vec![])
+//! #     }
+//! # }
+//! # let mut client = DbConn;
+//! use aykroyd_v2::combinator::Either;
+//!
+//! fn query_and_log(
+//!     client: &mut DbConn,
+//!     query: Either<GetTreesOver, GetTreesNamed>,
+//! ) {
+//!     let trees: Vec<Tree> = client.query(&query).unwrap();
+//!     println!("Got trees: {trees:?}");
+//! }
+//!
+//! // Run one type of query returning trees over 12.0 units.
+//! query_and_log(&mut client, Either::Left(GetTreesOver(12.0)));
+//!
+//! // Run a different query returning trees named "Bob".
+//! query_and_log(&mut client, Either::Right(GetTreesNamed("Bob")));
+//! ```
 
 use crate::client::Client;
 use crate::query::{QueryText, ToParams};
 use crate::{FromRow, Query, QueryOne, Statement};
 
 /// A query that could be one of two options.
+///
+/// See the [module docs](crate::combinator) for more details.
 pub enum Either<A, B> {
     Left(A),
     Right(B),
