@@ -37,5 +37,6 @@ optional = true
 version = "0.7"
 optional = true
 
-[dev-dependencies.async-trait]
-version = "0.1"
+[dev-dependencies]
+async-trait = "0.1"
+rust_decimal = { version = "1", features = ["db-tokio-postgres"] }
