@@ -63,9 +63,8 @@ struct GetAllPets;
 //!
 //! Once you have a `Statement` or `Query` in hand, you'll need a database
 //! connection to run it.  The driver is a [`Client`](client::Client), and
-//! it could be synchronous or asynchronous,
-//! implementing [`SyncClient`](client::SyncClient) or
-//! [`AsyncClient`](client::AsyncClient).
+//! it could be synchronous or asynchronous, implementing the methods in
+//! the [client specification](client::specification);
 //!
 //! Aykroyd supports the following database client crates:
 //!
@@ -88,7 +87,6 @@ with crate feature `tokio-postgres`.
 
 ```
 use tokio_postgres::NoTls;
-use aykroyd_v2::client::AsyncClient;
 use aykroyd_v2::tokio_postgres::{connect, Client};
 
 # use aykroyd_v2::{FromRow, Query, Statement};
@@ -165,7 +163,6 @@ with crate feature `postgres`.
 
 ```no_run
 use postgres::NoTls;
-use aykroyd_v2::client::SyncClient;
 use aykroyd_v2::postgres::Client;
 
 # use aykroyd_v2::{FromRow, Query, Statement};

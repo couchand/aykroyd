@@ -148,8 +148,6 @@ mod test {
         }
 
         fn test<S: Statement<TestClient>>(statement: &S, expected: &str) {
-            use crate::client::SyncClient;
-
             let mut client = TestClient::new();
             client.execute(statement).unwrap();
 
@@ -198,8 +196,6 @@ mod test {
         }
 
         fn test<Q: Query<TestClient>>(query: &Q, expected: &str) {
-            use crate::client::SyncClient;
-
             let mut client = TestClient::new();
             client.push_query_result(Ok(vec![]));
             client.query(query).unwrap();
@@ -253,8 +249,6 @@ mod test {
         }
 
         fn test<Q: QueryOne<TestClient>>(query: &Q, expected: &str) {
-            use crate::client::SyncClient;
-
             let mut client = TestClient::new();
             client.push_query_one_result(Ok(sync_client::RowInner::default()));
             client.query_one(query).unwrap();

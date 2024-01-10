@@ -122,8 +122,8 @@ impl client::Client for TestClient {
     type Error = ErrorDetails;
 }
 
-impl client::SyncClient for TestClient {
-    fn prepare<S: query::StaticQueryText>(&mut self) -> Result<()> {
+impl TestClient {
+    pub fn prepare<S: query::StaticQueryText>(&mut self) -> Result<()> {
         self.records.push(Record {
             text: S::QUERY_TEXT.into(),
             params: None,
@@ -132,7 +132,7 @@ impl client::SyncClient for TestClient {
         self.prepare_results.pop().unwrap_or(Ok(()))
     }
 
-    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
+    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
@@ -144,7 +144,7 @@ impl client::SyncClient for TestClient {
         })
     }
 
-    fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
+    pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
@@ -159,7 +159,7 @@ impl client::SyncClient for TestClient {
         })
     }
 
-    fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
+    pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row> {
         self.records.push(Record {
             text: query.query_text(),
             params: Some(query.to_params().into_iter().map(ToParam::to_param).collect()),
@@ -171,7 +171,7 @@ impl client::SyncClient for TestClient {
         })
     }
 
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
+    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64> {
         self.records.push(Record {
             text: statement.query_text(),
             params: Some(statement.to_params().into_iter().map(ToParam::to_param).collect()),
@@ -180,9 +180,7 @@ impl client::SyncClient for TestClient {
         self.execute_results.pop().unwrap_or(Ok(0))
     }
 
-    type Transaction<'a> = Transaction<'a>;
-
-    fn transaction(&mut self) -> Result<Transaction> {
+    pub fn transaction(&mut self) -> Result<Transaction> {
         self.records.push(Record {
             text: "BEGIN".into(),
             params: None,
@@ -203,8 +201,8 @@ impl<'a> AsMut<TestClient> for Transaction<'a> {
     }
 }
 
-impl<'a> client::SyncTransaction<TestClient> for Transaction<'a> {
-    fn commit(mut self) -> Result<()> {
+impl<'a> Transaction<'a> {
+    pub fn commit(mut self) -> Result<()> {
         self.as_mut().records.push(Record {
             text: "COMMIT".into(),
             params: None,
@@ -213,7 +211,7 @@ impl<'a> client::SyncTransaction<TestClient> for Transaction<'a> {
         self.as_mut().commit_results.pop().unwrap_or(Ok(()))
     }
 
-    fn rollback(mut self) -> Result<()> {
+    pub fn rollback(mut self) -> Result<()> {
         self.as_mut().records.push(Record {
             text: "ROLLBACK".into(),
             params: None,
@@ -222,28 +220,23 @@ impl<'a> client::SyncTransaction<TestClient> for Transaction<'a> {
         self.as_mut().rollback_results.pop().unwrap_or(Ok(()))
     }
 
-    fn prepare<S: query::StaticQueryText>(&mut self) -> Result<()> {
-        use client::SyncClient;
+    pub fn prepare<S: query::StaticQueryText>(&mut self) -> Result<()> {
         self.as_mut().prepare::<S>()
     }
 
-    fn query<Q: Query<TestClient>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
-        use client::SyncClient;
+    pub fn query<Q: Query<TestClient>>(&mut self, query: &Q) -> Result<Vec<Q::Row>> {
         self.as_mut().query(query)
     }
 
-    fn query_opt<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
-        use client::SyncClient;
+    pub fn query_opt<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Option<Q::Row>> {
         self.as_mut().query_opt(query)
     }
 
-    fn query_one<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Q::Row> {
-        use client::SyncClient;
+    pub fn query_one<Q: QueryOne<TestClient>>(&mut self, query: &Q) -> Result<Q::Row> {
         self.as_mut().query_one(query)
     }
 
-    fn execute<S: Statement<TestClient>>(&mut self, statement: &S) -> Result<u64> {
-        use client::SyncClient;
+    pub fn execute<S: Statement<TestClient>>(&mut self, statement: &S) -> Result<u64> {
         self.as_mut().execute(statement)
     }
 }

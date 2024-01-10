@@ -15,14 +15,10 @@
 //! [`FromColumnIndexed`](./trait.FromColumnIndexed.html) and/or
 //! [`FromColumnNamed`](./trait.FromColumnNamed.html) for
 //! anything you can retrieve from a database row (by column
-//! index and/or name).  Finally, implement either
-//! [`AsyncClient`](./trait.AsyncClient.html) and
-//! [`AsyncTransaction`](./trait.AsyncTransaction.html) or
-//! [`SyncClient`](./trait.SyncClient.html) and
-//! [`SyncTransaction`](./trait.SyncTransaction.html) as appropriate.
+//! index and/or name).  Finally, implement methods according
+//! to the [specification].
 
-use crate::query::StaticQueryText;
-use crate::{Error, Query, QueryOne, Statement};
+use crate::error::Error;
 
 /// A database client's types.
 pub trait Client: Sized {
@@ -60,116 +56,212 @@ pub trait ToParam<C: Client> {
     fn to_param(&self) -> C::Param<'_>;
 }
 
-/// An asynchronous database client.
-#[async_trait::async_trait]
-#[cfg(feature = "async")]
-#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
-pub trait AsyncClient: Client {
-    type Transaction<'a>: AsyncTransaction<Self> where Self: 'a;
-
-    async fn transaction(&mut self) -> Result<Self::Transaction<'_>, Error<Self::Error>>;
-
-    async fn query<Q: Query<Self>>(&mut self, query: &Q)
-        -> Result<Vec<Q::Row>, Error<Self::Error>>;
-
-    async fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error<Self::Error>>;
-
-    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
-
-    async fn query_opt<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error<Self::Error>> {
-        self.query(query).await.map(|rows| rows.into_iter().next())
-    }
-
-    async fn query_one<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error<Self::Error>> {
-        self.query_opt(query).await.map(|row| row.unwrap())
-    }
-}
-
-/// An asynchronous database transaction
-#[async_trait::async_trait]
-#[cfg(feature = "async")]
-#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
-pub trait AsyncTransaction<C: Client> {
-    async fn commit(self) -> Result<(), Error<C::Error>>;
-    async fn rollback(self) -> Result<(), Error<C::Error>>;
-
-    async fn query<Q: Query<C>>(&mut self, query: &Q)
-        -> Result<Vec<Q::Row>, Error<C::Error>>;
-
-    async fn execute<S: Statement<C>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error<C::Error>>;
-
-    async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<C::Error>>;
-
-    async fn query_opt<Q: QueryOne<C>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error<C::Error>> {
-        self.query(query).await.map(|rows| rows.into_iter().next())
-    }
-
-    async fn query_one<Q: QueryOne<C>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error<C::Error>> {
-        self.query_opt(query).await.map(|row| row.unwrap())
-    }
-}
-
-/// A synchronous database client.
-pub trait SyncClient: Client {
-    type Transaction<'a>: SyncTransaction<Self> where Self: 'a;
-
-    fn transaction(&mut self) -> Result<Self::Transaction<'_>, Error<Self::Error>>;
-
-    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<Self::Error>>;
-
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<Self::Error>>;
-
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<Self::Error>>;
-
-    fn query_opt<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error<Self::Error>> {
-        self.query(query).map(|rows| rows.into_iter().next())
-    }
-
-    fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error<Self::Error>> {
-        self.query_opt(query).map(|row| row.unwrap())
-    }
-}
-
-/// A synchronous database transaction.
-pub trait SyncTransaction<C: Client> {
-    fn commit(self) -> Result<(), Error<C::Error>>;
-    fn rollback(self) -> Result<(), Error<C::Error>>;
-
-    fn query<Q: Query<C>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<C::Error>>;
-
-    fn execute<S: Statement<C>>(&mut self, statement: &S) -> Result<u64, Error<C::Error>>;
-
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<C::Error>>;
-
-    fn query_opt<Q: QueryOne<C>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error<C::Error>> {
-        self.query(query).map(|rows| rows.into_iter().next())
-    }
-
-    fn query_one<Q: QueryOne<C>>(&mut self, query: &Q) -> Result<Q::Row, Error<C::Error>> {
-        self.query_opt(query).map(|row| row.unwrap())
-    }
+pub mod specification {
+    //! The `aykroyd` client specification.
+    //!
+    //! Aykroyd clients all implement the following specification.
+    //! The consistency makes moving from one backend to another easy,
+    //! but flexibility is allowed to make the best use of each driver.
+    //!
+    //! ## `std` Traits
+    //!
+    //! Aykroyd clients generally wrap another database driver, so they
+    //! implement the following traits:
+    //!
+    //! * [`From<Driver>`], to create a client by wrapping the driver,
+    //! * [`AsRef<Driver>`], for shared access to the driver, and
+    //! * [`AsMut<Driver>`], for exclusive access to the driver.
+    //!
+    //! ## Constructors
+    //!
+    //! For ease of use, Aykroyd clients provide constructors matching
+    //! the ones available on the underlying driver, such as
+    //! `open_in_memory()` for the `rusqlite` driver, or the `connect()`
+    //! function from `tokio-postgres`.
+    //!
+    //! ## Query Methods
+    //!
+    //! Methods on the client are synchronous or asynchronous, as
+    //! appropriate, and the overall interface looks the same.
+    //! Clients implement the following common query methods.
+    //!
+    //! ### Sync Client Interface
+    //!
+    //! ```
+    //! use aykroyd_v2::client::Client;
+    //! use aykroyd_v2::query::StaticQueryText;
+    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //!
+    //! /// An example of a synchronous database client.
+    //! trait SyncClient: Client {
+    //!     fn prepare<S: StaticQueryText>(
+    //!         &mut self,
+    //!     ) -> Result<(), Error<Self::Error>>;
+    //!
+    //!     fn execute<S: Statement<Self>>(
+    //!         &mut self,
+    //!         statement: &S,
+    //!     ) -> Result<u64, Error<Self::Error>>;
+    //!
+    //!     fn query<Q: Query<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Vec<Q::Row>, Error<Self::Error>>;
+    //!
+    //!     fn query_one<Q: QueryOne<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Q::Row, Error<Self::Error>>;
+    //!
+    //!     fn query_opt<Q: QueryOne<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Option<Q::Row>, Error<Self::Error>>;
+    //! }
+    //! ```
+    //!
+    //! ### Async Client Interface
+    //!
+    //! ```
+    //! use aykroyd_v2::client::Client;
+    //! use aykroyd_v2::query::StaticQueryText;
+    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //!
+    //! /// An example of an asynchronous database client.
+    //! # #[async_trait::async_trait]
+    //! trait AsyncClient: Client {
+    //!     async fn prepare<S: StaticQueryText>(
+    //!         &mut self,
+    //!     ) -> Result<(), Error<Self::Error>>;
+    //!
+    //!     async fn execute<S: Statement<Self>>(
+    //!         &mut self,
+    //!         statement: &S,
+    //!     ) -> Result<u64, Error<Self::Error>>;
+    //!
+    //!     async fn query<Q: Query<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Vec<Q::Row>, Error<Self::Error>>;
+    //!
+    //!     async fn query_one<Q: QueryOne<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Q::Row, Error<Self::Error>>;
+    //!
+    //!     async fn query_opt<Q: QueryOne<Self>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Option<Q::Row>, Error<Self::Error>>;
+    //! }
+    //! ```
+    //!
+    //! ## Transaction Control
+    //!
+    //! Databases that offer transaction control should follow the
+    //! following transactions interface.
+    //!
+    //! ### Sync Transaction Interface
+    //!
+    //! ```
+    //! use aykroyd_v2::client::Client;
+    //! use aykroyd_v2::query::StaticQueryText;
+    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //!
+    //! trait SyncClient: Client {
+    //!     type Transaction: SyncTransaction<Self>;
+    //!
+    //!     fn transaction(
+    //!         &mut self,
+    //!     ) -> Result<Self::Transaction, Error<Self::Error>>;
+    //! }
+    //!
+    //! /// An example of a synchronous database transaction.
+    //! trait SyncTransaction<C: Client> {
+    //!     fn commit(
+    //!         self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     fn rollback(
+    //!         self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     fn prepare<S: StaticQueryText>(
+    //!         &mut self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     fn execute<S: Statement<C>>(
+    //!         &mut self,
+    //!         statement: &S,
+    //!     ) -> Result<u64, Error<C::Error>>;
+    //!
+    //!     fn query<Q: Query<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Vec<Q::Row>, Error<C::Error>>;
+    //!
+    //!     fn query_one<Q: QueryOne<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Q::Row, Error<C::Error>>;
+    //!
+    //!     fn query_opt<Q: QueryOne<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Option<Q::Row>, Error<C::Error>>;
+    //! }
+    //! ```
+    //!
+    //! ### Async Transaction Interface
+    //!
+    //! ```
+    //! use aykroyd_v2::client::Client;
+    //! use aykroyd_v2::query::StaticQueryText;
+    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //!
+    //! # #[async_trait::async_trait]
+    //! trait AsyncClient: Client {
+    //!     type Transaction: AsyncTransaction<Self>;
+    //!
+    //!     async fn transaction(
+    //!         &mut self,
+    //!     ) -> Result<Self::Transaction, Error<Self::Error>>;
+    //! }
+    //!
+    //! /// An example of as asynchronous database transaction.
+    //! # #[async_trait::async_trait]
+    //! trait AsyncTransaction<C: Client> {
+    //!     async fn commit(
+    //!         self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     async fn rollback(
+    //!         self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     async fn prepare<S: StaticQueryText>(
+    //!         &mut self,
+    //!     ) -> Result<(), Error<C::Error>>;
+    //!
+    //!     async fn execute<S: Statement<C>>(
+    //!         &mut self,
+    //!         statement: &S,
+    //!     ) -> Result<u64, Error<C::Error>>;
+    //!
+    //!     async fn query<Q: Query<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Vec<Q::Row>, Error<C::Error>>;
+    //!
+    //!     async fn query_one<Q: QueryOne<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Q::Row, Error<C::Error>>;
+    //!
+    //!     async fn query_opt<Q: QueryOne<C>>(
+    //!         &mut self,
+    //!         query: &Q,
+    //!     ) -> Result<Option<Q::Row>, Error<C::Error>>;
+    //! }
+    //! ```
 }

@@ -1,6 +1,6 @@
 //! A synchronous client for PostgreSQL.
 
-use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
 use crate::{Error, FromRow, Query, Statement};
 
@@ -42,6 +42,30 @@ pub struct Client {
     statements: std::collections::HashMap<String, tokio_postgres::Statement>,
 }
 
+impl AsMut<postgres::Client> for Client {
+    fn as_mut(&mut self) -> &mut postgres::Client {
+        &mut self.client
+    }
+}
+
+impl crate::client::Client for Client {
+    type Row<'a> = tokio_postgres::Row;
+    type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
+    type Error = tokio_postgres::Error;
+}
+
+impl AsRef<postgres::Client> for Client {
+    fn as_ref(&self) -> &postgres::Client {
+        &self.client
+    }
+}
+
+impl From<postgres::Client> for Client {
+    fn from(client: postgres::Client) -> Self {
+        Self::new(client)
+    }
+}
+
 impl Client {
     pub fn new(client: postgres::Client) -> Self {
         let statements = std::collections::HashMap::new();
@@ -77,34 +101,8 @@ impl Client {
             }
         }
     }
-}
 
-impl AsMut<postgres::Client> for Client {
-    fn as_mut(&mut self) -> &mut postgres::Client {
-        &mut self.client
-    }
-}
-
-impl AsRef<postgres::Client> for Client {
-    fn as_ref(&self) -> &postgres::Client {
-        &self.client
-    }
-}
-
-impl From<postgres::Client> for Client {
-    fn from(client: postgres::Client) -> Self {
-        Self::new(client)
-    }
-}
-
-impl crate::client::Client for Client {
-    type Row<'a> = tokio_postgres::Row;
-    type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
-    type Error = tokio_postgres::Error;
-}
-
-impl SyncClient for Client {
-    fn query<Q: Query<Self>>(
+    pub fn query<Q: Query<Self>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
@@ -119,7 +117,7 @@ impl SyncClient for Client {
         FromRow::from_rows(&rows)
     }
 
-    fn execute<S: Statement<Self>>(
+    pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
     ) -> Result<u64, Error<tokio_postgres::Error>> {
@@ -134,14 +132,12 @@ impl SyncClient for Client {
         Ok(rows_affected)
     }
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
         self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
 
-    type Transaction<'a> = Transaction<'a>;
-
-    fn transaction(&mut self) -> Result<Transaction, Error<tokio_postgres::Error>> {
+    pub fn transaction(&mut self) -> Result<Transaction, Error<tokio_postgres::Error>> {
         Ok(Transaction {
             txn: self.client.transaction().map_err(Error::transaction)?,
             statements: &mut self.statements,
@@ -170,18 +166,16 @@ impl<'a> Transaction<'a> {
             }
         }
     }
-}
 
-impl<'a> SyncTransaction<Client> for Transaction<'a> {
-    fn commit(self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn commit(self) -> Result<(), Error<tokio_postgres::Error>> {
         self.txn.commit().map_err(Error::transaction)
     }
 
-    fn rollback(self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn rollback(self) -> Result<(), Error<tokio_postgres::Error>> {
         self.txn.rollback().map_err(Error::transaction)
     }
 
-    fn query<Q: Query<Client>>(
+    pub fn query<Q: Query<Client>>(
         &mut self,
         query: &Q,
     ) -> Result<Vec<Q::Row>, Error<tokio_postgres::Error>> {
@@ -196,7 +190,7 @@ impl<'a> SyncTransaction<Client> for Transaction<'a> {
         FromRow::from_rows(&rows)
     }
 
-    fn execute<S: Statement<Client>>(
+    pub fn execute<S: Statement<Client>>(
         &mut self,
         statement: &S,
     ) -> Result<u64, Error<tokio_postgres::Error>> {
@@ -211,7 +205,7 @@ impl<'a> SyncTransaction<Client> for Transaction<'a> {
         Ok(rows_affected)
     }
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<tokio_postgres::Error>> {
         self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }

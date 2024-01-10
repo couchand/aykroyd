@@ -1,6 +1,6 @@
 //! MySQL bindings.
 
-use crate::client::{FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
+use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
 use crate::{Error, FromRow, Query, Statement};
 
@@ -37,14 +37,10 @@ where
 
 pub struct Client(mysql::Conn);
 
-impl Client {
-    pub fn new<T, E>(opts: T) -> Result<Self, mysql::Error>
-    where
-        mysql::Opts: TryFrom<T, Error = E>,
-        mysql::Error: From<E>,
-    {
-        mysql::Conn::new(opts).map(Client)
-    }
+impl crate::client::Client for Client {
+    type Row<'a> = mysql::Row;
+    type Param<'a> = mysql::Value;
+    type Error = mysql::Error;
 }
 
 impl AsMut<mysql::Conn> for Client {
@@ -65,14 +61,16 @@ impl From<mysql::Conn> for Client {
     }
 }
 
-impl crate::client::Client for Client {
-    type Row<'a> = mysql::Row;
-    type Param<'a> = mysql::Value;
-    type Error = mysql::Error;
-}
+impl Client {
+    pub fn new<T, E>(opts: T) -> Result<Self, mysql::Error>
+    where
+        mysql::Opts: TryFrom<T, Error = E>,
+        mysql::Error: From<E>,
+    {
+        mysql::Conn::new(opts).map(Client)
+    }
 
-impl SyncClient for Client {
-    fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -88,7 +86,7 @@ impl SyncClient for Client {
         FromRow::from_rows(&rows)
     }
 
-    fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
+    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -103,31 +101,29 @@ impl SyncClient for Client {
         Ok(self.0.affected_rows())
     }
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
         use mysql::prelude::Queryable;
         self.0.prep(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())
     }
 
-    type Transaction<'a> = Transaction<'a>;
-
-    fn transaction(&mut self) -> Result<Transaction<'_>, Error<mysql::Error>> {
+    pub fn transaction(&mut self) -> Result<Transaction<'_>, Error<mysql::Error>> {
         Ok(Transaction(self.0.start_transaction(mysql::TxOpts::default()).map_err(Error::transaction)?))
     }
 }
 
 pub struct Transaction<'a>(mysql::Transaction<'a>);
 
-impl<'a> SyncTransaction<Client> for Transaction<'a> {
-    fn commit(self) -> Result<(), Error<mysql::Error>> {
+impl<'a> Transaction<'a> {
+    pub fn commit(self) -> Result<(), Error<mysql::Error>> {
         self.0.commit().map_err(Error::transaction)
     }
 
-    fn rollback(self) -> Result<(), Error<mysql::Error>> {
+    pub fn rollback(self) -> Result<(), Error<mysql::Error>> {
         self.0.rollback().map_err(Error::transaction)
     }
 
-    fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
+    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = query.to_params();
@@ -143,7 +139,7 @@ impl<'a> SyncTransaction<Client> for Transaction<'a> {
         FromRow::from_rows(&rows)
     }
 
-    fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
+    pub fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error<mysql::Error>> {
         use mysql::prelude::Queryable;
 
         let params = statement.to_params();
@@ -158,7 +154,7 @@ impl<'a> SyncTransaction<Client> for Transaction<'a> {
         Ok(self.0.affected_rows())
     }
 
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<mysql::Error>> {
         use mysql::prelude::Queryable;
         self.0.prep(S::QUERY_TEXT).map_err(Error::prepare)?;
         Ok(())

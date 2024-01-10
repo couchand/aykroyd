@@ -1,4 +1,4 @@
-use crate::client::{Client, FromColumnIndexed, FromColumnNamed, SyncClient, SyncTransaction, ToParam};
+use crate::client::{Client, FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::combinator::Either;
 use crate::error::Error;
 use crate::query::{QueryText, StaticQueryText, ToParams};
@@ -208,7 +208,7 @@ fn smoke_to_params() {
     assert_eq!("foobar", row[0]);
 }
 
-impl SyncClient for FakeClient {
+impl FakeClient {
     fn query<Q: Query<Self>>(&mut self, _query: &Q) -> Result<Vec<Q::Row>, Error<String>> {
         let mut rows = vec![];
         for row in &self.0 {
@@ -231,38 +231,6 @@ impl SyncClient for FakeClient {
             self.0[0].tuple[0] = text
         }
         Ok(1)
-    }
-
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<String>> {
-        Ok(())
-    }
-
-    type Transaction<'a> = ();
-
-    fn transaction(&mut self) -> Result<(), Error<String>> {
-        Ok(())
-    }
-}
-
-impl SyncTransaction<FakeClient> for () {
-    fn commit(self) -> Result<(), Error<String>> {
-        todo!()
-    }
-
-    fn rollback(self) -> Result<(), Error<String>> {
-        todo!()
-    }
-
-    fn query<Q: Query<FakeClient>>(&mut self, _query: &Q) -> Result<Vec<Q::Row>, Error<String>> {
-        todo!()
-    }
-
-    fn execute<S: Statement<FakeClient>>(&mut self, _statement: &S) -> Result<u64, Error<String>> {
-        todo!()
-    }
-
-    fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error<String>> {
-        todo!()
     }
 }
 
