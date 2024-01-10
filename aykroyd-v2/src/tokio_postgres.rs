@@ -17,12 +17,14 @@ pub async fn connect<T>(
         Client,
         tokio_postgres::Connection<tokio_postgres::Socket, T::Stream>,
     ),
-    tokio_postgres::Error,
+    Error,
 >
 where
     T: tokio_postgres::tls::MakeTlsConnect<tokio_postgres::Socket>,
 {
-    let (client, connection) = tokio_postgres::connect(config, tls).await?;
+    let (client, connection) = tokio_postgres::connect(config, tls)
+        .await
+        .map_err(Error::connect)?;
     Ok((client.into(), connection))
 }
 

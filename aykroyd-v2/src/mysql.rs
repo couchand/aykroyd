@@ -64,12 +64,12 @@ impl From<mysql::Conn> for Client {
 }
 
 impl Client {
-    pub fn new<T, E>(opts: T) -> Result<Self, mysql::Error>
+    pub fn new<T, E>(opts: T) -> Result<Self, Error>
     where
         mysql::Opts: TryFrom<T, Error = E>,
         mysql::Error: From<E>,
     {
-        mysql::Conn::new(opts).map(Client)
+        mysql::Conn::new(opts).map(Client).map_err(Error::connect)
     }
 
     pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {

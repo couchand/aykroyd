@@ -1,9 +1,14 @@
 //! Error handling.
 //!
-//! Errors can generally happen in one of three phases:
-//! when preparing a query, when executing a query, or when
-//! retrieving values from the results.  Use the `kind()`
-//! method on [`Error`](./struct.Error.html) to find out
+//! Errors can happen in one of a few different phases:
+//!
+//! * connecting to a database
+//! * preparing a query
+//! * executing a query
+//! * retrieving values from the results
+//! * transaction control
+//!
+//! Use the `kind()` method on [`Error`] to find out
 //! which step it was.  If we have an underlying database
 //! error it can be retrieved with the `inner()` method.
 
@@ -54,6 +59,16 @@ impl<ClientError> Error<ClientError> {
         }
     }
 
+    pub fn connect_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
+        let kind = ErrorKind::Connect;
+        let message = message.into();
+        Error {
+            message,
+            kind,
+            inner,
+        }
+    }
+
     pub fn transaction_str<S: Into<String>>(message: S, inner: Option<ClientError>) -> Self {
         let kind = ErrorKind::Transaction;
         let message = message.into();
@@ -81,6 +96,11 @@ impl<ClientError: std::fmt::Display> Error<ClientError> {
         Self::query_str(message, Some(inner))
     }
 
+    pub fn connect(inner: ClientError) -> Self {
+        let message = inner.to_string();
+        Self::connect_str(message, Some(inner))
+    }
+
     pub fn transaction(inner: ClientError) -> Self {
         let message = inner.to_string();
         Self::transaction_str(message, Some(inner))
@@ -98,6 +118,9 @@ pub enum ErrorKind {
 
     /// Bad conversion from a database column.
     FromColumn,
+
+    /// Problems connecting to the database.
+    Connect,
 
     /// Error in transaction control.
     Transaction,

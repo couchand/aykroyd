@@ -60,12 +60,12 @@ impl From<rusqlite::Connection> for Client {
 }
 
 impl Client {
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, rusqlite::Error> {
-        rusqlite::Connection::open(path).map(Client)
+    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
+        rusqlite::Connection::open(path).map(Client).map_err(Error::connect)
     }
 
-    pub fn open_in_memory() -> Result<Self, rusqlite::Error> {
-        rusqlite::Connection::open_in_memory().map(Client)
+    pub fn open_in_memory() -> Result<Self, Error> {
+        rusqlite::Connection::open_in_memory().map(Client).map_err(Error::connect)
     }
 
     pub fn query<Q: Query<Self>>(
