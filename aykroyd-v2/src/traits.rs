@@ -55,7 +55,7 @@ use crate::row::{ColumnsIndexed, FromColumnsIndexed};
 ///
 /// #[derive(Query)]
 /// #[aykroyd(
-///     query = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
+///     text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
 ///     row((i32, Decimal))
 /// )]
 /// pub struct SalesByMonth;

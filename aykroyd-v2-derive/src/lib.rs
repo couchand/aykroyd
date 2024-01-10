@@ -34,7 +34,7 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         let mut query_text = None;
 
         attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("query") {
+            if meta.path.is_ident("text") {
                 let value = meta.value()?;
                 let text: syn::LitStr = value.parse()?;
                 query_text = Some(text);
@@ -82,7 +82,7 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         let mut row = None;
 
         attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("query") {
+            if meta.path.is_ident("text") {
                 let value = meta.value()?;
                 let text: syn::LitStr = value.parse()?;
                 query_text = Some(text);

@@ -37,7 +37,7 @@
 use aykroyd_v2::{FromRow, Query, Statement};
 
 #[derive(Statement)]
-#[aykroyd(query = "
+#[aykroyd(text = "
     INSERT INTO pets (name, species) VALUES ($1, $2)
 ")]
 struct InsertPet<'a> {
@@ -53,7 +53,7 @@ struct Pet {
 }
 
 #[derive(Query)]
-#[aykroyd(row(Pet), query = "
+#[aykroyd(row(Pet), text = "
     SELECT id, name, species FROM pets
 ")]
 struct GetAllPets;
@@ -92,7 +92,7 @@ use aykroyd_v2::tokio_postgres::{connect, Client};
 # use aykroyd_v2::{FromRow, Query, Statement};
 #
 # #[derive(Statement)]
-# #[aykroyd(query = "
+# #[aykroyd(text = "
 #     INSERT INTO pets (name, species) VALUES ($1, $2)
 # ")]
 # struct InsertPet<'a> {
@@ -108,7 +108,7 @@ use aykroyd_v2::tokio_postgres::{connect, Client};
 # }
 #
 # #[derive(Query)]
-# #[aykroyd(row(Pet), query = "
+# #[aykroyd(row(Pet), text = "
 #     SELECT id, name, species FROM pet
 # ")]
 # struct GetAllPets;
@@ -168,7 +168,7 @@ use aykroyd_v2::postgres::Client;
 # use aykroyd_v2::{FromRow, Query, Statement};
 #
 # #[derive(Statement)]
-# #[aykroyd(query = "
+# #[aykroyd(text = "
 #     INSERT INTO pets (name, species) VALUES ($1, $2)
 # ")]
 # struct InsertPet<'a> {
@@ -184,7 +184,7 @@ use aykroyd_v2::postgres::Client;
 # }
 #
 # #[derive(Query)]
-# #[aykroyd(row(Pet), query = "
+# #[aykroyd(row(Pet), text = "
 #     SELECT id, name, species FROM pet
 # ")]
 # struct GetAllPets;
