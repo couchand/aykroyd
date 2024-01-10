@@ -8,7 +8,7 @@
 //! error it can be retrieved with the `inner()` method.
 
 /// An error that occurred when trying to use the database.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Error<ClientError> {
     message: String,
     kind: ErrorKind,

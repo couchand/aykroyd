@@ -5,6 +5,8 @@ use crate::query::{QueryText, StaticQueryText, ToParams};
 use crate::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 use crate::*;
 
+pub mod sync_client;
+
 struct FakeRow {
     columns: Vec<String>,
     tuple: Vec<String>,
