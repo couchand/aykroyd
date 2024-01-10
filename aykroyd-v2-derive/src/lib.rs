@@ -12,6 +12,7 @@ enum Delegate {
     FromColumns,
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(Statement, attributes(aykroyd))]
 pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -59,6 +60,7 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     body.into()
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(Query, attributes(aykroyd))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -116,6 +118,7 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     body.into()
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(QueryOne, attributes(aykroyd))]
 pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -320,6 +323,7 @@ fn impl_query_one(
     }
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(FromRow, attributes(aykroyd))]
 pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -374,6 +378,7 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     body.into()
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(FromColumnsIndexed, attributes(aykroyd))]
 pub fn derive_from_columns_indexed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -400,6 +405,7 @@ pub fn derive_from_columns_indexed(input: proc_macro::TokenStream) -> proc_macro
     body.into()
 }
 
+/// Derive macro available if aykroyd is built with `features = ["derive"]`.
 #[proc_macro_derive(FromColumnsNamed, attributes(aykroyd))]
 pub fn derive_from_columns_named(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();

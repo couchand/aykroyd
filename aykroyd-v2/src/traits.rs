@@ -171,7 +171,7 @@ pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
     type Row: FromRow<C>;
 }
 
-/// A marker trait that a query only returns zero or one row.
+/// A marker trait for a query that returns at most one row.
 ///
 /// A `QueryOne` is a marker trait, indicating that a `Query`
 /// will only ever return zero or one row.
