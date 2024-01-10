@@ -96,39 +96,10 @@ pub struct AuthoredPostNamed {
 )]
 pub struct QueryPostsByIdNamed(isize);
 
-pub fn query_user_tuples<C: ::aykroyd_v2::client::SyncClient>(
-    client: &mut C,
-) -> Result<Vec<(String, Option<String>)>, ::aykroyd_v2::Error<C::Error>>
-where
-    GetAllUsersAsTuple: ::aykroyd_v2::Query<C, Row = (String, Option<String>)>,
-{
-    client.query(&GetAllUsersAsTuple)
-}
-
-pub fn query_by_id_indexed<C: ::aykroyd_v2::client::SyncClient>(
-    client: &mut C,
-    id: isize,
-) -> Result<Vec<AuthoredPostIndexed>, ::aykroyd_v2::Error<C::Error>>
-where
-    QueryPostsByIdIndexed: ::aykroyd_v2::Query<C, Row = AuthoredPostIndexed>,
-{
-    client.query(&QueryPostsByIdIndexed(id))
-}
-
-pub fn query_by_id_named<C: ::aykroyd_v2::client::SyncClient>(
-    client: &mut C,
-    id: isize,
-) -> Result<Vec<AuthoredPostNamed>, ::aykroyd_v2::Error<C::Error>>
-where
-    QueryPostsByIdNamed: ::aykroyd_v2::Query<C, Row = AuthoredPostNamed>,
-{
-    client.query(&QueryPostsByIdNamed(id))
-}
-
 pub fn query_mysql() {
     let url = "mysql://root:password@localhost:3307/db_name";
     let mut client = ::aykroyd_v2::mysql::Client::new(url).unwrap();
-    println!("{:?}", query_user_tuples(&mut client));
-    println!("{:?}", query_by_id_indexed(&mut client, 1));
-    println!("{:?}", query_by_id_named(&mut client, 2));
+    println!("{:?}", client.query(&GetAllUsersAsTuple));
+    println!("{:?}", client.query(&QueryPostsByIdIndexed(1)));
+    println!("{:?}", client.query(&QueryPostsByIdNamed(2)));
 }
