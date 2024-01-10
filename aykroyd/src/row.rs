@@ -110,8 +110,8 @@ impl<'a, 'b, C: Client> ColumnsNamed<'a, 'b, C> {
     doc = r##"
 
 ```
-# use aykroyd_v2::{FromRow, Query};
-# use aykroyd_v2::row::FromColumnsIndexed;
+# use aykroyd::{FromRow, Query};
+# use aykroyd::row::FromColumnsIndexed;
 # struct Color;
 #[derive(FromColumnsIndexed)]
 struct Person {
@@ -167,8 +167,8 @@ impl<C: Client, T: FromColumnsIndexed<C>> FromColumnsIndexed<C> for Option<T> {
     doc = r##"
 
 ```
-# use aykroyd_v2::{FromRow, Query};
-# use aykroyd_v2::row::FromColumnsNamed;
+# use aykroyd::{FromRow, Query};
+# use aykroyd::row::FromColumnsNamed;
 # struct Color;
 #[derive(FromColumnsNamed)]
 struct Person {
@@ -196,7 +196,7 @@ pub trait FromColumnsNamed<C: Client>: Sized {
 
 #[cfg(feature = "derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use aykroyd_v2_derive::{FromColumnsIndexed, FromColumnsNamed};
+pub use aykroyd_derive::{FromColumnsIndexed, FromColumnsNamed};
 
 macro_rules! impl_tuple_from_columns_indexed {
     (

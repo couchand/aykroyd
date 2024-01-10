@@ -88,9 +88,9 @@ pub mod specification {
     //! ### Sync Client Interface
     //!
     //! ```
-    //! use aykroyd_v2::client::Client;
-    //! use aykroyd_v2::query::StaticQueryText;
-    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //! use aykroyd::client::Client;
+    //! use aykroyd::query::StaticQueryText;
+    //! use aykroyd::{Error, Query, QueryOne, Statement};
     //!
     //! /// An example of a synchronous database client.
     //! trait SyncClient: Client {
@@ -123,9 +123,9 @@ pub mod specification {
     //! ### Async Client Interface
     //!
     //! ```
-    //! use aykroyd_v2::client::Client;
-    //! use aykroyd_v2::query::StaticQueryText;
-    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //! use aykroyd::client::Client;
+    //! use aykroyd::query::StaticQueryText;
+    //! use aykroyd::{Error, Query, QueryOne, Statement};
     //!
     //! /// An example of an asynchronous database client.
     //! # #[async_trait::async_trait]
@@ -164,9 +164,9 @@ pub mod specification {
     //! ### Sync Transaction Interface
     //!
     //! ```
-    //! use aykroyd_v2::client::Client;
-    //! use aykroyd_v2::query::StaticQueryText;
-    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //! use aykroyd::client::Client;
+    //! use aykroyd::query::StaticQueryText;
+    //! use aykroyd::{Error, Query, QueryOne, Statement};
     //!
     //! trait SyncClient: Client {
     //!     type Transaction: SyncTransaction<Self>;
@@ -215,9 +215,9 @@ pub mod specification {
     //! ### Async Transaction Interface
     //!
     //! ```
-    //! use aykroyd_v2::client::Client;
-    //! use aykroyd_v2::query::StaticQueryText;
-    //! use aykroyd_v2::{Error, Query, QueryOne, Statement};
+    //! use aykroyd::client::Client;
+    //! use aykroyd::query::StaticQueryText;
+    //! use aykroyd::{Error, Query, QueryOne, Statement};
     //!
     //! # #[async_trait::async_trait]
     //! trait AsyncClient: Client {

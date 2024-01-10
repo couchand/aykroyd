@@ -6,7 +6,7 @@
     doc = r##"
 
 ```
-# use aykroyd_v2::FromRow;
+# use aykroyd::FromRow;
 #[derive(Debug, FromRow)]
 struct Tree {
     height: f32,
@@ -23,7 +23,7 @@ struct Tree {
     doc = r##"
 
 ```
-# use aykroyd_v2::{FromRow, Query};
+# use aykroyd::{FromRow, Query};
 # #[derive(FromRow)] struct Tree;
 #[derive(Query)]
 #[aykroyd(row(Tree), text = "
@@ -46,13 +46,13 @@ struct GetTreesNamed<'a>(&'a str);
 //! care which one you have.  That's what `Either` is for.
 //!
 //! ```
-//! # use aykroyd_v2::client::Client;
-//! # use aykroyd_v2::query::{StaticQueryText, ToParams};
-//! # use aykroyd_v2::{FromRow, Query};
+//! # use aykroyd::client::Client;
+//! # use aykroyd::query::{StaticQueryText, ToParams};
+//! # use aykroyd::{FromRow, Query};
 //! # #[derive(Debug)]
 //! # struct Tree;
 //! # impl<C: Client> FromRow<C> for Tree {
-//! #     fn from_row(_row: &C::Row<'_>) -> Result<Self, aykroyd_v2::Error<C::Error>> {
+//! #     fn from_row(_row: &C::Row<'_>) -> Result<Self, aykroyd::Error<C::Error>> {
 //! #         Ok(Tree)
 //! #     }
 //! # }
@@ -90,7 +90,7 @@ struct GetTreesNamed<'a>(&'a str);
 //! #     }
 //! # }
 //! # let mut client = DbConn;
-//! use aykroyd_v2::combinator::Either;
+//! use aykroyd::combinator::Either;
 //!
 //! fn query_and_log(
 //!     client: &mut DbConn,

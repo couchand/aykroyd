@@ -1,166 +1,234 @@
-/// A trait for types that can be constructed from a `tokio_postgres::Row`.
+use crate::client::Client;
+use crate::error::Error;
+use crate::query::{QueryText, ToParams};
+use crate::row::{ColumnsIndexed, FromColumnsIndexed};
+
+/// A type that can be produced from a database's result row.
 ///
-/// This can be generally derived automatically (for structs).
+/// This can be generally derived automatically for structs and tuple structs,
+/// by delegating to an implementation of
+/// [`FromColumnsIndexed`](crate::row::FromColumnsIndexed) or
+/// [`FromColumnsNamed`](crate::row::FromColumnsNamed).
 ///
-/// For structs with named fields, the names must match exactly the name of
-/// the column in a result `Row`.
+/// For structs with named fields, default behavior is to match columns by
+/// their name in the result row.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::FromRow;
+#[derive(FromRow)]
+pub struct Customer {
+    id: i32,
+    first_name: String,
+    last_name: String,
+}
+```
+"##)]
 ///
-/// ```rust
-/// # use aykroyd::FromRow;
-/// #[derive(FromRow)]
-/// pub struct Customer {
-///     id: i32,
-///     first_name: String,
-///     last_name: String,
-/// }
-/// ```
+/// You can opt-in to loading fields by column order on a struct with
+/// named fields, by using the `by_index` attribute.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::FromRow;
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+pub struct Customer {
+    id: i32,
+    first_name: String,
+    last_name: String,
+}
+```
+"##)]
 ///
 /// For tuple structs, the fields are taken from the row in order.  The
 /// order of the query columns must match the tuple struct fields.
-///
-/// ```rust
-/// # use aykroyd::FromRow;
-/// #[derive(FromRow)]
-/// pub struct QueryResults(i32, f32, String);
-/// ```
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::FromRow;
+#[derive(FromRow)]
+pub struct QueryResults(i32, f32, String);
+```
+"##)]
 ///
 /// If you just need the results of an ad-hoc query, consider using an
 /// anonymous tuple instead.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Query;
+use rust_decimal::Decimal;
+
+#[derive(Query)]
+#[aykroyd(row((i32, Decimal)), text = "
+    SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales
+")]
+pub struct SalesByMonth;
+```
+"##)]
 ///
-/// ```rust
-/// # use aykroyd::Query;
-/// # use rust_decimal::Decimal;
-/// #[derive(Query)]
-/// #[query(
-///     text = "SELECT EXTRACT(MONTH FROM closed_on), SUM(amount) FROM sales",
-///     row((i32, Decimal))
-/// )]
-/// pub struct SalesByMonth;
-/// ```
-///
-/// If the default mapping is not sufficient, you can control what column
-/// the field is taken from.  This is most useful for renaming columns:
-///
-/// ```rust
-/// # use aykroyd::FromRow;
-/// #[derive(FromRow)]
-/// pub struct Widget {
-///     #[query(column = "type")]
-///     pub ty: String,
-/// }
-/// ```
-///
-/// You can also (somewhat questionably) assign an explicit column index.
-/// Before doing so, consider whether this is the best approach to solving
-/// your problem, as it will likely be confusing to use.
-///
-/// ```rust
-/// # use aykroyd::FromRow;
-/// #[derive(FromRow)]
-/// pub struct Widget {
-///     #[query(column = 4)]
-///     pub ty: String,
-/// }
-/// ```
-pub trait FromRow: Sized {
-    /// Build the type from a PostgreSQL result row.
-    fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error>;
+/// You can also load nested rows, as long as they use the same
+/// column loading strategy.  Use this to share models between queries,
+/// load associations, etc.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::{FromRow, Query};
+# struct Color;
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+struct Person {
+    name: String,
+    favorite_color: Color,
 }
 
-impl FromRow for () {
-    fn from_row(_row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
-        Ok(())
+#[derive(FromRow)]
+#[aykroyd(by_index)]
+struct Pet {
+    name: String,
+    #[aykroyd(nested)]
+    owner: Person,
+}
+
+#[derive(Query)]
+#[aykroyd(row(Pet), text = "
+    SELECT pet.name, owner.name, owner.fav_color FROM pets
+")]
+struct GetPets;
+```
+"##)]
+///
+/// See [`FromColumnsIndexed`] and [`FromColumnsNamed`](crate::row::FromColumnsNamed)
+/// for more details.
+pub trait FromRow<C: Client>: Sized {
+    fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
+
+    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error<C::Error>> {
+        rows.iter().map(|row| FromRow::from_row(row)).collect()
     }
 }
 
 macro_rules! impl_tuple_from_row {
     (
         $(
-            $name:ident $index:literal$(,)?
-        )+
+            $name:ident
+        ),+
+        $(,)?
     ) => {
         impl<
+            C,
             $(
-                $name: for<'a> tokio_postgres::types::FromSql<'a>,
+                $name,
             )+
-        > FromRow for ($($name,)+) {
-            fn from_row(row: tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
-                Ok((
-                    $(
-                        row.try_get($index)?,
-                    )+
-                ))
+        > FromRow<C> for ($($name,)+)
+        where
+            C: Client,
+            ($($name,)+): FromColumnsIndexed<C>,
+        {
+            fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
+                FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
             }
         }
     };
 }
 
-impl_tuple_from_row!(A 0);
-impl_tuple_from_row!(A 0, B 1);
-impl_tuple_from_row!(A 0, B 1, C 2);
-impl_tuple_from_row!(A 0, B 1, C 2, D 3);
-impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4);
-impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5);
-impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6);
-impl_tuple_from_row!(A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7);
+impl_tuple_from_row!(T0);
+impl_tuple_from_row!(T0, T1);
+impl_tuple_from_row!(T0, T1, T2);
+impl_tuple_from_row!(T0, T1, T2, T3);
+impl_tuple_from_row!(T0, T1, T2, T3, T4);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6);
+impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6, T7);
 
-/// A SQL statement or query, with typed parameters.
+/// A database statement which returns no results.
 ///
-/// This can generally be derived automatically (for structs).  If you're deriving
-/// [`Query`](./trait.Query.html) or [`QueryOne`](./trait.QueryOne.html), don't
-/// derive this, an implementation of this trait will be generated for you.
+/// A `Statement` is something that has query text and can be
+/// converted to the parameters of some database `Client`.
 ///
-/// The source order of the fields corresponds to parameter order: the first field
+/// This can generally be derived automatically for structs.  The source
+/// order of the fields corresponds to parameter order: the first field
 /// in source order is `$1`, the second `$2`, and so on.
-///
-/// ```rust
-/// # use aykroyd::Statement;
-/// #[derive(Statement)]
-/// #[query(text = "INSERT INTO customers (first_name, last_name) VALUES ($1, $2)")]
-/// pub struct InsertCustomer {
-///     first_name: String,
-///     last_name: String,
-/// }
-/// ```
-///
-/// For queries with more than a handful of parameters, this can get error-prone.
-/// Help ensure that the struct fields and the query text stay in sync by annotating
-/// parameter index on the fields.  Any fields not annotated will take the next
-/// available index.
-///
-/// ```rust
-/// # use aykroyd::Statement;
-/// #[derive(Statement)]
-/// #[query(text = "
-///     INSERT INTO customers (first, last, middle, salutation)
-///     VALUES ($1, $2, $3, $4)
-/// ")]
-/// pub struct InsertCustomer<'a> {
-///     #[query(param = "$4")]
-///     pub salutation: &'a str,
-///     pub first: &'a str,
-///     #[query(param = "$3")]
-///     pub middle: &'a str,
-///     pub last: &'a str,
-/// }
-/// ```
-pub trait Statement {
-    /// The SQL text of the statement or query.
-    const TEXT: &'static str;
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
 
-    /// Type of the statement's result rows.
-    type Row: FromRow + Send;
+```
+# use aykroyd::Statement;
+#[derive(Statement)]
+#[aykroyd(text = "
+    INSERT INTO customers (first_name, last_name) VALUES ($1, $2)
+")]
+pub struct InsertCustomer<'a> {
+    first_name: &'a str,
+    last_name: &'a str,
+}
+```
+"##)]
+pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 
-    /// Prepare the instance's parameters for serialization.
-    fn to_row(&self) -> Vec<&(dyn tokio_postgres::types::ToSql + Sync)>;
+/// A database query that returns zero or more result rows.
+///
+/// A `Query` is something that has `QueryText`, can be converted
+/// to the parameters of some database `Client`, and has a result
+/// type that can be produced from that `Client`'s rows.
+///
+/// You can use the derive macro to produce each of these parts:
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::{FromRow, Query};
+#[derive(FromRow)]
+struct Todo {
+    id: i32,
+    label: String,
 }
 
-/// A marker trait for a query that may return any number of rows.
-///
-/// See the [`Statement`](./trait.Statement.html) trait for more details.
-pub trait Query: Statement {}
+#[derive(Query)]
+#[aykroyd(row(Todo), text = "SELECT id, label FROM todo")]
+struct GetAllTodos;
+```
+"##)]
+pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
+    type Row: FromRow<C>;
+}
 
 /// A marker trait for a query that returns at most one row.
 ///
-/// See the [`Statement`](./trait.Statement.html) trait for more details.
-pub trait QueryOne: Statement {}
+/// A `QueryOne` is a marker trait, indicating that a `Query`
+/// will only ever return zero or one row.
+///
+/// You can use the derive macro to generate an implementation.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::{FromRow, QueryOne};
+#[derive(FromRow)]
+struct Todo {
+    id: i32,
+    label: String,
+}
+
+#[derive(QueryOne)]
+#[aykroyd(row(Todo), text = "
+    SELECT id, label FROM todo WHERE id = $1
+")]
+struct GetTodoById(i32);
+```
+"##)]
+pub trait QueryOne<C: Client>: Query<C> {}

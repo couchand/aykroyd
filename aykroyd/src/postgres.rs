@@ -1,23 +1,49 @@
-//! A synchronous client for the PostgreSQL database.
+//! A synchronous client for PostgreSQL.
 
-use crate::*;
+use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
+use crate::query::StaticQueryText;
+use crate::{error, FromRow, Query, QueryOne, Statement};
+
+/// The type of errors from a `Client`.
+pub type Error = error::Error<tokio_postgres::Error>;
+
+impl<T> FromColumnIndexed<Client> for T
+where
+    T: tokio_postgres::types::FromSqlOwned,
+{
+    fn from_column(
+        row: &tokio_postgres::Row,
+        index: usize,
+    ) -> Result<Self, Error> {
+        row.try_get(index).map_err(Error::from_column)
+    }
+}
+
+impl<T> FromColumnNamed<Client> for T
+where
+    T: tokio_postgres::types::FromSqlOwned,
+{
+    fn from_column(
+        row: &tokio_postgres::Row,
+        name: &str,
+    ) -> Result<Self, Error> {
+        row.try_get(name).map_err(Error::from_column)
+    }
+}
+
+impl<T> ToParam<Client> for T
+where
+    T: tokio_postgres::types::ToSql + Sync,
+{
+    fn to_param(&self) -> &(dyn tokio_postgres::types::ToSql + Sync) {
+        self
+    }
+}
 
 /// A synchronous PostgreSQL client.
 pub struct Client {
     client: postgres::Client,
-    statements: StatementCache,
-}
-
-impl From<postgres::Client> for Client {
-    fn from(client: postgres::Client) -> Self {
-        Self::new(client)
-    }
-}
-
-impl AsRef<postgres::Client> for Client {
-    fn as_ref(&self) -> &postgres::Client {
-        &self.client
-    }
+    statements: std::collections::HashMap<String, tokio_postgres::Statement>,
 }
 
 impl AsMut<postgres::Client> for Client {
@@ -26,10 +52,28 @@ impl AsMut<postgres::Client> for Client {
     }
 }
 
+impl crate::client::Client for Client {
+    type Row<'a> = tokio_postgres::Row;
+    type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
+    type Error = tokio_postgres::Error;
+}
+
+impl AsRef<postgres::Client> for Client {
+    fn as_ref(&self) -> &postgres::Client {
+        &self.client
+    }
+}
+
+impl From<postgres::Client> for Client {
+    fn from(client: postgres::Client) -> Self {
+        Self::new(client)
+    }
+}
+
 impl Client {
     /// Create a new `Client` from a `postgres::Client`.
     pub fn new(client: postgres::Client) -> Self {
-        let statements = StatementCache::new();
+        let statements = std::collections::HashMap::new();
         Client { client, statements }
     }
 
@@ -38,51 +82,55 @@ impl Client {
     /// See the documentation for `postgres::Config` for information about the connection syntax.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use postgres::NoTls;
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// // Connect to the database.
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn connect<T>(params: &str, tls_mode: T) -> Result<Self, tokio_postgres::Error>
+    pub fn connect<T>(params: &str, tls_mode: T) -> Result<Self, Error>
     where
         T: postgres::tls::MakeTlsConnect<postgres::Socket> + 'static + Send,
         T::TlsConnect: Send,
         T::Stream: Send,
         <T::TlsConnect as postgres::tls::TlsConnect<postgres::Socket>>::Future: Send,
     {
-        let client = postgres::Client::connect(params, tls_mode)?;
+        let client = postgres::Client::connect(params, tls_mode)
+            .map_err(Error::connect)?;
         Ok(Self::new(client))
     }
 
-    fn statement_key<Q: Statement>() -> StatementKey {
-        Q::TEXT.to_string()
-    }
-
-    fn find_or_prepare<Q: Statement>(
+    fn prepare_internal<S: Into<String>>(
         &mut self,
-    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        let key = Client::statement_key::<Q>();
-        self.statements
-            .ensure_sync(key, || self.client.prepare(Q::TEXT))
+        query_text: S,
+    ) -> Result<postgres::Statement, Error> {
+        match self.statements.entry(query_text.into()) {
+            std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let statement = self.client.prepare(entry.key()).map_err(Error::prepare)?;
+                Ok(entry.insert(statement).clone())
+            }
+        }
     }
 
-    /// Creates a new prepared statement.
+    /// Creates and caches new prepared statement.
     ///
     /// Everything required to prepare the statement is available on the
     /// type argument, so no runtime input is needed:
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Query, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
     /// #[derive(Query)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -92,8 +140,8 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn prepare<Q: Statement>(&mut self) -> Result<(), tokio_postgres::Error> {
-        self.find_or_prepare::<Q>()?;
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
+        self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
 
@@ -102,9 +150,9 @@ impl Client {
     /// We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Query, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -113,7 +161,9 @@ impl Client {
     /// #   last: String,
     /// # }
     /// #[derive(Query)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -125,13 +175,20 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.client
-            .query(&stmt, &query.to_row())?
-            .into_iter()
-            .map(FromRow::from_row)
-            .collect()
+    pub fn query<Q: Query<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let rows = self
+            .client
+            .query(&statement, params)
+            .map_err(Error::query)?;
+
+        FromRow::from_rows(&rows)
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -139,9 +196,9 @@ impl Client {
     /// Returns an error if the query does not return exactly one row.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{QueryOne, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -150,7 +207,9 @@ impl Client {
     /// #   last: String,
     /// # }
     /// #[derive(QueryOne)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
     /// pub struct GetCustomerById(i32);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -161,9 +220,20 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        FromRow::from_row(self.client.query_one(&stmt, &query.to_row())?)
+    pub fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let row = self
+            .client
+            .query_one(&statement, params)
+            .map_err(Error::query)?;
+
+        FromRow::from_row(&row)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -171,9 +241,9 @@ impl Client {
     /// Returns an error if the query returns more than one row.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{QueryOne, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -182,7 +252,9 @@ impl Client {
     /// #   last: String,
     /// # }
     /// #[derive(QueryOne)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
     /// pub struct GetCustomerById(i32);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -194,15 +266,20 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne>(
+    pub fn query_opt<Q: QueryOne<Self>>(
         &mut self,
         query: &Q,
-    ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.client
-            .query_opt(&stmt, &query.to_row())?
-            .map(FromRow::from_row)
-            .transpose()
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let row = self
+            .client
+            .query_opt(&statement, params)
+            .map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
     }
 
     /// Executes a statement, returning the number of rows modified.
@@ -210,12 +287,14 @@ impl Client {
     /// If the statement does not modify any rows (e.g. SELECT), 0 is returned.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Statement};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// #[derive(Statement)]
-    /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
+    /// #[aykroyd(text = "
+    ///     UPDATE customers SET first = $2, last = $3 WHERE id = $1
+    /// ")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -226,62 +305,66 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.client.execute(&stmt, &query.to_row())
+    pub fn execute<S: Statement<Self>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error> {
+        let params = statement.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(statement.query_text())?;
+
+        let rows_affected = self
+            .client
+            .execute(&statement, params)
+            .map_err(Error::query)?;
+
+        Ok(rows_affected)
     }
 
     /// Begins a new database transaction.
     ///
     /// The transaction will roll back by default - use the `commit` method to commit it.
-    pub fn transaction(&mut self) -> Result<Transaction, tokio_postgres::Error> {
-        let txn = self.client.transaction()?;
-        let statements = self.statements.clone();
-        Ok(Transaction { txn, statements })
+    pub fn transaction(&mut self) -> Result<Transaction, Error> {
+        Ok(Transaction {
+            txn: self.client.transaction().map_err(Error::transaction)?,
+            statements: &mut self.statements,
+        })
     }
 }
 
-/// A representation of a PostgreSQL database transaction.
+/// A synchronous PostgreSQL transaction.
 ///
 /// Transactions will implicitly roll back by default when dropped. Use the
-/// `commit` method to commit the changes made in the transaction. Transactions
-/// can be nested, with inner transactions implemented via savepoints.
+/// `commit` method to commit the changes made in the transaction.
 pub struct Transaction<'a> {
     txn: postgres::Transaction<'a>,
-    statements: StatementCache,
-}
-
-impl<'a> AsRef<postgres::Transaction<'a>> for Transaction<'a> {
-    fn as_ref(&self) -> &postgres::Transaction<'a> {
-        &self.txn
-    }
-}
-
-impl<'a> AsMut<postgres::Transaction<'a>> for Transaction<'a> {
-    fn as_mut(&mut self) -> &mut postgres::Transaction<'a> {
-        &mut self.txn
-    }
+    statements: &'a mut std::collections::HashMap<String, tokio_postgres::Statement>,
 }
 
 impl<'a> Transaction<'a> {
+    fn prepare_internal<S: Into<String>>(
+        &mut self,
+        query_text: S,
+    ) -> Result<tokio_postgres::Statement, Error> {
+        match self.statements.entry(query_text.into()) {
+            std::collections::hash_map::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let statement = self.txn.prepare(entry.key()).map_err(Error::prepare)?;
+                Ok(entry.insert(statement).clone())
+            }
+        }
+    }
+
     /// Consumes the transaction, committing all changes made within it.
-    pub fn commit(self) -> Result<(), tokio_postgres::Error> {
-        self.txn.commit()
+    pub fn commit(self) -> Result<(), Error> {
+        self.txn.commit().map_err(Error::transaction)
     }
 
     /// Rolls the transaction back, discarding all changes made within it.
     ///
     /// This is equivalent to `Transaction`'s `Drop` implementation, but provides any error encountered to the caller.
-    pub fn rollback(self) -> Result<(), tokio_postgres::Error> {
-        self.txn.rollback()
-    }
-
-    fn find_or_prepare<Q: Statement>(
-        &mut self,
-    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        let key = Client::statement_key::<Q>();
-        self.statements
-            .ensure_sync(key, || self.txn.prepare(Q::TEXT))
+    pub fn rollback(self) -> Result<(), Error> {
+        self.txn.rollback().map_err(Error::transaction)
     }
 
     /// Creates a new prepared statement.
@@ -290,14 +373,16 @@ impl<'a> Transaction<'a> {
     /// type argument, so no runtime input is needed:
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Query, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer;
     /// #[derive(Query)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -308,8 +393,8 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn prepare<Q: Statement>(&mut self) -> Result<(), tokio_postgres::Error> {
-        self.find_or_prepare::<Q>()?;
+    pub fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
+        self.prepare_internal(S::QUERY_TEXT)?;
         Ok(())
     }
 
@@ -318,9 +403,9 @@ impl<'a> Transaction<'a> {
     /// We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Query, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -329,7 +414,9 @@ impl<'a> Transaction<'a> {
     /// #   last: String,
     /// # }
     /// #[derive(Query)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE first = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE first = $1
+    /// ")]
     /// pub struct GetCustomersByFirstName<'a>(&'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -342,13 +429,17 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query>(&mut self, query: &Q) -> Result<Vec<Q::Row>, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.txn
-            .query(&stmt, &query.to_row())?
-            .into_iter()
-            .map(FromRow::from_row)
-            .collect()
+    pub fn query<Q: Query<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Vec<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let rows = self.txn.query(&statement, params).map_err(Error::query)?;
+
+        FromRow::from_rows(&rows)
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -356,9 +447,9 @@ impl<'a> Transaction<'a> {
     /// Returns an error if the query does not return exactly one row.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{QueryOne, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -367,7 +458,9 @@ impl<'a> Transaction<'a> {
     /// #   last: String,
     /// # }
     /// #[derive(QueryOne)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
     /// pub struct GetCustomerById(i32);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -379,9 +472,17 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne>(&mut self, query: &Q) -> Result<Q::Row, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        FromRow::from_row(self.txn.query_one(&stmt, &query.to_row())?)
+    pub fn query_one<Q: QueryOne<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let row = self.txn.query_one(&statement, params).map_err(Error::query)?;
+
+        FromRow::from_row(&row)
     }
 
     /// Executes a statement which returns zero or one rows, returning it.
@@ -389,9 +490,9 @@ impl<'a> Transaction<'a> {
     /// Returns an error if the query returns more than one row.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{QueryOne, FromRow};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// # #[derive(FromRow)]
     /// # pub struct Customer {
@@ -400,7 +501,9 @@ impl<'a> Transaction<'a> {
     /// #   last: String,
     /// # }
     /// #[derive(QueryOne)]
-    /// #[query(text = "SELECT id, first, last FROM customers WHERE id = $1", row(Customer))]
+    /// #[aykroyd(row(Customer), text = "
+    ///     SELECT id, first, last FROM customers WHERE id = $1
+    /// ")]
     /// pub struct GetCustomerById(i32);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -413,15 +516,20 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne>(
+    pub fn query_opt<Q: QueryOne<Client>>(
         &mut self,
         query: &Q,
-    ) -> Result<Option<Q::Row>, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.txn
-            .query_opt(&stmt, &query.to_row())?
-            .map(FromRow::from_row)
-            .transpose()
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(query.query_text())?;
+
+        let row = self
+            .txn
+            .query_opt(&statement, params)
+            .map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
     }
 
     /// Executes a statement, returning the number of rows modified.
@@ -429,12 +537,14 @@ impl<'a> Transaction<'a> {
     /// If the statement does not modify any rows (e.g. SELECT), 0 is returned.  We'll prepare the statement first if we haven't yet.
     ///
     /// ```no_run
-    /// # fn main() -> Result<(), postgres::Error> {
+    /// # fn main() -> Result<(), aykroyd::postgres::Error> {
     /// # use aykroyd::{Statement};
-    /// # use aykroyd::sync_client::Client;
+    /// # use aykroyd::postgres::Client;
     /// # use postgres::NoTls;
     /// #[derive(Statement)]
-    /// #[query(text = "UPDATE customers SET first = $2, last = $3 WHERE id = $1")]
+    /// #[aykroyd(text = "
+    ///     UPDATE customers SET first = $2, last = $3 WHERE id = $1
+    /// ")]
     /// pub struct UpdateCustomerName<'a>(i32, &'a str, &'a str);
     ///
     /// let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
@@ -446,8 +556,19 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<Q: Statement>(&mut self, query: &Q) -> Result<u64, tokio_postgres::Error> {
-        let stmt = self.find_or_prepare::<Q>()?;
-        self.txn.execute(&stmt, &query.to_row())
+    pub fn execute<S: Statement<Client>>(
+        &mut self,
+        statement: &S,
+    ) -> Result<u64, Error> {
+        let params = statement.to_params();
+        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        let statement = self.prepare_internal(statement.query_text())?;
+
+        let rows_affected = self
+            .txn
+            .execute(&statement, params)
+            .map_err(Error::query)?;
+
+        Ok(rows_affected)
     }
 }
