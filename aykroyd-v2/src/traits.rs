@@ -27,19 +27,6 @@ pub struct Customer {
 ```
 "##)]
 ///
-/// For tuple structs, the fields are taken from the row in order.  The
-/// order of the query columns must match the tuple struct fields.
-#[cfg_attr(
-    feature = "derive",
-    doc = r##"
-
-```
-# use aykroyd_v2::FromRow;
-#[derive(FromRow)]
-pub struct QueryResults(i32, f32, String);
-```
-"##)]
-///
 /// You can opt-in to loading fields by column order on a struct with
 /// named fields, by using the `by_index` attribute.
 #[cfg_attr(
@@ -55,6 +42,19 @@ pub struct Customer {
     first_name: String,
     last_name: String,
 }
+```
+"##)]
+///
+/// For tuple structs, the fields are taken from the row in order.  The
+/// order of the query columns must match the tuple struct fields.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::FromRow;
+#[derive(FromRow)]
+pub struct QueryResults(i32, f32, String);
 ```
 "##)]
 ///
@@ -132,7 +132,9 @@ impl_tuple_from_row!(T0, T1, T2, T3, T4, T5, T6, T7);
 ```
 # use aykroyd_v2::Statement;
 #[derive(Statement)]
-#[aykroyd(text = "INSERT INTO customers (first_name, last_name) VALUES ($1, $2)")]
+#[aykroyd(text = "
+    INSERT INTO customers (first_name, last_name) VALUES ($1, $2)
+")]
 pub struct InsertCustomer<'a> {
     first_name: &'a str,
     last_name: &'a str,
@@ -156,7 +158,7 @@ pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 # use aykroyd_v2::{FromRow, Query};
 #[derive(FromRow)]
 struct Todo {
-    id: isize,
+    id: i32,
     label: String,
 }
 
@@ -173,4 +175,25 @@ pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
 ///
 /// A `QueryOne` is a marker trait, indicating that a `Query`
 /// will only ever return zero or one row.
+///
+/// You can use the derive macro to generate an implementation.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd_v2::{FromRow, QueryOne};
+#[derive(FromRow)]
+struct Todo {
+    id: i32,
+    label: String,
+}
+
+#[derive(QueryOne)]
+#[aykroyd(row(Todo), text = "
+    SELECT id, label FROM todo WHERE id = $1
+")]
+struct GetTodoById(i32);
+```
+"##)]
 pub trait QueryOne<C: Client>: Query<C> {}

@@ -8,7 +8,7 @@ use crate::client::Client;
 /// The text of a given `Query` or `Statement`.
 ///
 /// Most types will get the blanket implementation of
-/// this trait for implementors of `StaticQueryText`.
+/// this trait for implementors of [`StaticQueryText`].
 /// The dynamic version exists, however, to enable
 /// query combinators.
 pub trait QueryText {
