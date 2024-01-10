@@ -1,7 +1,19 @@
 [package]
 name = "aykroyd-v2"
-version = "0.1.0"
+description = "An opinionated micro-ORM for PostgreSQL."
+version = "0.2.0"
 edition = "2021"
+license = "MIT"
+authors = ["Andrew Dona-Couch <aykroyd@couchand.com>"]
+repository = "https://git.sr.ht/~couch/aykroyd"
+documentation = "https://docs.rs/aykroyd/latest/aykroyd/"
+readme = "../README.markdown"
+keywords = ["orm", "postgres", "postgresql", "sql"]
+categories = ["database"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = []

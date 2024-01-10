@@ -1,7 +1,13 @@
 [package]
 name = "aykroyd-v2-derive"
+description = "Derive macros for aykroyd: an opinionated micro-ORM for PostgreSQL."
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["Andrew Dona-Couch <aykroyd@couchand.com>"]
+repository = "https://git.sr.ht/~couch/aykroyd"
+keywords = []
+categories = []
 
 [lib]
 proc-macro = true
