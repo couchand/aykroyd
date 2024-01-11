@@ -4,7 +4,6 @@ resolver = "2"
 members = [
     "aykroyd",
     "aykroyd-derive",
-    "aykroyd-v2-example",
 ]
 
 default-members = [
