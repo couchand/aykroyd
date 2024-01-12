@@ -1,6 +1,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! An opinionated micro-ORM for Rust.
+//! Zero-overhead ergonomic data access for Rust.
+//!
+//! Aykroyd is a micro-ORM focused on developer ergonomics, with an
+//! uncompromising commitment to performance.  Your database doesn't
+//! have to be kept hidden behind abstraction layers or buried in
+//! repetitive boilerplate anymore.
 //!
 //! Database queries are represented by a plain Rust struct that implements
 //! either [`Statement`](Statement) or [`Query`](Query) (and maybe
