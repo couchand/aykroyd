@@ -598,3 +598,53 @@ impl<'a> Transaction<'a> {
         Ok(rows_affected)
     }
 }
+
+// TODO: not derive support
+#[cfg(all(test, feature ="derive"))]
+mod test {
+    use super::*;
+
+    use tokio_postgres::NoTls;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "CREATE TABLE test_tokio_postgres (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
+    struct CreateTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "DROP TABLE test_tokio_postgres")]
+    struct DropTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "INSERT INTO test_tokio_postgres (label) VALUES ($1)")]
+    struct InsertTodo<'a>(&'a str);
+
+    #[derive(Query)]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_tokio_postgres")]
+    struct GetAllTodos;
+
+    #[tokio::test]
+    async fn end_to_end() {
+        const TODO_TEXT: &str = "get things done, please!";
+
+        let (mut client, connection) = connect(
+            "host=localhost user=aykroyd_test password=aykroyd_test",
+            NoTls,
+        ).await.unwrap();
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("connection error: {e}");
+            }
+        });
+
+        client.execute(&CreateTodos).await.unwrap();
+
+        client.execute(&InsertTodo(TODO_TEXT)).await.unwrap();
+
+        let todos = client.query(&GetAllTodos).await.unwrap();
+        assert_eq!(1, todos.len());
+        assert_eq!(TODO_TEXT, todos[0].1);
+
+        client.execute(&DropTodos).await.unwrap();
+    }
+}

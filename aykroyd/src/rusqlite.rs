@@ -179,19 +179,19 @@ mod test {
     use super::*;
 
     #[derive(Statement)]
-    #[aykroyd(text = "CREATE TABLE test_todos (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL)")]
+    #[aykroyd(text = "CREATE TABLE test_rusqlite (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL)")]
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_todos")]
+    #[aykroyd(text = "DROP TABLE test_rusqlite")]
     struct DropTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "INSERT INTO test_todos (label) VALUES ($1)")]
+    #[aykroyd(text = "INSERT INTO test_rusqlite (label) VALUES ($1)")]
     struct InsertTodo<'a>(&'a str);
 
     #[derive(Query)]
-    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_todos")]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_rusqlite")]
     struct GetAllTodos;
 
     #[test]

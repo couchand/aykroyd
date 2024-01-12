@@ -182,3 +182,44 @@ impl<'a> Transaction<'a> {
         Ok(())
     }
 }
+
+// TODO: not derive support
+#[cfg(all(test, feature ="derive"))]
+mod test {
+    use super::*;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "CREATE TABLE test_mysql (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
+    struct CreateTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "DROP TABLE test_mysql")]
+    struct DropTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "INSERT INTO test_mysql (label) VALUES (?)")]
+    struct InsertTodo<'a>(&'a str);
+
+    #[derive(Query)]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_mysql")]
+    struct GetAllTodos;
+
+    #[test]
+    fn end_to_end() {
+        const TODO_TEXT: &str = "get things done, please!";
+
+        let mut client = Client::new(
+            "mysql://aykroyd_test:aykroyd_test@localhost:3306/aykroyd_test"
+        ).unwrap();
+
+        client.execute(&CreateTodos).unwrap();
+
+        client.execute(&InsertTodo(TODO_TEXT)).unwrap();
+
+        let todos = client.query(&GetAllTodos).unwrap();
+        assert_eq!(1, todos.len());
+        assert_eq!(TODO_TEXT, todos[0].1);
+
+        client.execute(&DropTodos).unwrap();
+    }
+}

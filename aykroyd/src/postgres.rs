@@ -581,19 +581,19 @@ mod test {
     use postgres::NoTls;
 
     #[derive(Statement)]
-    #[aykroyd(text = "CREATE TABLE test_todos (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
+    #[aykroyd(text = "CREATE TABLE test_postgres (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_todos")]
+    #[aykroyd(text = "DROP TABLE test_postgres")]
     struct DropTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "INSERT INTO test_todos (label) VALUES ($1)")]
+    #[aykroyd(text = "INSERT INTO test_postgres (label) VALUES ($1)")]
     struct InsertTodo<'a>(&'a str);
 
     #[derive(Query)]
-    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_todos")]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_postgres")]
     struct GetAllTodos;
 
     #[test]
