@@ -572,3 +572,47 @@ impl<'a> Transaction<'a> {
         Ok(rows_affected)
     }
 }
+
+// TODO: not derive support
+#[cfg(all(test, feature ="derive"))]
+mod test {
+    use super::*;
+
+    use postgres::NoTls;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "CREATE TABLE test_todos (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
+    struct CreateTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "DROP TABLE test_todos")]
+    struct DropTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "INSERT INTO test_todos (label) VALUES ($1)")]
+    struct InsertTodo<'a>(&'a str);
+
+    #[derive(Query)]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_todos")]
+    struct GetAllTodos;
+
+    #[test]
+    fn end_to_end() {
+        const TODO_TEXT: &str = "get things done, please!";
+
+        let mut client = Client::connect(
+            "host=localhost user=aykroyd_test password=aykroyd_test",
+            NoTls,
+        ).unwrap();
+
+        client.execute(&CreateTodos).unwrap();
+
+        client.execute(&InsertTodo(TODO_TEXT)).unwrap();
+
+        let todos = client.query(&GetAllTodos).unwrap();
+        assert_eq!(1, todos.len());
+        assert_eq!(TODO_TEXT, todos[0].1);
+
+        client.execute(&DropTodos).unwrap();
+    }
+}

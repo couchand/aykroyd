@@ -172,3 +172,59 @@ impl<'a> Transaction<'a> {
         Ok(())
     }
 }
+
+// TODO: not derive support
+#[cfg(all(test, feature ="derive"))]
+mod test {
+    use super::*;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "CREATE TABLE test_todos (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL)")]
+    struct CreateTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "DROP TABLE test_todos")]
+    struct DropTodos;
+
+    #[derive(Statement)]
+    #[aykroyd(text = "INSERT INTO test_todos (label) VALUES ($1)")]
+    struct InsertTodo<'a>(&'a str);
+
+    #[derive(Query)]
+    #[aykroyd(row((i32, String)), text = "SELECT id, label FROM test_todos")]
+    struct GetAllTodos;
+
+    #[test]
+    fn end_to_end_memory() {
+        const TODO_TEXT: &str = "get things done, please!";
+
+        let mut client = Client::open_in_memory().unwrap();
+
+        client.execute(&CreateTodos).unwrap();
+
+        client.execute(&InsertTodo(TODO_TEXT)).unwrap();
+
+        let todos = client.query(&GetAllTodos).unwrap();
+        assert_eq!(1, todos.len());
+        assert_eq!(TODO_TEXT, todos[0].1);
+
+        client.execute(&DropTodos).unwrap();
+    }
+
+    #[test]
+    fn end_to_end_file() {
+        const TODO_TEXT: &str = "get things done, please!";
+
+        let mut client = Client::open("./foobar").unwrap();
+
+        client.execute(&CreateTodos).unwrap();
+
+        client.execute(&InsertTodo(TODO_TEXT)).unwrap();
+
+        let todos = client.query(&GetAllTodos).unwrap();
+        assert_eq!(1, todos.len());
+        assert_eq!(TODO_TEXT, todos[0].1);
+
+        client.execute(&DropTodos).unwrap();
+    }
+}

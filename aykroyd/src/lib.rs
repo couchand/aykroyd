@@ -223,6 +223,8 @@ assert_eq!(rows[0].name, "Dan");
 "##
 )]
 
+extern crate self as aykroyd;
+
 pub mod client;
 pub mod combinator;
 pub mod error;
