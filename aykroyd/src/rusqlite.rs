@@ -2,7 +2,7 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, QueryOne, Statement};
 
 pub type Error = error::Error<rusqlite::Error>;
 
@@ -89,6 +89,44 @@ impl Client {
         Ok(result)
     }
 
+    pub fn query_one<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+
+        let mut statement =
+            rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
+                .map_err(Error::prepare)?;
+
+        let mut rows = statement.query(params).map_err(Error::query)?;
+
+        rows.next()
+            .map_err(Error::query)?
+            .ok_or_else(|| Error::query(rusqlite::Error::QueryReturnedNoRows))
+            .and_then(|row| FromRow::from_row(row))
+    }
+
+    pub fn query_opt<Q: QueryOne<Self>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+
+        let mut statement =
+            rusqlite::Connection::prepare_cached(self.as_mut(), &query.query_text())
+                .map_err(Error::prepare)?;
+
+        let mut rows = statement.query(params).map_err(Error::query)?;
+
+        rows.next()
+            .map_err(Error::query)?
+            .map(|row| FromRow::from_row(row))
+            .transpose()
+    }
+
     pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
@@ -148,6 +186,44 @@ impl<'a> Transaction<'a> {
         }
 
         Ok(result)
+    }
+
+    pub fn query_one<Q: QueryOne<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Q::Row, Error> {
+        let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+
+        let mut statement =
+            rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
+                .map_err(Error::prepare)?;
+
+        let mut rows = statement.query(params).map_err(Error::query)?;
+
+        rows.next()
+            .map_err(Error::query)?
+            .ok_or_else(|| Error::query(rusqlite::Error::QueryReturnedNoRows))
+            .and_then(|row| FromRow::from_row(row))
+    }
+
+    pub fn query_opt<Q: QueryOne<Client>>(
+        &mut self,
+        query: &Q,
+    ) -> Result<Option<Q::Row>, Error> {
+        let params = query.to_params();
+        let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+
+        let mut statement =
+            rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
+                .map_err(Error::prepare)?;
+
+        let mut rows = statement.query(params).map_err(Error::query)?;
+
+        rows.next()
+            .map_err(Error::query)?
+            .map(|row| FromRow::from_row(row))
+            .transpose()
     }
 
     pub fn execute<S: Statement<Client>>(
