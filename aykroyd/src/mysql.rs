@@ -2,7 +2,7 @@
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
-use crate::{error, FromRow, Query, Statement};
+use crate::{error, FromRow, Query, QueryOne, Statement};
 
 pub type Error = error::Error<mysql::Error>;
 
@@ -90,6 +90,44 @@ impl Client {
         FromRow::from_rows(&rows)
     }
 
+    pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
+        use mysql::prelude::Queryable;
+
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
+        };
+        let query = self
+            .as_mut()
+            .prep(query.query_text())
+            .map_err(Error::prepare)?;
+
+        let row: Option<mysql::Row> =
+            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params).map_err(Error::query)?;
+
+        row
+            .ok_or_else(|| Error::query_str("query returned no rows", None))
+            .and_then(|row| FromRow::from_row(&row))
+    }
+
+    pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
+        use mysql::prelude::Queryable;
+
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
+        };
+        let query = self
+            .as_mut()
+            .prep(query.query_text())
+            .map_err(Error::prepare)?;
+
+        let row: Option<mysql::Row> =
+            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params).map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
+    }
+
     pub fn execute<S: Statement<Self>>(
         &mut self,
         statement: &S,
@@ -153,6 +191,42 @@ impl<'a> Transaction<'a> {
             mysql::prelude::Queryable::exec(&mut self.0, &query, params).map_err(Error::query)?;
 
         FromRow::from_rows(&rows)
+    }
+
+    pub fn query_one<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
+        use mysql::prelude::Queryable;
+
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
+        };
+        let query = self.0
+            .prep(query.query_text())
+            .map_err(Error::prepare)?;
+
+        let row: Option<mysql::Row> =
+            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params).map_err(Error::query)?;
+
+        row
+            .ok_or_else(|| Error::query_str("query returned no rows", None))
+            .and_then(|row| FromRow::from_row(&row))
+    }
+
+    pub fn query_opt<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
+        use mysql::prelude::Queryable;
+
+        let params = match query.to_params() {
+            None => mysql::Params::Empty,
+            Some(params) => mysql::Params::Positional(params),
+        };
+        let query = self.0
+            .prep(query.query_text())
+            .map_err(Error::prepare)?;
+
+        let row: Option<mysql::Row> =
+            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params).map_err(Error::query)?;
+
+        row.map(|row| FromRow::from_row(&row)).transpose()
     }
 
     pub fn execute<S: Statement<Client>>(
