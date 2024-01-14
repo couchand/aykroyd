@@ -99,6 +99,8 @@ struct Pet {
     name: String,
     #[aykroyd(nested)]
     owner: Person,
+    #[aykroyd(nested)]
+    vet: Option<Person>,
 }
 
 #[derive(Query)]

@@ -553,7 +553,7 @@ fn impl_from_columns(
 
         match delegate {
             Delegate::FromColumn => num_const += 1,
-            Delegate::FromColumns => plus_nesteds.push(quote!(+ #ty::NUM_COLUMNS)),
+            Delegate::FromColumns => plus_nesteds.push(quote!(+ <#ty as ::aykroyd::row::FromColumnsIndexed<C>>::NUM_COLUMNS)),
         }
     }
 
