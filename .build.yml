@@ -1,0 +1,25 @@
+image: archlinux
+packages:
+    - postgresql
+    - mariadb
+sources:
+    - https://git.sr.ht/~couch/aykroyd
+tasks:
+    - install_rust: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh  -s -- -y
+    - setup_postgres: |
+        sudo -u postgres initdb -D /var/lib/postgres/data
+        sudo systemctl start postgresql.service
+        sudo -u postgres psql -c "create role aykroyd_test with login password 'aykroyd_test';"
+        sudo -u postgres psql -c "create database aykroyd_test;"
+        sudo -u postgres psql -c "alter database aykroyd_test owner to aykroyd_test;"
+    - setup_mysql: |
+        sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+        sudo systemctl start mariadb.service
+        sudo -u mysql mariadb -e "create user 'aykroyd_test'@'localhost' identified by 'aykroyd_test';"
+        sudo -u mysql mariadb -e "create database aykroyd_test;"
+        sudo -u mysql mariadb -e "grant all privileges on aykroyd_test.* to 'aykroyd_test'@'localhost';"
+    - test: |
+        source "$HOME/.cargo/env"
+        cd aykroyd
+        cargo test --all-features
