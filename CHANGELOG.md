@@ -23,8 +23,10 @@ Like most crates in the Rust ecosystem this project adheres to
 - The derive macros for `FromRow`, `Statement`, `Query`, and `QueryOne`
   now use the attribute `aykroyd` for all configuration parameters
   rather than `query`.
-- Explicit column names and indexes and parameter indexes have
-  been removed temporarily.  Expect to see them again soon!
+- Explicit column names and indexes are now only allowed if every
+  field in the struct is annotated.
+- Explicit parameter indexes have been removed temporarily.  Expect
+  to see them again soon!
 - Support for loading query text from files has been removed
   temporarily.  Expect to see it again soon!
 
