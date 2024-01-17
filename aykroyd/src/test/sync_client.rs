@@ -114,6 +114,25 @@ impl client::FromColumnNamed<TestClient> for String {
     }
 }
 
+impl client::FromColumnIndexed<TestClient> for i32 {
+    fn from_column(row: &Row<'_>, index: usize) -> Result<Self> {
+        Ok(row.1.values[index].parse().unwrap()) // TODO: not panic
+    }
+}
+
+impl client::FromColumnNamed<TestClient> for i32 {
+    fn from_column(row: &Row<'_>, name: &str) -> Result<Self> {
+        let index = row
+            .1
+            .names
+            .iter()
+            .enumerate()
+            .find(|(_, n)| *n == name)
+            .map(|(i, _)| i);
+        Ok(row.1.values[index.unwrap()].parse().unwrap()) // TODO: not panic
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ErrorDetails {
     pub message: String,

@@ -559,7 +559,7 @@ impl FieldInfo {
             }
         }
 
-        Ok(key)
+        Ok(expected.or(key))
     }
 }
 
