@@ -14,8 +14,19 @@ Like most crates in the Rust ecosystem this project adheres to
 - `FromRow` for nested structs using `FromColumnsIndexed` od
   `FromColumnsNamed`.
 - The `Either` combinator, for dynamic query choice.
+
+### Breaking
+
+- The PostgreSQL clients have been moved into modules matching
+  the backend crate: `sync_client::Client` is now `postgres::Client`
+  and `async_client::Client` is now `tokio_postgres::Client`.
+- The derive macros for `FromRow`, `Statement`, `Query`, and `QueryOne`
+  now use the attribute `aykroyd` for all configuration parameters
+  rather than `query`.
 - Explicit column names and indexes and parameter indexes have
   been removed temporarily.  Expect to see them again soon!
+- Support for loading query text from files has been removed
+  temporarily.  Expect to see it again soon!
 
 ## [v0.2.0] - 2023-04-18 ([Log][v0.2.0-log])
 
