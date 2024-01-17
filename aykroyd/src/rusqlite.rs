@@ -62,12 +62,132 @@ impl From<rusqlite::Connection> for Client {
 }
 
 impl Client {
+    /// Open a new connection to a SQLite database. If a database does not exist
+    /// at the path, one is created.
+    ///
+    /// ```rust,no_run
+    /// # use aykroyd::rusqlite::{Client, Error};
+    /// # fn open_my_db() -> Result<(), Error> {
+    ///     let path = "./my_db.db3";
+    ///     let db = Client::open(path)?;
+    ///     // Use the database somehow...
+    ///     println!("{}", db.as_ref().is_autocommit());
+    ///     Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if `path` cannot be converted to a C-compatible string
+    /// or if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open()`] for more details.
     pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
         rusqlite::Connection::open(path).map(Client).map_err(Error::connect)
     }
 
+    /// Open a new connection to a SQLite database.
+    ///
+    /// [Database Connection](http://www.sqlite.org/c3ref/open.html) for a description of valid
+    /// flag combinations.
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if `path` cannot be converted to a C-compatible
+    /// string or if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open_with_flags()`] for more details.
+    pub fn open_with_flags<P: AsRef<std::path::Path>>(
+        path: P,
+        flags: rusqlite::OpenFlags,
+    ) -> Result<Self, Error> {
+        rusqlite::Connection::open_with_flags(path, flags)
+            .map(Client)
+            .map_err(Error::connect)
+    }
+
+    /// Open a new connection to a SQLite database using the specific flags and
+    /// vfs name.
+    ///
+    /// [Database Connection](http://www.sqlite.org/c3ref/open.html) for a description of valid
+    /// flag combinations.
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if either `path` or `vfs` cannot be converted to a
+    /// C-compatible string or if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open_with_flags_and_vfs()`] for more details.
+    pub fn open_with_flags_and_vfs<P: AsRef<std::path::Path>>(
+        path: P,
+        flags: rusqlite::OpenFlags,
+        vfs: &str,
+    ) -> Result<Self, Error> {
+        rusqlite::Connection::open_with_flags_and_vfs(path, flags, vfs)
+            .map(Client)
+            .map_err(Error::connect)
+    }
+
+    /// Open a new connection to an in-memory SQLite database.
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open_in_memory()`] for more details.
     pub fn open_in_memory() -> Result<Self, Error> {
         rusqlite::Connection::open_in_memory().map(Client).map_err(Error::connect)
+    }
+
+
+    /// Open a new connection to an in-memory SQLite database.
+    ///
+    /// [Database Connection](http://www.sqlite.org/c3ref/open.html) for a description of valid
+    /// flag combinations.
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open_in_memory_with_flags()`] for more details.
+    pub fn open_in_memory_with_flags(flags: rusqlite::OpenFlags) -> Result<Self, Error> {
+        rusqlite::Connection::open_in_memory_with_flags(flags)
+            .map(Client)
+            .map_err(Error::connect)
+    }
+
+    /// Open a new connection to an in-memory SQLite database using the specific
+    /// flags and vfs name.
+    ///
+    /// [Database Connection](http://www.sqlite.org/c3ref/open.html) for a description of valid
+    /// flag combinations.
+    ///
+    /// # Failure
+    ///
+    /// Will return `Err` if `vfs` cannot be converted to a C-compatible
+    /// string or if the underlying SQLite open call fails.
+    ///
+    /// # More Details
+    ///
+    /// See the docs for [`rusqlite::Connection::open_in_memory_with_flags_and_vfs()`]
+    /// for more details.
+    pub fn open_in_memory_with_flags_and_vfs(
+        flags: rusqlite::OpenFlags,
+        vfs: &str,
+    ) -> Result<Self, Error> {
+        rusqlite::Connection::open_in_memory_with_flags_and_vfs(flags, vfs)
+            .map(Client)
+            .map_err(Error::connect)
     }
 
     /// Creates and caches new prepared statement.
