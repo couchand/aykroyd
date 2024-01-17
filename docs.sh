@@ -1,2 +1,2 @@
 #!/bin/sh
-RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features --open --workspace
+RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features --workspace
