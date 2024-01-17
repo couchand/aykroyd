@@ -1,6 +1,6 @@
 [package]
 name = "bb8-aykroyd"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Aykroyd micro-ORM for the bb8 connection pool."
 license = "MIT"
@@ -10,19 +10,13 @@ readme = "./README.markdown"
 documentation = "https://docs.rs/bb8-aykroyd/latest/bb8_aykroyd/"
 
 [features]
-"with-bit-vec-0_6" = ["bb8-postgres/with-bit-vec-0_6"]
-"with-chrono-0_4" = ["bb8-postgres/with-chrono-0_4"]
-"with-eui48-0_4" = ["bb8-postgres/with-eui48-0_4"]
-"with-geo-types-0_6" = ["bb8-postgres/with-geo-types-0_6"]
-"with-serde_json-1" = ["bb8-postgres/with-serde_json-1"]
-"with-uuid-0_8" = ["bb8-postgres/with-uuid-0_8"]
-"with-uuid-1" = ["bb8-postgres/with-uuid-1"]
-"with-time-0_2" = ["bb8-postgres/with-time-0_2"]
-"with-time-0_3" = ["bb8-postgres/with-time-0_3"]
+default = []
+
+tokio-postgres = ["aykroyd/tokio-postgres", "dep:bb8-postgres", "dep:tokio-postgres"]
 
 [dependencies]
-aykroyd = { version = "0.2", features = ["async"], path = "../aykroyd" }
+aykroyd = { version = "0.3", path = "../aykroyd" }
 async-trait = "0.1"
 bb8 = "0.8"
-bb8-postgres = "0.8"
-tokio-postgres = "0.7"
+bb8-postgres = { version = "0.8", optional = true }
+tokio-postgres = { version = "0.7", optional = true }

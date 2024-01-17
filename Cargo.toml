@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "aykroyd",
     "aykroyd-derive",
+    "bb8-aykroyd",
     "r2d2-aykroyd",
 ]
 
