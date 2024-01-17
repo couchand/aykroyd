@@ -119,11 +119,6 @@ use aykroyd::tokio_postgres::{connect, Client};
 # struct GetAllPets;
 #
 # struct MyError;
-# impl From<tokio_postgres::Error> for MyError {
-#     fn from(error: tokio_postgres::Error) -> Self {
-#         MyError
-#     }
-# }
 # impl From<aykroyd::Error<tokio_postgres::Error>> for MyError {
 #     fn from(error: aykroyd::Error<tokio_postgres::Error>) -> Self {
 #         MyError
@@ -145,7 +140,7 @@ tokio::spawn(async move {
 // Execute a statement, returning the number of rows modified.
 let insert_count = client.execute(&InsertPet {
     name: "Dan",
-    species: "Felis catus",
+    species: "Felis asynchronous",
 }).await?;
 assert_eq!(insert_count, 1);
 
@@ -166,7 +161,7 @@ assert_eq!(rows[0].name, "Dan");
 The synchronous PostgreSQL client, available when compiled
 with crate feature `postgres`.
 
-```no_run
+```
 use postgres::NoTls;
 use aykroyd::postgres::Client;
 
@@ -195,11 +190,6 @@ use aykroyd::postgres::Client;
 # struct GetAllPets;
 #
 # struct MyError;
-# impl From<tokio_postgres::Error> for MyError {
-#     fn from(error: tokio_postgres::Error) -> Self {
-#         MyError
-#     }
-# }
 # impl From<aykroyd::Error<tokio_postgres::Error>> for MyError {
 #     fn from(error: aykroyd::Error<tokio_postgres::Error>) -> Self {
 #         MyError
@@ -213,7 +203,130 @@ let mut client =
 // Execute a statement, returning the number of rows modified.
 let insert_count = client.execute(&InsertPet {
     name: "Dan",
-    species: "Felis catus",
+    species: "Felis synchronous",
+})?;
+assert_eq!(insert_count, 1);
+
+// Run a query and map the result objects.
+let rows = client.query(&GetAllPets)?;
+assert_eq!(rows.len(), 1);
+assert_eq!(rows[0].name, "Dan");
+#
+# Ok(())
+# }
+```
+"##
+)]
+#![cfg_attr(
+    feature = "mysql",
+    doc = r##"
+
+The synchronous MySQL/MariaDB client, available when compiled
+with crate feature `mysql`.
+
+```
+use aykroyd::mysql::Client;
+
+# use aykroyd::{FromRow, Query, Statement};
+#
+# #[derive(Statement)]
+# #[aykroyd(text = "
+#     INSERT INTO pets (name, species) VALUES (?, ?)
+# ")]
+# struct InsertPet<'a> {
+#     name: &'a str,
+#     species: &'a str,
+# }
+#
+# #[derive(FromRow)]
+# struct Pet {
+#     id: i32,
+#     name: String,
+#     species: String,
+# }
+#
+# #[derive(Query)]
+# #[aykroyd(row(Pet), text = "
+#     SELECT id, name, species FROM pet
+# ")]
+# struct GetAllPets;
+#
+# struct MyError;
+# impl From<aykroyd::Error<mysql::Error>> for MyError {
+#     fn from(error: aykroyd::Error<mysql::Error>) -> Self {
+#         MyError
+#     }
+# }
+# fn try_main() -> Result<(), MyError> {
+// Connect to the database
+let mut client =
+    Client::new("mysql://user:password@locahost:3307/db_name")?;
+
+// Execute a statement, returning the number of rows modified.
+let insert_count = client.execute(&InsertPet {
+    name: "Dan",
+    species: "Felis maria",
+})?;
+assert_eq!(insert_count, 1);
+
+// Run a query and map the result objects.
+let rows = client.query(&GetAllPets)?;
+assert_eq!(rows.len(), 1);
+assert_eq!(rows[0].name, "Dan");
+#
+# Ok(())
+# }
+```
+"##
+)]
+#![cfg_attr(
+    feature = "rusqlite",
+    doc = r##"
+
+The synchronous SQLite client, available when compiled
+with crate feature `rusqlite`.
+
+```
+use aykroyd::rusqlite::Client;
+
+# use aykroyd::{FromRow, Query, Statement};
+#
+# #[derive(Statement)]
+# #[aykroyd(text = "
+#     INSERT INTO pets (name, species) VALUES ($1, $2)
+# ")]
+# struct InsertPet<'a> {
+#     name: &'a str,
+#     species: &'a str,
+# }
+#
+# #[derive(FromRow)]
+# struct Pet {
+#     id: i32,
+#     name: String,
+#     species: String,
+# }
+#
+# #[derive(Query)]
+# #[aykroyd(row(Pet), text = "
+#     SELECT id, name, species FROM pet
+# ")]
+# struct GetAllPets;
+#
+# struct MyError;
+# impl From<aykroyd::Error<rusqlite::Error>> for MyError {
+#     fn from(error: aykroyd::Error<rusqlite::Error>) -> Self {
+#         MyError
+#     }
+# }
+# fn try_main() -> Result<(), MyError> {
+// Connect to the database
+let mut client = Client::open("./my_db.db3")?;
+
+// Execute a statement, returning the number of rows modified.
+let insert_count = client.execute(&InsertPet {
+    name: "Dan",
+    species: "Felis localis",
 })?;
 assert_eq!(insert_count, 1);
 
