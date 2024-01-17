@@ -1,6 +1,6 @@
 [package]
 name = "deadpool-aykroyd"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Aykroyd micro-ORM for the deadpool connection pool."
 license = "MIT"
@@ -9,10 +9,15 @@ repository = "https://git.sr.ht/~couch/aykroyd"
 readme = "./README.markdown"
 documentation = "https://docs.rs/deadpool-aykroyd/latest/deadpool_aykroyd/"
 
+[features]
+default = []
+
+tokio-postgres = ["aykroyd/tokio-postgres", "dep:deadpool-postgres", "dep:tokio-postgres"]
+
 [dependencies]
 async-trait = "0.1"
-aykroyd = { version = "0.2", features = ["async"], path = "../aykroyd" }
+aykroyd = { version = "0.3", path = "../aykroyd" }
 deadpool = "0.9"
-deadpool-postgres = "0.10"
+deadpool-postgres = { version = "0.10", optional = true }
 tokio = "1"
-tokio-postgres = "0.7"
+tokio-postgres = { version = "0.7", optional = true }
