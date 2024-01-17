@@ -89,6 +89,12 @@ pub trait ToParam {
     fn to_param(&self) -> String;
 }
 
+impl ToParam for &str {
+    fn to_param(&self) -> String {
+        self.to_string()
+    }
+}
+
 impl<T: ToParam> client::ToParam<TestClient> for T {
     fn to_param(&self) -> &dyn ToParam {
         self

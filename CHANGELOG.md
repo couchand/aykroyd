@@ -25,8 +25,6 @@ Like most crates in the Rust ecosystem this project adheres to
   rather than `query`.
 - Explicit column names and indexes are now only allowed if every
   field in the struct is annotated.
-- Explicit parameter indexes have been removed temporarily.  Expect
-  to see them again soon!
 - Support for loading query text from files has been removed
   temporarily.  Expect to see it again soon!
 

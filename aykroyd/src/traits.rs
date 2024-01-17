@@ -209,6 +209,31 @@ pub struct InsertCustomer<'a> {
 }
 ```
 "##)]
+///
+/// For queries with more than a handful of parameters, this can get
+/// error-prone. Help ensure that the struct fields and the query text
+/// stay in sync by annotating parameter index on the fields.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Statement;
+#[derive(Statement)]
+#[aykroyd(text = "
+    INSERT INTO customers (first, last, middle)
+    VALUES ($1, $2, $3)
+")]
+pub struct InsertCustomer<'a> {
+    #[aykroyd(param = "$1")]
+    pub first: &'a str,
+    #[aykroyd(param = "$3")]
+    pub middle: &'a str,
+    #[aykroyd(param = "$2")]
+    pub last: &'a str,
+}
+```
+"##)]
 pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 
 /// A database query that returns zero or more result rows.

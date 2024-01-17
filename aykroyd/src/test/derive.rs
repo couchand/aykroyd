@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use aykroyd::row::FromColumnsIndexed;
-use aykroyd::FromRow;
+use aykroyd::{FromRow, Statement};
 
 use super::sync_client::TestClient;
 
@@ -80,4 +80,31 @@ fn implicit_column_count_nested() {
     }
 
     assert_num_columns::<Row>(6);
+}
+
+#[test]
+fn statement_explicit_param() {
+    #[derive(Statement)]
+    #[aykroyd(text = "")]
+    struct MyStatement<'a> {
+        #[aykroyd(param = "$2")]
+        second: &'a str,
+        first: &'a str,
+    }
+
+    let mut client = TestClient::new();
+
+    client.execute(&MyStatement {
+        first: "first",
+        second: "second",
+    }).unwrap();
+
+    let records = client.records();
+    assert_eq!(1, records.len());
+    assert!(records[0].params.is_some());
+
+    let params = records[0].params.as_ref().unwrap();
+    assert_eq!(2, params.len());
+    assert_eq!("first", params[0]);
+    assert_eq!("second", params[1]);
 }

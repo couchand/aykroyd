@@ -30,6 +30,14 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         syn::Data::Union(_) => panic!("Cannot derive Statement on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
+    let fields = match fields {
+        syn::Fields::Unit => vec![],
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.iter().collect(),
+    };
+    let fields = ParamInfo::from_fields(&fields);
 
     let query_text = {
         let mut query_text = None;
@@ -53,7 +61,7 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     };
 
     let query_text_impl = impl_static_query_text(name, generics, &query_text);
-    let to_params_impl = impl_to_params(name, generics, fields);
+    let to_params_impl = impl_to_params(name, generics, &fields);
     let statement_impl = impl_statement(name, generics);
 
     let body = quote!(#query_text_impl #to_params_impl #statement_impl);
@@ -78,6 +86,14 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         syn::Data::Union(_) => panic!("Cannot derive Query on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
+    let fields = match fields {
+        syn::Fields::Unit => vec![],
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.iter().collect(),
+    };
+    let fields = ParamInfo::from_fields(&fields);
 
     let (query_text, row) = {
         let mut query_text = None;
@@ -111,7 +127,7 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let query_text_impl = impl_static_query_text(name, generics, &query_text);
-    let to_params_impl = impl_to_params(name, generics, fields);
+    let to_params_impl = impl_to_params(name, generics, &fields);
     let query_impl = impl_query(name, generics, &row);
 
     let body = quote!(#query_text_impl #to_params_impl #query_impl);
@@ -136,6 +152,14 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         syn::Data::Union(_) => panic!("Cannot derive QueryOne on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
+    let fields = match fields {
+        syn::Fields::Unit => vec![],
+        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
+        | syn::Fields::Unnamed(syn::FieldsUnnamed {
+            unnamed: fields, ..
+        }) => fields.iter().collect(),
+    };
+    let fields = ParamInfo::from_fields(&fields);
 
     let (query_text, row) = {
         let mut query_text = None;
@@ -169,12 +193,63 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     };
 
     let query_text_impl = impl_static_query_text(name, generics, &query_text);
-    let to_params_impl = impl_to_params(name, generics, fields);
+    let to_params_impl = impl_to_params(name, generics, &fields);
     let query_impl = impl_query(name, generics, &row);
     let query_one_impl = impl_query_one(name, generics);
 
     let body = quote!(#query_text_impl #to_params_impl #query_impl #query_one_impl);
     body.into()
+}
+
+struct ParamInfo {
+    ident: Option<syn::Ident>,
+    ty: syn::Type,
+    param: Option<usize>,
+}
+
+impl ParamInfo {
+    fn from_fields(fields: &[&syn::Field]) -> Vec<ParamInfo> {
+        fields.iter().map(|field| {
+            let ident = field.ident.clone();
+            let ty = field.ty.clone();
+            let mut param = None;
+
+            for attr in &field.attrs {
+                if attr.path().is_ident("aykroyd") {
+                    attr.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("param") {
+                            let value = meta.value()?;
+                            let inner = value.parse()?;
+
+                            let inner = match inner {
+                                syn::Lit::Int(n) => {
+                                    let value: usize = n.base10_parse()
+                                        .map_err(|e| meta.error(e.to_string()))?;
+                                    value
+                                }
+                                syn::Lit::Str(s) => {
+                                    let text = s.value();
+                                    let text = text.strip_prefix('$').unwrap_or(&text);
+                                    let value: usize = text.parse()
+                                        .map_err(|_| meta.error("invalid param"))?;
+                                    value
+                                }
+                                _ => return Err(meta.error("invalid param")),
+                            };
+
+                            param = Some(inner);
+                            return Ok(());
+                        }
+
+                        Err(meta.error("unrecognized attr"))
+                    })
+                    .unwrap();
+                }
+            }
+
+            ParamInfo { ident, ty, param }
+        }).collect()
+    }
 }
 
 fn simplify(generics: &syn::Generics) -> proc_macro2::TokenStream {
@@ -224,20 +299,33 @@ fn impl_static_query_text(
 fn impl_to_params(
     name: &syn::Ident,
     generics: &syn::Generics,
-    fields: &syn::Fields,
+    fields: &[ParamInfo],
 ) -> proc_macro2::TokenStream {
-    let fields = match &fields {
-        syn::Fields::Unit => vec![],
-        syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
-        | syn::Fields::Unnamed(syn::FieldsUnnamed {
-            unnamed: fields, ..
-        }) => fields.into_iter().collect(),
-    };
-
     let mut params = vec![];
     let mut wheres = vec![];
 
-    for (index, field) in fields.iter().enumerate() {
+    let mut has_index = std::collections::HashMap::new();
+    let mut no_index = std::collections::VecDeque::new();
+
+    for field in fields {
+        match &field.param {
+            Some(param) => {
+                has_index.insert(param, field);
+            }
+            None => {
+                no_index.push_front(field);
+            }
+        }
+    }
+
+    for index in 0..fields.len() {
+        let param = index + 1;
+        let field = if has_index.contains_key(&param) {
+            has_index.remove(&param).expect("index")
+        } else {
+            no_index.pop_back().expect("noindex")
+        };
+
         let name = match &field.ident {
             Some(name) => quote!(#name),
             None => {
