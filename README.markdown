@@ -2,7 +2,7 @@
 
 All database queries are represented by a plain Rust struct that implements
 either `Statement` or `Query` (and maybe `QueryOne`).  These trait implementations
-logically binds the SQL text to the types of the inputs, and the `Query` or
+logically bind the SQL text to the types of the inputs, and the `Query` or
 `QueryOne` implementation does the same for the output rows.  This lets the
 struct act as an event-sourcing layer between your application and the database.
 
