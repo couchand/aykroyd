@@ -16,7 +16,12 @@ use r2d2::ManageConnection;
 /// ```no_run
 /// use std::thread;
 /// use postgres::NoTls;
-/// use r2d2_aykroyd::AykroydConnectionManager;
+/// use r2d2_aykroyd::postgres::AykroydConnectionManager;
+/// use aykroyd::Statement;
+///
+/// #[derive(Statement)]
+/// #[aykroyd(text = "INSERT INTO foo(bar) VALUES ($1)")]
+/// struct InsertFoo(i32);
 ///
 /// fn main() {
 ///     let manager = AykroydConnectionManager::new(
@@ -29,7 +34,7 @@ use r2d2::ManageConnection;
 ///         let pool = pool.clone();
 ///         thread::spawn(move || {
 ///             let mut client = pool.get().unwrap();
-///             client.execute("INSERT INTO foo (bar) VALUES ($1)", &[&i]).unwrap();
+///             client.execute(&InsertFoo(i)).unwrap();
 ///         });
 ///     }
 /// }
