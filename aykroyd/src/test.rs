@@ -5,6 +5,8 @@ use crate::query::{QueryText, StaticQueryText, ToParams};
 use crate::row::{ColumnsIndexed, ColumnsNamed, FromColumnsIndexed, FromColumnsNamed};
 use crate::*;
 
+#[cfg(feature = "derive")]
+pub mod derive;
 pub mod sync_client;
 
 struct FakeRow {

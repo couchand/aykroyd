@@ -1,0 +1,5 @@
+error: expected column name
+ --> tests/from-row/column-mismatch.rs:7:24
+  |
+7 |     #[aykroyd(column = 0)]
+  |                        ^

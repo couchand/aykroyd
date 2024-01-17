@@ -1,0 +1,5 @@
+error: expected column index
+ --> tests/from-row/column-index-mismatch.rs:6:24
+  |
+6 |     #[aykroyd(column = "one")]
+  |                        ^^^^^

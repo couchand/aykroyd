@@ -54,3 +54,4 @@ optional = true
 async-trait = "0.1"
 rust_decimal = { version = "1", features = ["db-tokio-postgres"] }
 tokio = { version = "1", features = ["full"] }
+trybuild = { version = "1" }

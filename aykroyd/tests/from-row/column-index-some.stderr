@@ -1,0 +1,5 @@
+error: expected column index
+ --> tests/from-row/column-index-some.rs:7:15
+  |
+7 |     column_0: i32,
+  |               ^^^
