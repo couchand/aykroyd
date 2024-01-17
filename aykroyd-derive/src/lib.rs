@@ -341,17 +341,18 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         syn::Data::Union(_) => panic!("Cannot derive FromRow on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
-    let tuple_struct = match &fields {
+    let tuple_struct = match fields {
         syn::Fields::Unit | syn::Fields::Unnamed(_) => true,
         syn::Fields::Named(_) => false,
     };
-    let fields = match &fields {
+    let fields = match fields {
         syn::Fields::Unit => vec![],
         syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
         | syn::Fields::Unnamed(syn::FieldsUnnamed {
             unnamed: fields, ..
-        }) => fields.into_iter().collect(),
+        }) => fields.iter().collect(),
     };
+    let fields = FieldInfo::from_fields(&fields);
 
     let mut key = None;
 
@@ -376,6 +377,10 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         .unwrap();
     }
 
+    let key = match FieldInfo::key_for(key, &fields) {
+        Err(message) => return message.into(),
+        Ok(key) => key,
+    };
     let key = key.unwrap_or(if tuple_struct { Key::Index } else { Key::Name });
 
     let from_columns_impl = impl_from_columns(key, name, tuple_struct, &fields[..]);
@@ -396,17 +401,21 @@ pub fn derive_from_columns_indexed(input: proc_macro::TokenStream) -> proc_macro
         syn::Data::Union(_) => panic!("Cannot derive FromColumnsIndexed on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
-    let tuple_struct = match &fields {
+    let tuple_struct = match fields {
         syn::Fields::Unit | syn::Fields::Unnamed(_) => true,
         syn::Fields::Named(_) => false,
     };
-    let fields = match &fields {
+    let fields = match fields {
         syn::Fields::Unit => vec![],
         syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
         | syn::Fields::Unnamed(syn::FieldsUnnamed {
             unnamed: fields, ..
-        }) => fields.into_iter().collect(),
+        }) => fields.iter().collect(),
     };
+    let fields = FieldInfo::from_fields(&fields);
+    if let Err(message) = FieldInfo::assert_key(Key::Index, &fields) {
+        return message.into();
+    }
 
     let body = impl_from_columns(Key::Index, name, tuple_struct, &fields[..]);
     body.into()
@@ -423,42 +432,135 @@ pub fn derive_from_columns_named(input: proc_macro::TokenStream) -> proc_macro::
         syn::Data::Union(_) => panic!("Cannot derive FromColumnsNamed on union!"),
         syn::Data::Struct(s) => &s.fields,
     };
-    let tuple_struct = match &fields {
+    let tuple_struct = match fields {
         syn::Fields::Unit | syn::Fields::Unnamed(_) => true,
         syn::Fields::Named(_) => false,
     };
-    let fields = match &fields {
+    let fields = match fields {
         syn::Fields::Unit => vec![],
         syn::Fields::Named(syn::FieldsNamed { named: fields, .. })
         | syn::Fields::Unnamed(syn::FieldsUnnamed {
             unnamed: fields, ..
-        }) => fields.into_iter().collect(),
+        }) => fields.iter().collect(),
     };
+    let fields = FieldInfo::from_fields(&fields);
+    if let Err(message) = FieldInfo::assert_key(Key::Index, &fields) {
+        return message.into();
+    }
 
     let body = impl_from_columns(Key::Name, name, tuple_struct, &fields[..]);
     body.into()
 }
 
-fn select_from_columns_delegate(attrs: &[syn::Attribute]) -> Delegate {
-    for attr in attrs {
-        if attr.path().is_ident("aykroyd") {
-            let mut delegate = None;
-            attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("nested") {
-                    delegate = Some(Delegate::FromColumns);
-                }
+struct FieldInfo {
+    ident: Option<syn::Ident>,
+    ty: syn::Type,
+    nested: bool,
+    column: Option<syn::Lit>,
+}
 
-                // TODO: centralize parsing!
-                Ok(())
-            })
-            .unwrap();
-            if let Some(delegate) = delegate {
-                return delegate;
+impl FieldInfo {
+    fn from_fields(fields: &[&syn::Field]) -> Vec<FieldInfo> {
+        fields.iter().map(|field| {
+            let ident = field.ident.clone();
+            let ty = field.ty.clone();
+            let mut nested = false;
+            let mut column = None;
+
+            for attr in &field.attrs {
+                if attr.path().is_ident("aykroyd") {
+                    attr.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("nested") {
+                            nested = true;
+                            return Ok(());
+                        }
+
+                        if meta.path.is_ident("column") {
+                            let value = meta.value()?;
+                            let inner = value.parse()?;
+                            column = Some(inner);
+                            return Ok(());
+                        }
+
+                        Err(meta.error("unrecognized attr"))
+                    })
+                    .unwrap();
+                }
             }
-        }
+
+            FieldInfo { ident, ty, nested, column }
+        }).collect()
     }
 
-    Delegate::FromColumn
+    fn assert_key(
+        expected: Key,
+        fields: &[FieldInfo],
+    ) -> Result<Option<Key>, proc_macro2::TokenStream> {
+        FieldInfo::key_for(Some(expected), fields)
+    }
+
+    fn key_for(
+        expected: Option<Key>,
+        fields: &[FieldInfo],
+    ) -> Result<Option<Key>, proc_macro2::TokenStream> {
+        let key = fields
+            .iter()
+            .find_map(|field| field.column.as_ref())
+            .map(|lit| {
+                match lit {
+                    syn::Lit::Int(_) => Ok(Key::Index),
+                    syn::Lit::Str(_) => Ok(Key::Name),
+                    _ => {
+                        Err(quote::quote_spanned! {
+                            lit.span() => compile_error!("invalid column key");
+                        })
+                    }
+                }
+            })
+            .transpose()?;
+
+        if let Some(key) = key {
+            let key = expected.unwrap_or(key);
+            for field in fields {
+                match key {
+                    Key::Index => {
+                        match &field.column {
+                            Some(syn::Lit::Int(_)) => {}
+                            Some(lit) => {
+                                return Err(quote::quote_spanned! {
+                                    lit.span() => compile_error!("expected column index");
+                                });
+                            }
+                            None => {
+                                use syn::spanned::Spanned;
+                                return Err(quote::quote_spanned! {
+                                    field.ty.span() => compile_error!("expected column index");
+                                });
+                            }
+                        }
+                    }
+                    Key::Name => {
+                        match &field.column {
+                            Some(syn::Lit::Str(_)) => {}
+                            Some(lit) => {
+                                return Err(quote::quote_spanned! {
+                                    lit.span() => compile_error!("expected column name");
+                                });
+                            }
+                            None => {
+                                use syn::spanned::Spanned;
+                                return Err(quote::quote_spanned! {
+                                    field.ty.span() => compile_error!("expected column name");
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(key)
+    }
 }
 
 fn impl_from_row(key: Key, name: &syn::Ident) -> proc_macro2::TokenStream {
@@ -489,7 +591,7 @@ fn impl_from_columns(
     key: Key,
     name: &syn::Ident,
     tuple_struct: bool,
-    fields: &[&syn::Field],
+    fields: &[FieldInfo],
 ) -> proc_macro2::TokenStream {
     let mut wheres = vec![];
     let mut num_const = 0;
@@ -497,7 +599,11 @@ fn impl_from_columns(
     let mut field_puts = vec![];
     for (index, field) in fields.iter().enumerate() {
         let ty = &field.ty;
-        let delegate = select_from_columns_delegate(&field.attrs);
+        let delegate = if field.nested {
+            Delegate::FromColumns
+        } else {
+            Delegate::FromColumn
+        };
 
         {
             use Delegate::*;
@@ -518,37 +624,56 @@ fn impl_from_columns(
             };
             let key = match key {
                 Key::Index => {
-                    // TODO: explicit index
-                    let num_const = syn::LitInt::new(
-                        &format!("{num_const}usize"),
-                        proc_macro2::Span::call_site(),
-                    );
-                    quote!(#num_const #(#plus_nesteds)*)
+                    match &field.column {
+                        Some(index) => {
+                            quote!(#index)
+                        }
+                        None => {
+                            let num_const = syn::LitInt::new(
+                                &format!("{num_const}usize"),
+                                proc_macro2::Span::call_site(),
+                            );
+                            quote!(#num_const #(#plus_nesteds)*)
+                        }
+                    }
                 }
                 Key::Name => {
-                    // TODO: explicit name
-                    let name = field
-                        .ident
-                        .as_ref()
-                        .map(ToString::to_string)
-                        .unwrap_or_else(|| index.to_string());
-
-                    let name = match delegate {
-                        Delegate::FromColumn => name,
-                        Delegate::FromColumns => {
-                            // TODO: explicit name as prefix
-                            let mut s = name;
-                            s.push('_');
-                            s
+                    match &field.column {
+                        Some(name) => {
+                            quote!(#name)
                         }
-                    };
-                    quote!(#name)
+                        None => {
+                            let name = field
+                                .ident
+                                .as_ref()
+                                .map(ToString::to_string)
+                                .unwrap_or_else(|| index.to_string());
+
+                            let name = match delegate {
+                                Delegate::FromColumn => name,
+                                Delegate::FromColumns => {
+                                    let mut s = name;
+                                    s.push('_');
+                                    s
+                                }
+                            };
+                            quote!(#name)
+                        }
+                    }
                 }
             };
             field_puts.push(match &field.ident {
                 Some(field_name) => quote!(#field_name: columns.#get_method(#key)?),
                 None => quote!(columns.#get_method(#key)?),
             });
+        }
+
+        if let Some(lit) = &field.column {
+            if let syn::Lit::Int(index) = lit {
+                let index: usize = index.base10_parse().unwrap();
+                num_const = index;
+                plus_nesteds.clear();
+            }
         }
 
         match delegate {

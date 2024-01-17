@@ -76,6 +76,37 @@ pub struct SalesByMonth;
 ```
 "##)]
 ///
+/// If the default mapping is not sufficient, you can control what column
+/// the field is taken from.  This is useful for renaming columns:
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::FromRow;
+#[derive(FromRow)]
+pub struct Widget {
+    #[aykroyd(column = "type")]
+    pub ty: String,
+}
+```
+"##)]
+///
+/// You can assign explicit column indexes to each field, too.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::FromRow;
+#[derive(FromRow)]
+pub struct Widget {
+    #[aykroyd(column = 4)]
+    pub ty: String,
+}
+```
+"##)]
+///
 /// You can also load nested rows, as long as they use the same
 /// column loading strategy.  Use this to share models between queries,
 /// load associations, etc.
