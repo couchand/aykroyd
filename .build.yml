@@ -22,4 +22,4 @@ tasks:
     - test: |
         source "$HOME/.cargo/env"
         cd aykroyd
-        cargo test --all-features
+        cargo test --all-features --workspace
