@@ -38,6 +38,7 @@ use r2d2::ManageConnection;
 ///         });
 ///     }
 /// }
+#[derive(Debug)]
 /// ```
 pub struct AykroydConnectionManager<Tls> {
     inner: r2d2_postgres::PostgresConnectionManager<Tls>,

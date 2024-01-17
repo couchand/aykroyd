@@ -14,11 +14,16 @@ type RecycleError = deadpool::managed::RecycleError<tokio_postgres::Error>;
 
 pub use deadpool_postgres::{ManagerConfig, RecyclingMethod};
 
+/// An object managed by this pool, parameterized on TLS.
 pub type Object<T> = deadpool::managed::Object<Manager<T>>;
+/// The pool type, parameterized on TLS.
 pub type Pool<T> = deadpool::managed::Pool<Manager<T>, deadpool::managed::Object<Manager<T>>>;
+/// A builder for the pool type, parameterized on TLS.
 pub type PoolBuilder<T> = deadpool::managed::PoolBuilder<Manager<T>>;
+/// This pool's error type.
 pub type PoolError = deadpool::managed::PoolError<tokio_postgres::Error>;
 
+/// A manager for `aykroyd` database connections.
 #[derive(Debug)]
 pub struct Manager<T> {
     config: ManagerConfig,
@@ -27,10 +32,12 @@ pub struct Manager<T> {
 }
 
 impl<T> Manager<T> {
+    /// Create a pool manager from the given `tokio_postgres::Config`, with the default `ManagerConfig`.
     pub fn new(pg_config: tokio_postgres::Config, tls: T) -> Self {
         Self::from_config(pg_config, tls, ManagerConfig::default())
     }
 
+    /// Create a pool manager from the given `tokio_postgres::Config` and `ManagerConfig`.
     pub fn from_config(pg_config: tokio_postgres::Config, tls: T, config: ManagerConfig) -> Self {
         Manager { config, pg_config, tls }
     }
