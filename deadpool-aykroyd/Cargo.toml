@@ -6,7 +6,7 @@ description = "Aykroyd micro-ORM for the deadpool connection pool."
 license = "MIT"
 authors = ["Andrew Dona-Couch <aykroyd@couchand.com>"]
 repository = "https://git.sr.ht/~couch/aykroyd"
-readme = "./README.markdown"
+readme = "./README.md"
 documentation = "https://docs.rs/deadpool-aykroyd/latest/deadpool_aykroyd/"
 
 [features]
