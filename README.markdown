@@ -1,4 +1,4 @@
-# aykroyd: An opinionated micro-ORM for PostgreSQL.
+# aykroyd: An opinionated micro-ORM for Rust.
 
 All database queries are represented by a plain Rust struct that implements
 either `Statement` or `Query` (and maybe `QueryOne`).  These trait implementations
