@@ -1,6 +1,6 @@
 [package]
 name = "r2d2-aykroyd"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Aykroyd micro-ORM for the r2d2 connection pool."
 license = "MIT"
@@ -9,8 +9,13 @@ repository = "https://git.sr.ht/~couch/aykroyd"
 readme = "./README.markdown"
 documentation = "https://docs.rs/r2d2-aykroyd/latest/r2d2_aykroyd/"
 
+[features]
+default = []
+
+postgres = ["aykroyd/postgres", "dep:postgres", "dep:r2d2_postgres"]
+
 [dependencies]
-aykroyd = { version = "0.2", features = ["sync"], path = "../aykroyd" }
+aykroyd = { version = "0.3", path = "../aykroyd" }
 r2d2 = "0.8"
-r2d2_postgres = "0.18"
-postgres = "0.19"
+r2d2_postgres = { version = "0.18", optional = true }
+postgres = { version = "0.19", optional = true }
