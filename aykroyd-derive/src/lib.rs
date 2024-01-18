@@ -70,8 +70,7 @@ impl StatementInfo {
                 let value = meta.value()?;
                 let filename: syn::LitStr = value.parse()?;
                 let path = std::path::PathBuf::from("queries").join(filename.value());
-                //panic!("{} - {}", std::env::current_dir().unwrap().display(), path.display());
-                let source = std::fs::read_to_string(&path).unwrap();
+                let source = std::fs::read_to_string(path).unwrap();
                 file = Some(source);
                 return Ok(());
             }
@@ -184,8 +183,7 @@ impl QueryInfo {
                 let value = meta.value()?;
                 let filename: syn::LitStr = value.parse()?;
                 let path = std::path::PathBuf::from("queries").join(filename.value());
-                //panic!("{} - {}", std::env::current_dir().unwrap().display(), path.display());
-                let source = std::fs::read_to_string(&path).unwrap();
+                let source = std::fs::read_to_string(path).unwrap();
                 file = Some(source);
                 return Ok(());
             }
