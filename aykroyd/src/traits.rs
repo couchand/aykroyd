@@ -244,6 +244,29 @@ pub struct InsertCustomer<'a> {
 ```
 "##
 )]
+///
+/// The query text can be provided inline, as above, or loaded from
+/// a file.  The path is relative to a `queries` directory at the
+/// root of the crate.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Statement;
+#[derive(Statement)]
+#[aykroyd(file = "insert-customer.sql")]
+pub struct InsertCustomer<'a> {
+    #[aykroyd(param = "$1")]
+    pub first: &'a str,
+    #[aykroyd(param = "$3")]
+    pub middle: &'a str,
+    #[aykroyd(param = "$2")]
+    pub last: &'a str,
+}
+```
+"##
+)]
 pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 
 /// A database query that returns zero or more result rows.
