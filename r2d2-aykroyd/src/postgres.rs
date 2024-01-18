@@ -1,3 +1,4 @@
+#![allow(clippy::needless_doctest_main)]
 //! Aykroyd PostgreSQL support.
 
 pub use aykroyd;

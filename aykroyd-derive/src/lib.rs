@@ -751,12 +751,10 @@ fn impl_from_columns(
             });
         }
 
-        if let Some(lit) = &field.column {
-            if let syn::Lit::Int(index) = lit {
-                let index: usize = index.base10_parse().unwrap();
-                num_const = index;
-                plus_nesteds.clear();
-            }
+        if let Some(syn::Lit::Int(index)) = &field.column {
+            let index: usize = index.base10_parse().unwrap();
+            num_const = index;
+            plus_nesteds.clear();
         }
 
         match delegate {

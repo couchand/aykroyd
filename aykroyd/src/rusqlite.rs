@@ -1,3 +1,4 @@
+#![allow(clippy::redundant_closure)]
 //! Sqlite bindings.
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};

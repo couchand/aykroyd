@@ -320,7 +320,7 @@ impl Client {
 
         let rows_affected = self
             .client
-            .execute(&statement, &params)
+            .execute(&statement, params)
             .await
             .map_err(Error::query)?;
 
@@ -455,7 +455,7 @@ impl<'a> Transaction<'a> {
 
         let rows = self
             .txn
-            .query(&statement, &params)
+            .query(&statement, params)
             .await
             .map_err(Error::query)?;
 
@@ -591,7 +591,7 @@ impl<'a> Transaction<'a> {
 
         let rows_affected = self
             .txn
-            .execute(&statement, &params)
+            .execute(&statement, params)
             .await
             .map_err(Error::query)?;
 
