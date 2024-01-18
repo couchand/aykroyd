@@ -3,6 +3,16 @@
 version = 3
 
 [[package]]
+name = "async"
+version = "0.1.0"
+dependencies = [
+ "aykroyd",
+ "common",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,25 +122,6 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "subtle",
-]
-
-[[package]]
-name = "example-async"
-version = "0.1.0"
-dependencies = [
- "aykroyd",
- "common",
- "tokio",
- "tokio-postgres",
-]
-
-[[package]]
-name = "example-sync"
-version = "0.1.0"
-dependencies = [
- "aykroyd",
- "common",
- "postgres",
 ]
 
 [[package]]
@@ -557,6 +548,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "sync"
+version = "0.1.0"
+dependencies = [
+ "aykroyd",
+ "common",
+ "postgres",
 ]
 
 [[package]]

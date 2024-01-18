@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
+    "async",
     "common",
-    "example-sync",
-    "example-async",
+    "sync",
 ]

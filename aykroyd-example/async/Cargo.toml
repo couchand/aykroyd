@@ -1,5 +1,5 @@
 [package]
-name = "example-async"
+name = "async"
 version = "0.1.0"
 edition = "2021"
 
