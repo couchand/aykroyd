@@ -1,5 +1,0 @@
-error: expected column name
- --> tests/from-row/column-name-some.rs:7:15
-  |
-7 |     column_0: i32,
-  |               ^^^

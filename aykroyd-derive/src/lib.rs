@@ -635,12 +635,7 @@ impl FieldInfo {
                                     lit.span() => compile_error!("expected column name");
                                 });
                             }
-                            None => {
-                                use syn::spanned::Spanned;
-                                return Err(quote::quote_spanned! {
-                                    field.ty.span() => compile_error!("expected column name");
-                                });
-                            }
+                            None => {} // n.b. not all named columns need explicit names
                         }
                     }
                 }

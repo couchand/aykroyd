@@ -3,7 +3,7 @@
 use aykroyd::row::FromColumnsIndexed;
 use aykroyd::{FromRow, Query, QueryOne, Statement};
 
-use super::sync_client::TestClient;
+use super::sync_client::{TestClient, RowInner};
 
 #[test]
 fn compile_fail() {
@@ -80,6 +80,33 @@ fn implicit_column_count_nested() {
     }
 
     assert_num_columns::<Row>(6);
+}
+
+#[test]
+fn explicit_names_mixed() {
+    #[derive(FromRow)]
+    struct Row {
+        one: String,
+        #[aykroyd(column = "two")]
+        other: String,
+    }
+
+    #[derive(Query)]
+    #[aykroyd(row(Row), text = "")]
+    struct Query;
+
+    let mut client = TestClient::new();
+    let row = RowInner {
+        names: vec!["two".into(), "one".into()],
+        values: vec!["second".into(), "first".into()],
+    };
+    client.push_query_result(Ok(vec![row]));
+
+    let result = client.query(&Query).unwrap();
+
+    assert_eq!(1, result.len());
+    assert_eq!("first", result[0].one);
+    assert_eq!("second", result[0].other);
 }
 
 #[test]
