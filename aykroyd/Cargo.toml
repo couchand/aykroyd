@@ -1,6 +1,6 @@
 [package]
 name = "aykroyd"
-description = "An opinionated micro-ORM for PostgreSQL."
+description = "Zero-overhead ergonomic data access for Rust."
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
