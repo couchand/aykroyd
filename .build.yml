@@ -31,3 +31,11 @@ tasks:
         source "$HOME/.cargo/env"
         cd aykroyd
         cargo clippy --all-features --all-targets --workspace
+    - test_example: |
+        source "$HOME/.cargo/env"
+        cd aykroyd/aykroyd-example
+        cargo test --all-features --workspace
+    - clippy_example: |
+        source "$HOME/.cargo/env"
+        cd aykroyd/aykroyd-example
+        cargo clippy --all-features --all-targets --workspace
