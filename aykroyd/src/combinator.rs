@@ -116,6 +116,7 @@ use crate::{FromRow, Query, QueryOne, Statement};
 /// A query that could be one of two options.
 ///
 /// See the [module docs](crate::combinator) for more details.
+#[derive(Debug)]
 pub enum Either<A, B> {
     Left(A),
     Right(B),

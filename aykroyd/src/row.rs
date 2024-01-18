@@ -4,6 +4,7 @@ use crate::client::{Client, FromColumnIndexed, FromColumnNamed};
 use crate::error::Error;
 
 /// The columns of a result row by index.
+#[derive(Debug)]
 pub struct ColumnsIndexed<'a, 'b, C: Client> {
     row: &'a C::Row<'b>,
     offset: usize,
@@ -41,6 +42,7 @@ impl<'a, 'b, C: Client> ColumnsIndexed<'a, 'b, C> {
 }
 
 /// The columns of a result row by name.
+#[derive(Debug)]
 pub struct ColumnsNamed<'a, 'b, C: Client> {
     row: &'a C::Row<'b>,
     prefix: String,
