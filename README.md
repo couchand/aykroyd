@@ -126,3 +126,16 @@ async fn main() -> Result<(), Error> {
 
     Ok(())
 }
+```
+
+### More Details
+
+See the example project directory `aykroyd-example` for more details.
+
+## Contributing
+
+We'd be lucky to have your help.  Join the
+[mailing list](https://lists.sr.ht/~couch/aykroyd-dev) and say hello,
+take a look at the [issue tracker](https://todo.sr.ht/~couch/aykroyd)
+to see if anything looks interesting.  Please see the `CONTRIBUTING.md`
+file for more information.
