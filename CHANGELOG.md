@@ -28,15 +28,15 @@ Like most crates in the Rust ecosystem this project adheres to
 - Queries loaded from file are now taken from a `queries` directory
   at the crate root.
 
-## [v0.2.0] - 2023-04-18 ([Log][v0.2.0-log])
+## [v0.2.0] - 2023-12-11 ([Log][v0.2.0-log])
 
 - The feature `derive` is no longer default.
 
-## [v0.1.1] - 2020-08-12 ([Log][v0.1.1-log])
+## [v0.1.1] - 2020-12-11 ([Log][v0.1.1-log])
 
 - Documentation has been improved.
 
-## [v0.1.0] - 2020-08-12 ([Log][v0.1.0-log])
+## [v0.1.0] - 2020-12-11 ([Log][v0.1.0-log])
 
 - Initial release of `aykroyd`.
 - Traits for `Query`, `QueryOne`, and `Statement` types, binding
