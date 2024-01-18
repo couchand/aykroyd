@@ -174,7 +174,7 @@ impl TestClient {
             }),
             kind: Kind::Query,
         });
-        self.query_results.pop().unwrap().and_then(|rows| {
+        self.query_results.pop().unwrap_or_else(|| Ok(vec![])).and_then(|rows| {
             let statement = TestStatement::new(self);
             FromRow::from_rows(&statement.execute(rows))
         })

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use aykroyd::row::FromColumnsIndexed;
-use aykroyd::{FromRow, Statement};
+use aykroyd::{FromRow, Query, QueryOne, Statement};
 
 use super::sync_client::TestClient;
 
@@ -95,6 +95,60 @@ fn statement_explicit_param() {
     let mut client = TestClient::new();
 
     client.execute(&MyStatement {
+        first: "first",
+        second: "second",
+    }).unwrap();
+
+    let records = client.records();
+    assert_eq!(1, records.len());
+    assert!(records[0].params.is_some());
+
+    let params = records[0].params.as_ref().unwrap();
+    assert_eq!(2, params.len());
+    assert_eq!("first", params[0]);
+    assert_eq!("second", params[1]);
+}
+
+#[test]
+fn query_explicit_param() {
+    #[derive(Query)]
+    #[aykroyd(row(()), text = "")]
+    struct MyStatement<'a> {
+        #[aykroyd(param = "$2")]
+        second: &'a str,
+        first: &'a str,
+    }
+
+    let mut client = TestClient::new();
+
+    client.query(&MyStatement {
+        first: "first",
+        second: "second",
+    }).unwrap();
+
+    let records = client.records();
+    assert_eq!(1, records.len());
+    assert!(records[0].params.is_some());
+
+    let params = records[0].params.as_ref().unwrap();
+    assert_eq!(2, params.len());
+    assert_eq!("first", params[0]);
+    assert_eq!("second", params[1]);
+}
+
+#[test]
+fn query_one_explicit_param() {
+    #[derive(QueryOne)]
+    #[aykroyd(row(()), text = "")]
+    struct MyStatement<'a> {
+        #[aykroyd(param = "$2")]
+        second: &'a str,
+        first: &'a str,
+    }
+
+    let mut client = TestClient::new();
+
+    client.query_opt(&MyStatement {
         first: "first",
         second: "second",
     }).unwrap();
