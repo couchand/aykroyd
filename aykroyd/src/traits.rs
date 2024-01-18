@@ -156,18 +156,18 @@ macro_rules! impl_tuple_from_row {
     (
         $(
             $name:ident
-        ),+
+        ),*
         $(,)?
     ) => {
         impl<
             C,
             $(
                 $name,
-            )+
-        > FromRow<C> for ($($name,)+)
+            )*
+        > FromRow<C> for ($($name,)*)
         where
             C: Client,
-            ($($name,)+): FromColumnsIndexed<C>,
+            ($($name,)*): FromColumnsIndexed<C>,
         {
             fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>> {
                 FromColumnsIndexed::from_columns(ColumnsIndexed::new(row))
@@ -176,6 +176,7 @@ macro_rules! impl_tuple_from_row {
     };
 }
 
+impl_tuple_from_row!();
 impl_tuple_from_row!(T0);
 impl_tuple_from_row!(T0, T1);
 impl_tuple_from_row!(T0, T1, T2);

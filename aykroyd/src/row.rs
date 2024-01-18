@@ -202,37 +202,39 @@ pub use aykroyd_derive::{FromColumnsIndexed, FromColumnsNamed};
 
 macro_rules! impl_tuple_from_columns_indexed {
     (
-        $num_columns:literal :
+        $num_columns:literal $(:)?
         $(
             $name:ident $index:literal
-        ),+
+        ),*
         $(,)?
     ) => {
         impl<
             C,
             $(
                 $name,
-            )+
-        > FromColumnsIndexed<C> for ($($name,)+)
+            )*
+        > FromColumnsIndexed<C> for ($($name,)*)
         where
             C: Client,
             $(
                 $name: FromColumnIndexed<C>,
-            )+
+            )*
         {
             const NUM_COLUMNS: usize = $num_columns;
 
+            #[allow(unused_variables)]
             fn from_columns(
                 columns: ColumnsIndexed<C>,
             ) -> Result<Self, Error<C::Error>> {
                 Ok(($(
                     columns.get($index)?,
-                )+))
+                )*))
             }
         }
     };
 }
 
+impl_tuple_from_columns_indexed!(0);
 impl_tuple_from_columns_indexed!(1: T0 0);
 impl_tuple_from_columns_indexed!(2: T0 0, T1 1);
 impl_tuple_from_columns_indexed!(3: T0 0, T1 1, T2 2);
