@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aykroyd = { path = "../../aykroyd", features = ["sync"] }
+aykroyd = { path = "../../aykroyd", features = ["postgres"] }
 common = { path = "../common" }
 
 postgres = "0.19"

@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-akroyd = { path = "../../akroyd", features = ["derive"] }
+aykroyd = { path = "../../aykroyd", features = ["derive"] }

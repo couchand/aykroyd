@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aykroyd = { path = "../../aykroyd", features = ["async"] }
+aykroyd = { path = "../../aykroyd", features = ["tokio-postgres"] }
 common = { path = "../common" }
 
 tokio-postgres = "0.7"

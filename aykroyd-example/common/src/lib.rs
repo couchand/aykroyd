@@ -1,7 +1,7 @@
 use aykroyd::*;
 
 #[derive(Query)]
-#[query(text = "SELECT id, name FROM customers", row(Customer))]
+#[aykroyd(text = "SELECT id, name FROM customers", row(Customer))]
 pub struct GetCustomers;
 
 #[derive(Debug, FromRow)]
@@ -21,49 +21,47 @@ impl Customer {
 }
 
 #[derive(Query)]
-#[query(file = "get_customers.sql", row(Customer2))]
+#[aykroyd(file = "get_customers.sql", row(Customer2))]
 pub struct GetCustomers2;
 
 #[derive(Debug, FromRow)]
 pub struct Customer2(i32, String);
 
 #[derive(Query)]
-#[query(file = "get_customers.sql", row(Customer3))]
+#[aykroyd(file = "get_customers.sql", row(Customer3))]
 pub struct GetCustomers3;
 
 #[derive(Debug, FromRow)]
 pub struct Customer3 {
-    #[query(column = 0)]
+    #[aykroyd(column = 0)]
     pub database_id: i32,
-    #[query(column = 1)]
+    #[aykroyd(column = 1)]
     pub customer_name: String,
 }
 
 #[derive(Query)]
-#[query(file = "get_customers.sql", row(Customer4))]
+#[aykroyd(file = "get_customers.sql", row(Customer4))]
 pub struct GetCustomers4;
 
 #[derive(Debug, FromRow)]
 pub struct Customer4(
-    #[query(column = "id")] i32,
-    #[query(column = "name")] String,
+    #[aykroyd(column = "id")] i32,
+    #[aykroyd(column = "name")] String,
 );
 
-#[derive(Statement)]
-#[query(text = "SELECT id, name FROM customers", row((i32, String)))]
+#[derive(Query)]
+#[aykroyd(text = "SELECT id, name FROM customers", row((i32, String)))]
 pub struct GetCustomers5;
 
-impl Query for GetCustomers5 {}
-
 #[derive(Query)]
-#[query(
+#[aykroyd(
     text = "SELECT name, id FROM customers WHERE name LIKE $1",
     row(Customer)
 )]
 pub struct SearchCustomersByName<'a>(pub &'a str);
 
 #[derive(QueryOne)]
-#[query(text = "SELECT id, name FROM customers WHERE id = $1", row(Customer))]
+#[aykroyd(text = "SELECT id, name FROM customers WHERE id = $1", row(Customer))]
 pub struct GetCustomer {
     id: i32,
 }
@@ -75,9 +73,9 @@ impl GetCustomer {
 }
 
 #[derive(Statement)]
-#[query(text = "INSERT INTO customers (id, name) VALUES ($1, $2)")]
+#[aykroyd(text = "INSERT INTO customers (id, name) VALUES ($1, $2)")]
 pub struct InsertCustomer<'a> {
-    #[query(param = "$2")]
+    #[aykroyd(param = "$2")]
     pub name: &'a str,
     pub id: i32,
 }

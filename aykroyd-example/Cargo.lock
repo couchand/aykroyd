@@ -3,27 +3,6 @@
 version = 3
 
 [[package]]
-name = "akroyd"
-version = "0.1.0"
-dependencies = [
- "akroyd-derive",
- "async-trait",
- "bytes",
- "futures-util",
- "postgres",
- "tokio-postgres",
-]
-
-[[package]]
-name = "akroyd-derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "async-trait"
 version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -39,6 +18,25 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
+
+[[package]]
+name = "aykroyd"
+version = "0.3.0"
+dependencies = [
+ "aykroyd-derive",
+ "postgres",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "aykroyd-derive"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "base64"
@@ -83,7 +81,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "common"
 version = "0.1.0"
 dependencies = [
- "akroyd",
+ "aykroyd",
 ]
 
 [[package]]
@@ -120,7 +118,7 @@ dependencies = [
 name = "example-async"
 version = "0.1.0"
 dependencies = [
- "akroyd",
+ "aykroyd",
  "common",
  "tokio",
  "tokio-postgres",
@@ -130,7 +128,7 @@ dependencies = [
 name = "example-sync"
 version = "0.1.0"
 dependencies = [
- "akroyd",
+ "aykroyd",
  "common",
  "postgres",
 ]

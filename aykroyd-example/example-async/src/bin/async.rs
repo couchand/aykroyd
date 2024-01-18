@@ -1,7 +1,7 @@
-use aykroyd::async_client::{connect, Client};
+use aykroyd::tokio_postgres::{connect, Client, Error};
 use common::*;
 
-async fn run_test(client: &mut Client) -> Result<(), tokio_postgres::Error> {
+async fn run_test(client: &mut Client) -> Result<(), Error> {
     client.prepare::<InsertCustomer>().await?;
     let tim = "Tim";
 

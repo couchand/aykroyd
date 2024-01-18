@@ -1,7 +1,7 @@
-use aykroyd::sync_client::Client;
+use aykroyd::postgres::{Client, Error};
 use common::*;
 
-fn run_test(client: &mut Client) -> Result<(), postgres::Error> {
+fn run_test(client: &mut Client) -> Result<(), Error> {
     let tim = "Tim";
 
     println!("Inserting test data...");
