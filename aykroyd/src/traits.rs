@@ -294,6 +294,55 @@ struct GetAllTodos;
 ```
 "##
 )]
+///
+/// Just as with a [`Statement`], a `Query` can have parameters,
+/// taken in source order.
+/// For queries with more than a handful of parameters, this can get
+/// error-prone. Help ensure that the struct fields and the query text
+/// stay in sync by annotating parameter index on the fields.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Query;
+# #[derive(aykroyd::FromRow)]
+# struct Pet;
+#[derive(Query)]
+#[aykroyd(row(Pet), text = "
+    SELECT first_name, last_name, species
+    FROM pet
+    WHERE first_name = $1
+    AND last_name = $2
+    AND species = $3
+")]
+struct SearchPets<'a> {
+    #[aykroyd(param = "$3")]
+    pub species: &'a str,
+    #[aykroyd(param = "$1")]
+    pub first: &'a str,
+    #[aykroyd(param = "$2")]
+    pub last: &'a str,
+}
+```
+"##
+)]
+///
+/// The query text can be provided inline, as above, or loaded from
+/// a file.  The path is relative to a `queries` directory at the
+/// root of the crate.
+#[cfg_attr(
+    feature = "derive",
+    doc = r##"
+
+```
+# use aykroyd::Statement;
+#[derive(Statement)]
+#[aykroyd(file = "summarize-quarter.sql")]
+struct SummarizeQuarter;
+```
+"##
+)]
 pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
     type Row: FromRow<C>;
 }
