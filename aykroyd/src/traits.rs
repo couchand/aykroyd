@@ -246,7 +246,7 @@ pub struct InsertCustomer<'a> {
 )]
 ///
 /// The query text can be provided inline, as above, or loaded from
-/// a file.  The path is relative to a `queries` directory at the
+/// a file.  The path is relative to a `queries/` directory at the
 /// root of the crate.
 #[cfg_attr(
     feature = "derive",
@@ -329,7 +329,7 @@ struct SearchPets<'a> {
 )]
 ///
 /// The query text can be provided inline, as above, or loaded from
-/// a file.  The path is relative to a `queries` directory at the
+/// a file.  The path is relative to a `queries/` directory at the
 /// root of the crate.
 #[cfg_attr(
     feature = "derive",
