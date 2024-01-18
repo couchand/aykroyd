@@ -39,6 +39,7 @@ where
 }
 
 /// A synchronous MySQL client.
+#[derive(Debug)]
 pub struct Client(mysql::Conn);
 
 impl crate::client::Client for Client {
@@ -323,6 +324,7 @@ impl Client {
 ///
 /// Transactions will implicitly roll back by default when dropped. Use the
 /// `commit` method to commit the changes made in the transaction.
+#[derive(Debug)]
 pub struct Transaction<'a>(mysql::Transaction<'a>);
 
 impl<'a> Transaction<'a> {

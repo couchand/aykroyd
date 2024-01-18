@@ -36,6 +36,7 @@ where
 }
 
 /// A synchronous Sqlite client.
+#[derive(Debug)]
 pub struct Client(rusqlite::Connection);
 
 impl crate::client::Client for Client {
@@ -410,6 +411,7 @@ impl Client {
 ///
 /// Transactions will implicitly roll back by default when dropped. Use the
 /// `commit` method to commit the changes made in the transaction.
+#[derive(Debug)]
 pub struct Transaction<'a>(rusqlite::Transaction<'a>);
 
 impl<'a> Transaction<'a> {

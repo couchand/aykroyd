@@ -64,6 +64,12 @@ impl From<postgres::Client> for Client {
     }
 }
 
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Client").finish()
+    }
+}
+
 impl Client {
     /// Create a new `Client` from a `postgres::Client`.
     pub fn new(client: postgres::Client) -> Self {
@@ -320,6 +326,12 @@ impl Client {
 pub struct Transaction<'a> {
     txn: postgres::Transaction<'a>,
     statements: &'a mut std::collections::HashMap<String, tokio_postgres::Statement>,
+}
+
+impl<'a> std::fmt::Debug for Transaction<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Transaction").finish()
+    }
 }
 
 impl<'a> Transaction<'a> {

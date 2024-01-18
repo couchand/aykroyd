@@ -85,6 +85,14 @@ impl From<tokio_postgres::Client> for Client {
     }
 }
 
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Client")
+            .field("client", &self.client)
+            .finish()
+    }
+}
+
 impl Client {
     /// Create a new `Client` from a `tokio_postgres::Client`.
     pub fn new(client: tokio_postgres::Client) -> Self {
@@ -332,6 +340,12 @@ impl Client {
 pub struct Transaction<'a> {
     txn: tokio_postgres::Transaction<'a>,
     statements: &'a mut std::collections::HashMap<String, tokio_postgres::Statement>,
+}
+
+impl<'a> std::fmt::Debug for Transaction<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Transaction").finish()
+    }
 }
 
 impl<'a> Transaction<'a> {

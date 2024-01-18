@@ -238,6 +238,7 @@ impl TestClient {
     }
 }
 
+#[derive(Debug)]
 pub struct Transaction<'a>(&'a mut TestClient);
 
 impl<'a> AsMut<TestClient> for Transaction<'a> {
