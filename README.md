@@ -144,7 +144,7 @@ async fn main() -> Result<(), Error> {
 
 ### More Details
 
-See the example project directory `aykroyd-example` for more details.
+See the example project directory `aykroyd-example/` for more details.
 
 ## Contributing
 
