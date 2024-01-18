@@ -1,7 +1,0 @@
-- derive error reporting
-- logging
-- more verification on prepare?
-- txn builder?
-- generic client?
-- gate all doctests using derive on derive feature
-- named params e.g. where id = @id
