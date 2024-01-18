@@ -210,10 +210,10 @@ impl Client {
             .map_err(Error::prepare)?;
 
         let row: Option<mysql::Row> =
-            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params).map_err(Error::query)?;
+            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params)
+                .map_err(Error::query)?;
 
-        row
-            .ok_or_else(|| Error::query_str("query returned no rows", None))
+        row.ok_or_else(|| Error::query_str("query returned no rows", None))
             .and_then(|row| FromRow::from_row(&row))
     }
 
@@ -260,7 +260,8 @@ impl Client {
             .map_err(Error::prepare)?;
 
         let row: Option<mysql::Row> =
-            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params).map_err(Error::query)?;
+            mysql::prelude::Queryable::exec_first(self.as_mut(), &query, params)
+                .map_err(Error::query)?;
 
         row.map(|row| FromRow::from_row(&row)).transpose()
     }
@@ -288,10 +289,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
         let params = match statement.to_params() {
@@ -403,10 +401,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         use mysql::prelude::Queryable;
 
         let params = match query.to_params() {
@@ -458,15 +453,13 @@ impl<'a> Transaction<'a> {
             None => mysql::Params::Empty,
             Some(params) => mysql::Params::Positional(params),
         };
-        let query = self.0
-            .prep(query.query_text())
-            .map_err(Error::prepare)?;
+        let query = self.0.prep(query.query_text()).map_err(Error::prepare)?;
 
         let row: Option<mysql::Row> =
-            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params).map_err(Error::query)?;
+            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params)
+                .map_err(Error::query)?;
 
-        row
-            .ok_or_else(|| Error::query_str("query returned no rows", None))
+        row.ok_or_else(|| Error::query_str("query returned no rows", None))
             .and_then(|row| FromRow::from_row(&row))
     }
 
@@ -508,12 +501,11 @@ impl<'a> Transaction<'a> {
             None => mysql::Params::Empty,
             Some(params) => mysql::Params::Positional(params),
         };
-        let query = self.0
-            .prep(query.query_text())
-            .map_err(Error::prepare)?;
+        let query = self.0.prep(query.query_text()).map_err(Error::prepare)?;
 
         let row: Option<mysql::Row> =
-            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params).map_err(Error::query)?;
+            mysql::prelude::Queryable::exec_first(&mut self.0, &query, params)
+                .map_err(Error::query)?;
 
         row.map(|row| FromRow::from_row(&row)).transpose()
     }
@@ -542,10 +534,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Client>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error> {
         use mysql::prelude::Queryable;
 
         let params = match statement.to_params() {
@@ -565,7 +554,7 @@ impl<'a> Transaction<'a> {
 }
 
 // TODO: not derive support
-#[cfg(all(test, feature ="derive"))]
+#[cfg(all(test, feature = "derive"))]
 mod test {
     use super::*;
 
@@ -589,9 +578,8 @@ mod test {
     fn end_to_end() {
         const TODO_TEXT: &str = "get things done, please!";
 
-        let mut client = Client::new(
-            "mysql://aykroyd_test:aykroyd_test@localhost:3306/aykroyd_test"
-        ).unwrap();
+        let mut client =
+            Client::new("mysql://aykroyd_test:aykroyd_test@localhost:3306/aykroyd_test").unwrap();
 
         client.execute(&CreateTodos).unwrap();
 

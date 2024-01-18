@@ -14,7 +14,8 @@ struct Tree {
     name: String,
 }
 ```
-"##)]
+"##
+)]
 //!
 //! Then you might have a few different ways you
 //! could query for your data.
@@ -39,7 +40,8 @@ struct GetTreesOver(f32);
 ")]
 struct GetTreesNamed<'a>(&'a str);
 ```
-"##)]
+"##
+)]
 //!
 //! You might then find yourself in a situation where
 //! you want to hold on to a `Tree` query, but you don't

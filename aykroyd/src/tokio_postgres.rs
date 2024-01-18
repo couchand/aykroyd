@@ -32,10 +32,7 @@ impl<T> FromColumnIndexed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(
-        row: &tokio_postgres::Row,
-        index: usize,
-    ) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
         row.try_get(index).map_err(Error::from_column)
     }
 }
@@ -44,10 +41,7 @@ impl<T> FromColumnNamed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(
-        row: &tokio_postgres::Row,
-        name: &str,
-    ) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
         row.try_get(name).map_err(Error::from_column)
     }
 }
@@ -140,9 +134,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare<S: StaticQueryText>(
-        &mut self,
-    ) -> Result<(), Error> {
+    pub async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.prepare_internal(S::QUERY_TEXT).await?;
         Ok(())
     }
@@ -177,10 +169,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query<Q: Query<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub async fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text()).await?;
@@ -223,10 +212,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query_one<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub async fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text()).await?;
@@ -310,10 +296,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub async fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text()).await?;
@@ -407,9 +390,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare<S: StaticQueryText>(
-        &mut self,
-    ) -> Result<(), Error> {
+    pub async fn prepare<S: StaticQueryText>(&mut self) -> Result<(), Error> {
         self.prepare_internal(S::QUERY_TEXT).await?;
         Ok(())
     }
@@ -445,10 +426,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query<Q: Query<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub async fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text()).await?;
@@ -492,10 +470,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query_one<Q: QueryOne<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub async fn query_one<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text()).await?;
@@ -581,10 +556,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn execute<S: Statement<Client>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub async fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text()).await?;
@@ -600,14 +572,16 @@ impl<'a> Transaction<'a> {
 }
 
 // TODO: not derive support
-#[cfg(all(test, feature ="derive"))]
+#[cfg(all(test, feature = "derive"))]
 mod test {
     use super::*;
 
     use tokio_postgres::NoTls;
 
     #[derive(Statement)]
-    #[aykroyd(text = "CREATE TABLE test_tokio_postgres (id SERIAL PRIMARY KEY, label TEXT NOT NULL)")]
+    #[aykroyd(
+        text = "CREATE TABLE test_tokio_postgres (id SERIAL PRIMARY KEY, label TEXT NOT NULL)"
+    )]
     struct CreateTodos;
 
     #[derive(Statement)]
@@ -629,7 +603,9 @@ mod test {
         let (mut client, connection) = connect(
             "host=localhost user=aykroyd_test password=aykroyd_test",
             NoTls,
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {

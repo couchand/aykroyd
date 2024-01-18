@@ -3,7 +3,7 @@
 use aykroyd::row::FromColumnsIndexed;
 use aykroyd::{FromRow, Query, QueryOne, Statement};
 
-use super::sync_client::{TestClient, RowInner};
+use super::sync_client::{RowInner, TestClient};
 
 #[test]
 fn compile_fail() {
@@ -121,10 +121,12 @@ fn statement_explicit_param() {
 
     let mut client = TestClient::new();
 
-    client.execute(&MyStatement {
-        first: "first",
-        second: "second",
-    }).unwrap();
+    client
+        .execute(&MyStatement {
+            first: "first",
+            second: "second",
+        })
+        .unwrap();
 
     let records = client.records();
     assert_eq!(1, records.len());
@@ -148,10 +150,12 @@ fn query_explicit_param() {
 
     let mut client = TestClient::new();
 
-    client.query(&MyStatement {
-        first: "first",
-        second: "second",
-    }).unwrap();
+    client
+        .query(&MyStatement {
+            first: "first",
+            second: "second",
+        })
+        .unwrap();
 
     let records = client.records();
     assert_eq!(1, records.len());
@@ -175,10 +179,12 @@ fn query_one_explicit_param() {
 
     let mut client = TestClient::new();
 
-    client.query_opt(&MyStatement {
-        first: "first",
-        second: "second",
-    }).unwrap();
+    client
+        .query_opt(&MyStatement {
+            first: "first",
+            second: "second",
+        })
+        .unwrap();
 
     let records = client.records();
     assert_eq!(1, records.len());

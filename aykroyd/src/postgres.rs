@@ -11,10 +11,7 @@ impl<T> FromColumnIndexed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(
-        row: &tokio_postgres::Row,
-        index: usize,
-    ) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
         row.try_get(index).map_err(Error::from_column)
     }
 }
@@ -23,10 +20,7 @@ impl<T> FromColumnNamed<Client> for T
 where
     T: tokio_postgres::types::FromSqlOwned,
 {
-    fn from_column(
-        row: &tokio_postgres::Row,
-        name: &str,
-    ) -> Result<Self, Error> {
+    fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
         row.try_get(name).map_err(Error::from_column)
     }
 }
@@ -97,8 +91,7 @@ impl Client {
         T::Stream: Send,
         <T::TlsConnect as postgres::tls::TlsConnect<postgres::Socket>>::Future: Send,
     {
-        let client = postgres::Client::connect(params, tls_mode)
-            .map_err(Error::connect)?;
+        let client = postgres::Client::connect(params, tls_mode).map_err(Error::connect)?;
         Ok(Self::new(client))
     }
 
@@ -175,10 +168,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
@@ -220,10 +210,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
@@ -266,10 +253,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error> {
+    pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
@@ -305,10 +289,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text())?;
@@ -429,10 +410,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
@@ -472,15 +450,15 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub fn query_one<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
 
-        let row = self.txn.query_one(&statement, params).map_err(Error::query)?;
+        let row = self
+            .txn
+            .query_one(&statement, params)
+            .map_err(Error::query)?;
 
         FromRow::from_row(&row)
     }
@@ -516,10 +494,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error> {
+    pub fn query_opt<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
         let params = query.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(query.query_text())?;
@@ -556,25 +531,19 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Client>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
         let statement = self.prepare_internal(statement.query_text())?;
 
-        let rows_affected = self
-            .txn
-            .execute(&statement, params)
-            .map_err(Error::query)?;
+        let rows_affected = self.txn.execute(&statement, params).map_err(Error::query)?;
 
         Ok(rows_affected)
     }
 }
 
 // TODO: not derive support
-#[cfg(all(test, feature ="derive"))]
+#[cfg(all(test, feature = "derive"))]
 mod test {
     use super::*;
 
@@ -603,7 +572,8 @@ mod test {
         let mut client = Client::connect(
             "host=localhost user=aykroyd_test password=aykroyd_test",
             NoTls,
-        ).unwrap();
+        )
+        .unwrap();
 
         client.execute(&CreateTodos).unwrap();
 

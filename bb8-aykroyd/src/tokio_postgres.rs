@@ -1,11 +1,11 @@
 //! Aykroyd PostgreSQL support.
 
-pub use bb8;
 pub use aykroyd;
+pub use bb8;
 pub use tokio_postgres;
 
-use aykroyd::tokio_postgres::Client;
 use async_trait::async_trait;
+use aykroyd::tokio_postgres::Client;
 use tokio_postgres::config::Config;
 use tokio_postgres::tls::{MakeTlsConnect, TlsConnect};
 use tokio_postgres::{Error, Socket};

@@ -86,7 +86,9 @@ impl Client {
     ///
     /// See the docs for [`rusqlite::Connection::open()`] for more details.
     pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
-        rusqlite::Connection::open(path).map(Client).map_err(Error::connect)
+        rusqlite::Connection::open(path)
+            .map(Client)
+            .map_err(Error::connect)
     }
 
     /// Open a new connection to a SQLite database.
@@ -145,9 +147,10 @@ impl Client {
     ///
     /// See the docs for [`rusqlite::Connection::open_in_memory()`] for more details.
     pub fn open_in_memory() -> Result<Self, Error> {
-        rusqlite::Connection::open_in_memory().map(Client).map_err(Error::connect)
+        rusqlite::Connection::open_in_memory()
+            .map(Client)
+            .map_err(Error::connect)
     }
-
 
     /// Open a new connection to an in-memory SQLite database.
     ///
@@ -251,10 +254,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -300,10 +300,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub fn query_one<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -348,10 +345,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne<Self>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error> {
+    pub fn query_opt<Q: QueryOne<Self>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -389,10 +383,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Self>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Self>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -496,10 +487,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query<Q: Query<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Vec<Q::Row>, Error> {
+    pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -545,16 +533,12 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_one<Q: QueryOne<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Q::Row, Error> {
+    pub fn query_one<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Q::Row, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
-        let mut statement =
-            rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
-                .map_err(Error::prepare)?;
+        let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
+            .map_err(Error::prepare)?;
 
         let mut rows = statement.query(params).map_err(Error::query)?;
 
@@ -594,16 +578,12 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn query_opt<Q: QueryOne<Client>>(
-        &mut self,
-        query: &Q,
-    ) -> Result<Option<Q::Row>, Error> {
+    pub fn query_opt<Q: QueryOne<Client>>(&mut self, query: &Q) -> Result<Option<Q::Row>, Error> {
         let params = query.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
-        let mut statement =
-            rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
-                .map_err(Error::prepare)?;
+        let mut statement = rusqlite::Connection::prepare_cached(&self.0, &query.query_text())
+            .map_err(Error::prepare)?;
 
         let mut rows = statement.query(params).map_err(Error::query)?;
 
@@ -636,10 +616,7 @@ impl<'a> Transaction<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn execute<S: Statement<Client>>(
-        &mut self,
-        statement: &S,
-    ) -> Result<u64, Error> {
+    pub fn execute<S: Statement<Client>>(&mut self, statement: &S) -> Result<u64, Error> {
         let params = statement.to_params();
         let params: &[_] = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
 
@@ -653,12 +630,14 @@ impl<'a> Transaction<'a> {
 }
 
 // TODO: not derive support
-#[cfg(all(test, feature ="derive"))]
+#[cfg(all(test, feature = "derive"))]
 mod test {
     use super::*;
 
     #[derive(Statement)]
-    #[aykroyd(text = "CREATE TABLE test_rusqlite (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL)")]
+    #[aykroyd(
+        text = "CREATE TABLE test_rusqlite (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL)"
+    )]
     struct CreateTodos;
 
     #[derive(Statement)]

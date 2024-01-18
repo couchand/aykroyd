@@ -209,46 +209,51 @@ struct ParamInfo {
 
 impl ParamInfo {
     fn from_fields(fields: &[&syn::Field]) -> Vec<ParamInfo> {
-        fields.iter().map(|field| {
-            let ident = field.ident.clone();
-            let ty = field.ty.clone();
-            let mut param = None;
+        fields
+            .iter()
+            .map(|field| {
+                let ident = field.ident.clone();
+                let ty = field.ty.clone();
+                let mut param = None;
 
-            for attr in &field.attrs {
-                if attr.path().is_ident("aykroyd") {
-                    attr.parse_nested_meta(|meta| {
-                        if meta.path.is_ident("param") {
-                            let value = meta.value()?;
-                            let inner = value.parse()?;
+                for attr in &field.attrs {
+                    if attr.path().is_ident("aykroyd") {
+                        attr.parse_nested_meta(|meta| {
+                            if meta.path.is_ident("param") {
+                                let value = meta.value()?;
+                                let inner = value.parse()?;
 
-                            let inner = match inner {
-                                syn::Lit::Int(n) => {
-                                    let value: usize = n.base10_parse()
-                                        .map_err(|e| meta.error(e.to_string()))?;
-                                    value
-                                }
-                                syn::Lit::Str(s) => {
-                                    let text = s.value();
-                                    let text = text.strip_prefix('$').unwrap_or(&text);
-                                    let value: usize = text.parse()
-                                        .map_err(|_| meta.error("invalid param"))?;
-                                    value
-                                }
-                                _ => return Err(meta.error("invalid param")),
-                            };
+                                let inner = match inner {
+                                    syn::Lit::Int(n) => {
+                                        let value: usize = n
+                                            .base10_parse()
+                                            .map_err(|e| meta.error(e.to_string()))?;
+                                        value
+                                    }
+                                    syn::Lit::Str(s) => {
+                                        let text = s.value();
+                                        let text = text.strip_prefix('$').unwrap_or(&text);
+                                        let value: usize = text
+                                            .parse()
+                                            .map_err(|_| meta.error("invalid param"))?;
+                                        value
+                                    }
+                                    _ => return Err(meta.error("invalid param")),
+                                };
 
-                            param = Some(inner);
-                            return Ok(());
-                        }
+                                param = Some(inner);
+                                return Ok(());
+                            }
 
-                        Err(meta.error("unrecognized attr"))
-                    })
-                    .unwrap();
+                            Err(meta.error("unrecognized attr"))
+                        })
+                        .unwrap();
+                    }
                 }
-            }
 
-            ParamInfo { ident, ty, param }
-        }).collect()
+                ParamInfo { ident, ty, param }
+            })
+            .collect()
     }
 }
 
@@ -401,10 +406,7 @@ fn impl_query(
     }
 }
 
-fn impl_query_one(
-    name: &syn::Ident,
-    generics: &syn::Generics,
-) -> proc_macro2::TokenStream {
+fn impl_query_one(name: &syn::Ident, generics: &syn::Generics) -> proc_macro2::TokenStream {
     let generics_simple = simplify(generics);
     let generics = insert_c(generics);
     quote! {
@@ -549,35 +551,43 @@ struct FieldInfo {
 
 impl FieldInfo {
     fn from_fields(fields: &[&syn::Field]) -> Vec<FieldInfo> {
-        fields.iter().map(|field| {
-            let ident = field.ident.clone();
-            let ty = field.ty.clone();
-            let mut nested = false;
-            let mut column = None;
+        fields
+            .iter()
+            .map(|field| {
+                let ident = field.ident.clone();
+                let ty = field.ty.clone();
+                let mut nested = false;
+                let mut column = None;
 
-            for attr in &field.attrs {
-                if attr.path().is_ident("aykroyd") {
-                    attr.parse_nested_meta(|meta| {
-                        if meta.path.is_ident("nested") {
-                            nested = true;
-                            return Ok(());
-                        }
+                for attr in &field.attrs {
+                    if attr.path().is_ident("aykroyd") {
+                        attr.parse_nested_meta(|meta| {
+                            if meta.path.is_ident("nested") {
+                                nested = true;
+                                return Ok(());
+                            }
 
-                        if meta.path.is_ident("column") {
-                            let value = meta.value()?;
-                            let inner = value.parse()?;
-                            column = Some(inner);
-                            return Ok(());
-                        }
+                            if meta.path.is_ident("column") {
+                                let value = meta.value()?;
+                                let inner = value.parse()?;
+                                column = Some(inner);
+                                return Ok(());
+                            }
 
-                        Err(meta.error("unrecognized attr"))
-                    })
-                    .unwrap();
+                            Err(meta.error("unrecognized attr"))
+                        })
+                        .unwrap();
+                    }
                 }
-            }
 
-            FieldInfo { ident, ty, nested, column }
-        }).collect()
+                FieldInfo {
+                    ident,
+                    ty,
+                    nested,
+                    column,
+                }
+            })
+            .collect()
     }
 
     fn assert_key(
@@ -594,16 +604,12 @@ impl FieldInfo {
         let key = fields
             .iter()
             .find_map(|field| field.column.as_ref())
-            .map(|lit| {
-                match lit {
-                    syn::Lit::Int(_) => Ok(Key::Index),
-                    syn::Lit::Str(_) => Ok(Key::Name),
-                    _ => {
-                        Err(quote::quote_spanned! {
-                            lit.span() => compile_error!("invalid column key");
-                        })
-                    }
-                }
+            .map(|lit| match lit {
+                syn::Lit::Int(_) => Ok(Key::Index),
+                syn::Lit::Str(_) => Ok(Key::Name),
+                _ => Err(quote::quote_spanned! {
+                    lit.span() => compile_error!("invalid column key");
+                }),
             })
             .transpose()?;
 
@@ -611,22 +617,20 @@ impl FieldInfo {
             let key = expected.unwrap_or(key);
             for field in fields {
                 match key {
-                    Key::Index => {
-                        match &field.column {
-                            Some(syn::Lit::Int(_)) => {}
-                            Some(lit) => {
-                                return Err(quote::quote_spanned! {
-                                    lit.span() => compile_error!("expected column index");
-                                });
-                            }
-                            None => {
-                                use syn::spanned::Spanned;
-                                return Err(quote::quote_spanned! {
-                                    field.ty.span() => compile_error!("expected column index");
-                                });
-                            }
+                    Key::Index => match &field.column {
+                        Some(syn::Lit::Int(_)) => {}
+                        Some(lit) => {
+                            return Err(quote::quote_spanned! {
+                                lit.span() => compile_error!("expected column index");
+                            });
                         }
-                    }
+                        None => {
+                            use syn::spanned::Spanned;
+                            return Err(quote::quote_spanned! {
+                                field.ty.span() => compile_error!("expected column index");
+                            });
+                        }
+                    },
                     Key::Name => {
                         match &field.column {
                             Some(syn::Lit::Str(_)) => {}
@@ -706,44 +710,40 @@ fn impl_from_columns(
                 Delegate::FromColumns => quote!(get_nested),
             };
             let key = match key {
-                Key::Index => {
-                    match &field.column {
-                        Some(index) => {
-                            quote!(#index)
-                        }
-                        None => {
-                            let num_const = syn::LitInt::new(
-                                &format!("{num_const}usize"),
-                                proc_macro2::Span::call_site(),
-                            );
-                            quote!(#num_const #(#plus_nesteds)*)
-                        }
+                Key::Index => match &field.column {
+                    Some(index) => {
+                        quote!(#index)
                     }
-                }
-                Key::Name => {
-                    match &field.column {
-                        Some(name) => {
-                            quote!(#name)
-                        }
-                        None => {
-                            let name = field
-                                .ident
-                                .as_ref()
-                                .map(ToString::to_string)
-                                .unwrap_or_else(|| index.to_string());
+                    None => {
+                        let num_const = syn::LitInt::new(
+                            &format!("{num_const}usize"),
+                            proc_macro2::Span::call_site(),
+                        );
+                        quote!(#num_const #(#plus_nesteds)*)
+                    }
+                },
+                Key::Name => match &field.column {
+                    Some(name) => {
+                        quote!(#name)
+                    }
+                    None => {
+                        let name = field
+                            .ident
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_else(|| index.to_string());
 
-                            let name = match delegate {
-                                Delegate::FromColumn => name,
-                                Delegate::FromColumns => {
-                                    let mut s = name;
-                                    s.push('_');
-                                    s
-                                }
-                            };
-                            quote!(#name)
-                        }
+                        let name = match delegate {
+                            Delegate::FromColumn => name,
+                            Delegate::FromColumns => {
+                                let mut s = name;
+                                s.push('_');
+                                s
+                            }
+                        };
+                        quote!(#name)
                     }
-                }
+                },
             };
             field_puts.push(match &field.ident {
                 Some(field_name) => quote!(#field_name: columns.#get_method(#key)?),
@@ -759,7 +759,8 @@ fn impl_from_columns(
 
         match delegate {
             Delegate::FromColumn => num_const += 1,
-            Delegate::FromColumns => plus_nesteds.push(quote!(+ <#ty as ::aykroyd::row::FromColumnsIndexed<C>>::NUM_COLUMNS)),
+            Delegate::FromColumns => plus_nesteds
+                .push(quote!(+ <#ty as ::aykroyd::row::FromColumnsIndexed<C>>::NUM_COLUMNS)),
         }
     }
 

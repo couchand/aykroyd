@@ -2,12 +2,12 @@
 //! Aykroyd PostgreSQL support.
 
 pub use aykroyd;
-pub use r2d2;
 pub use postgres;
+pub use r2d2;
 
+use aykroyd::postgres::Client;
 use postgres::tls::{MakeTlsConnect, TlsConnect};
 use postgres::{Config, Error, Socket};
-use aykroyd::postgres::Client;
 use r2d2::ManageConnection;
 
 /// An `r2d2::ManageConnection` for `aykroyd::postgres::Client`s.

@@ -38,7 +38,8 @@ struct A;
 
 assert_eq!("A", A::QUERY_TEXT);
 ```
-"##)]
+"##
+)]
 pub trait StaticQueryText {
     const QUERY_TEXT: &'static str;
 }

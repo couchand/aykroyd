@@ -1,7 +1,7 @@
 //! Aykroyd PostgreSQL support.
 
-pub use deadpool;
 pub use aykroyd;
+pub use deadpool;
 pub use tokio_postgres;
 
 use async_trait::async_trait;
@@ -39,7 +39,11 @@ impl<T> Manager<T> {
 
     /// Create a pool manager from the given `tokio_postgres::Config` and `ManagerConfig`.
     pub fn from_config(pg_config: tokio_postgres::Config, tls: T, config: ManagerConfig) -> Self {
-        Manager { config, pg_config, tls }
+        Manager {
+            config,
+            pg_config,
+            tls,
+        }
     }
 }
 

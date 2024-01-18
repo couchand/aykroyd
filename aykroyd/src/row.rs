@@ -134,7 +134,8 @@ struct Pet {
 ")]
 struct GetPets;
 ```
-"##)]
+"##
+)]
 pub trait FromColumnsIndexed<C: Client>: Sized {
     const NUM_COLUMNS: usize;
     fn from_columns(columns: ColumnsIndexed<C>) -> Result<Self, Error<C::Error>>;
@@ -191,7 +192,8 @@ struct Pet {
 ")]
 struct GetPets;
 ```
-"##)]
+"##
+)]
 pub trait FromColumnsNamed<C: Client>: Sized {
     fn from_columns(columns: ColumnsNamed<C>) -> Result<Self, Error<C::Error>>;
 }

@@ -25,7 +25,8 @@ pub struct Customer {
     last_name: String,
 }
 ```
-"##)]
+"##
+)]
 ///
 /// You can opt-in to loading fields by column order on a struct with
 /// named fields, by using the `by_index` attribute.
@@ -43,7 +44,8 @@ pub struct Customer {
     last_name: String,
 }
 ```
-"##)]
+"##
+)]
 ///
 /// For tuple structs, the fields are taken from the row in order.  The
 /// order of the query columns must match the tuple struct fields.
@@ -56,7 +58,8 @@ pub struct Customer {
 #[derive(FromRow)]
 pub struct QueryResults(i32, f32, String);
 ```
-"##)]
+"##
+)]
 ///
 /// If you just need the results of an ad-hoc query, consider using an
 /// anonymous tuple instead.
@@ -74,7 +77,8 @@ use rust_decimal::Decimal;
 ")]
 pub struct SalesByMonth;
 ```
-"##)]
+"##
+)]
 ///
 /// If the default mapping is not sufficient, you can control what column
 /// the field is taken from.  This is useful for renaming columns:
@@ -90,7 +94,8 @@ pub struct Widget {
     pub ty: String,
 }
 ```
-"##)]
+"##
+)]
 ///
 /// You can assign explicit column indexes to each field, too.
 #[cfg_attr(
@@ -105,7 +110,8 @@ pub struct Widget {
     pub ty: String,
 }
 ```
-"##)]
+"##
+)]
 ///
 /// You can also load nested rows, as long as they use the same
 /// column loading strategy.  Use this to share models between queries,
@@ -140,7 +146,8 @@ struct Pet {
 ")]
 struct GetPets;
 ```
-"##)]
+"##
+)]
 ///
 /// See [`FromColumnsIndexed`] and [`FromColumnsNamed`](crate::row::FromColumnsNamed)
 /// for more details.
@@ -209,7 +216,8 @@ pub struct InsertCustomer<'a> {
     last_name: &'a str,
 }
 ```
-"##)]
+"##
+)]
 ///
 /// For queries with more than a handful of parameters, this can get
 /// error-prone. Help ensure that the struct fields and the query text
@@ -234,7 +242,8 @@ pub struct InsertCustomer<'a> {
     pub last: &'a str,
 }
 ```
-"##)]
+"##
+)]
 pub trait Statement<C: Client>: QueryText + ToParams<C> + Sync {}
 
 /// A database query that returns zero or more result rows.
@@ -260,7 +269,8 @@ struct Todo {
 #[aykroyd(row(Todo), text = "SELECT id, label FROM todo")]
 struct GetAllTodos;
 ```
-"##)]
+"##
+)]
 pub trait Query<C: Client>: QueryText + ToParams<C> + Sync {
     type Row: FromRow<C>;
 }
@@ -289,5 +299,6 @@ struct Todo {
 ")]
 struct GetTodoById(i32);
 ```
-"##)]
+"##
+)]
 pub trait QueryOne<C: Client>: Query<C> {}
