@@ -15,7 +15,7 @@ default = []
 tokio-postgres = ["aykroyd/tokio-postgres", "dep:bb8-postgres", "dep:tokio-postgres"]
 
 [dependencies]
-aykroyd = { version = "0.3", path = "../aykroyd" }
+aykroyd = { version = "0.3.0-rc.1", path = "../aykroyd" }
 async-trait = "0.1"
 bb8 = "0.8"
 bb8-postgres = { version = "0.8", optional = true }
