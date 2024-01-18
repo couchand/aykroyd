@@ -11,7 +11,7 @@ Like most crates in the Rust ecosystem this project adheres to
 
 - Support for the MySQL and SQLite databases, in addition to
   PostgreSQL.
-- `FromRow` for nested structs using `FromColumnsIndexed` od
+- `FromRow` for nested structs using `FromColumnsIndexed` or
   `FromColumnsNamed`.
 - The `Either` combinator, for dynamic query choice.
 
@@ -23,9 +23,9 @@ Like most crates in the Rust ecosystem this project adheres to
 - The derive macros for `FromRow`, `Statement`, `Query`, and `QueryOne`
   now use the attribute `aykroyd` for all configuration parameters
   rather than `query`.
-- Explicit column names and indexes are now only allowed if every
-  field in the struct is annotated.
-- Queries loaded from file are now taken from a `queries` directory
+- Explicit column indexes are now only allowed if every field in the
+  struct is annotated.
+- Queries loaded from file are now taken from a `queries/` directory
   at the crate root.
 
 ## [v0.2.0] - 2023-12-11 ([Log][v0.2.0-log])
