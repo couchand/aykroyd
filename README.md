@@ -6,13 +6,12 @@ have to be kept hidden behind abstraction layers or buried in
 repetitive boilerplate anymore.
 
 Database queries are represented by a plain Rust struct that implements
-either [`Statement`](Statement) or [`Query`](Query) (and maybe
-[`QueryOne`](QueryOne)).  The traits `Statement` and `Query` share two
-common parent traits:
+either `Statement` or `Query` (and maybe `QueryOne`).  The traits
+`Statement` and `Query` share two common parent traits:
 
-* [`QueryText`](query::QueryText), which gives access to the text of the
+* `QueryText`, which gives access to the text of the
   query, and
-* [`ToParams`](query::ToParams), which we can use to turn the struct into
+* `ToParams`, which we can use to turn the struct into
   database parameters.
 
 Using these together, a database client can prepare the text of a query
@@ -21,7 +20,7 @@ and then run it on a database, passing in the required parameters.
 In addition, the `Query` trait has an associated type `Row` which must
 implement:
 
-* [`FromRow`], to be deserialized from database rows.
+* `FromRow`, to be deserialized from database rows.
 
 All of these traits can be derived automatically, so the usual
 gnarly database access code is reduced to simple struct definitions.
