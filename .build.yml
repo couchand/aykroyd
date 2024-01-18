@@ -4,6 +4,10 @@ packages:
     - mariadb
 sources:
     - https://git.sr.ht/~couch/aykroyd
+triggers:
+    - action: email
+      condition: failure
+      to: ~couch/aykroyd-dev@lists.sr.ht
 tasks:
     - install_rust: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh  -s -- -y
