@@ -23,3 +23,7 @@ tasks:
         source "$HOME/.cargo/env"
         cd aykroyd
         cargo test --all-features --workspace
+    - clippy: |
+        source "$HOME/.cargo/env"
+        cd aykroyd
+        cargo clippy --all-features --all-targets --workspace
