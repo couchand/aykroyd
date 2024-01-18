@@ -25,8 +25,8 @@ Like most crates in the Rust ecosystem this project adheres to
   rather than `query`.
 - Explicit column names and indexes are now only allowed if every
   field in the struct is annotated.
-- Support for loading query text from files has been removed
-  temporarily.  Expect to see it again soon!
+- Queries loaded from file are now taken from a `queries` directory
+  at the crate root.
 
 ## [v0.2.0] - 2023-04-18 ([Log][v0.2.0-log])
 

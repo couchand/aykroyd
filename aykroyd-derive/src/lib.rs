@@ -19,11 +19,6 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let attr = ast
-        .attrs
-        .iter()
-        .find(|attr| attr.path().is_ident("aykroyd"))
-        .unwrap();
 
     let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Statement on enum!"),
@@ -39,14 +34,45 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     };
     let fields = ParamInfo::from_fields(&fields);
 
-    let query_text = {
-        let mut query_text = None;
+    let info = StatementInfo::from_attrs(&ast.attrs);
+
+    let query_text_impl = impl_static_query_text(name, generics, &info.query_text);
+    let to_params_impl = impl_to_params(name, generics, &fields);
+    let statement_impl = impl_statement(name, generics);
+
+    let body = quote!(#query_text_impl #to_params_impl #statement_impl);
+    body.into()
+}
+
+struct StatementInfo {
+    query_text: String,
+}
+
+impl StatementInfo {
+    fn from_attrs(attrs: &[syn::Attribute]) -> StatementInfo {
+        let attr = attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("aykroyd"))
+            .unwrap();
+
+        let mut text = None;
+        let mut file = None;
 
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("text") {
                 let value = meta.value()?;
-                let text: syn::LitStr = value.parse()?;
-                query_text = Some(text);
+                let source: syn::LitStr = value.parse()?;
+                text = Some(source.value());
+                return Ok(());
+            }
+
+            if meta.path.is_ident("file") {
+                let value = meta.value()?;
+                let filename: syn::LitStr = value.parse()?;
+                let path = std::path::PathBuf::from("queries").join(filename.value());
+                //panic!("{} - {}", std::env::current_dir().unwrap().display(), path.display());
+                let source = std::fs::read_to_string(&path).unwrap();
+                file = Some(source);
                 return Ok(());
             }
 
@@ -54,18 +80,15 @@ pub fn derive_statement(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         })
         .unwrap();
 
-        match query_text {
-            Some(q) => q,
-            None => panic!("unable to find query text"),
-        }
-    };
+        let query_text = match (text, file) {
+            (Some(_), Some(_)) => panic!("use one of file or text"),
+            (Some(q), None) => q,
+            (None, Some(q)) => q,
+            (None, None) => panic!("unable to find query text"),
+        };
 
-    let query_text_impl = impl_static_query_text(name, generics, &query_text);
-    let to_params_impl = impl_to_params(name, generics, &fields);
-    let statement_impl = impl_statement(name, generics);
-
-    let body = quote!(#query_text_impl #to_params_impl #statement_impl);
-    body.into()
+        StatementInfo { query_text }
+    }
 }
 
 /// Derive macro available if aykroyd is built with `features = ["derive"]`.
@@ -75,11 +98,6 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let attr = ast
-        .attrs
-        .iter()
-        .find(|attr| attr.path().is_ident("aykroyd"))
-        .unwrap();
 
     let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive Query on enum!"),
@@ -95,40 +113,11 @@ pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
     let fields = ParamInfo::from_fields(&fields);
 
-    let (query_text, row) = {
-        let mut query_text = None;
-        let mut row = None;
+    let info = QueryInfo::from_attrs(&ast.attrs);
 
-        attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("text") {
-                let value = meta.value()?;
-                let text: syn::LitStr = value.parse()?;
-                query_text = Some(text);
-                return Ok(());
-            }
-
-            if meta.path.is_ident("row") {
-                let content;
-                syn::parenthesized!(content in meta.input);
-                let ty: syn::Type = content.parse()?;
-                row = Some(ty);
-                return Ok(());
-            }
-
-            Err(meta.error("unknown meta path"))
-        })
-        .unwrap();
-
-        match (query_text, row) {
-            (Some(q), Some(r)) => (q, r),
-            (None, _) => panic!("unable to find query text"),
-            (_, None) => panic!("unable to find row"),
-        }
-    };
-
-    let query_text_impl = impl_static_query_text(name, generics, &query_text);
+    let query_text_impl = impl_static_query_text(name, generics, &info.query_text);
     let to_params_impl = impl_to_params(name, generics, &fields);
-    let query_impl = impl_query(name, generics, &row);
+    let query_impl = impl_query(name, generics, &info.row);
 
     let body = quote!(#query_text_impl #to_params_impl #query_impl);
     body.into()
@@ -141,11 +130,6 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
     let name = &ast.ident;
     let generics = &ast.generics;
-    let attr = ast
-        .attrs
-        .iter()
-        .find(|attr| attr.path().is_ident("aykroyd"))
-        .unwrap();
 
     let fields = match &ast.data {
         syn::Data::Enum(_) => panic!("Cannot derive QueryOne on enum!"),
@@ -161,15 +145,48 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     };
     let fields = ParamInfo::from_fields(&fields);
 
-    let (query_text, row) = {
-        let mut query_text = None;
+    let info = QueryInfo::from_attrs(&ast.attrs);
+
+    let query_text_impl = impl_static_query_text(name, generics, &info.query_text);
+    let to_params_impl = impl_to_params(name, generics, &fields);
+    let query_impl = impl_query(name, generics, &info.row);
+    let query_one_impl = impl_query_one(name, generics);
+
+    let body = quote!(#query_text_impl #to_params_impl #query_impl #query_one_impl);
+    body.into()
+}
+
+struct QueryInfo {
+    query_text: String,
+    row: syn::Type,
+}
+
+impl QueryInfo {
+    fn from_attrs(attrs: &[syn::Attribute]) -> QueryInfo {
+        let attr = attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("aykroyd"))
+            .unwrap();
+
+        let mut text = None;
+        let mut file = None;
         let mut row = None;
 
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("text") {
                 let value = meta.value()?;
-                let text: syn::LitStr = value.parse()?;
-                query_text = Some(text);
+                let source: syn::LitStr = value.parse()?;
+                text = Some(source.value());
+                return Ok(());
+            }
+
+            if meta.path.is_ident("file") {
+                let value = meta.value()?;
+                let filename: syn::LitStr = value.parse()?;
+                let path = std::path::PathBuf::from("queries").join(filename.value());
+                //panic!("{} - {}", std::env::current_dir().unwrap().display(), path.display());
+                let source = std::fs::read_to_string(&path).unwrap();
+                file = Some(source);
                 return Ok(());
             }
 
@@ -185,20 +202,20 @@ pub fn derive_query_one(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         })
         .unwrap();
 
-        match (query_text, row) {
-            (Some(q), Some(r)) => (q, r),
-            (None, _) => panic!("unable to find query text"),
-            (_, None) => panic!("unable to find row"),
-        }
-    };
+        let query_text = match (text, file) {
+            (Some(_), Some(_)) => panic!("use one of file or text"),
+            (Some(q), None) => q,
+            (None, Some(q)) => q,
+            (None, None) => panic!("unable to find query text"),
+        };
 
-    let query_text_impl = impl_static_query_text(name, generics, &query_text);
-    let to_params_impl = impl_to_params(name, generics, &fields);
-    let query_impl = impl_query(name, generics, &row);
-    let query_one_impl = impl_query_one(name, generics);
+        let row = match row {
+            Some(r) => r,
+            None => panic!("unable to find row type"),
+        };
 
-    let body = quote!(#query_text_impl #to_params_impl #query_impl #query_one_impl);
-    body.into()
+        QueryInfo { query_text, row }
+    }
 }
 
 struct ParamInfo {
@@ -288,10 +305,9 @@ fn insert_c(generics: &syn::Generics) -> syn::Generics {
 fn impl_static_query_text(
     name: &syn::Ident,
     generics: &syn::Generics,
-    query_text: &syn::LitStr,
+    query_text: &str,
 ) -> proc_macro2::TokenStream {
     let generics_simple = simplify(generics);
-    let query_text = query_text.value();
     let query_text = query_text.trim();
     quote! {
         #[automatically_derived]

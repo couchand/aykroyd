@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use aykroyd::query::StaticQueryText;
 use aykroyd::row::FromColumnsIndexed;
 use aykroyd::{FromRow, Query, QueryOne, Statement};
 
@@ -194,4 +195,31 @@ fn query_one_explicit_param() {
     assert_eq!(2, params.len());
     assert_eq!("first", params[0]);
     assert_eq!("second", params[1]);
+}
+
+#[test]
+fn statement_file() {
+    #[derive(Statement)]
+    #[aykroyd(file = "foobar.txt")]
+    struct Foobar;
+
+    assert_eq!("foobar", Foobar::QUERY_TEXT);
+}
+
+#[test]
+fn query_file() {
+    #[derive(Query)]
+    #[aykroyd(row(()), file = "foobar.txt")]
+    struct Foobar;
+
+    assert_eq!("foobar", Foobar::QUERY_TEXT);
+}
+
+#[test]
+fn query_one_file() {
+    #[derive(QueryOne)]
+    #[aykroyd(row(()), file = "foobar.txt")]
+    struct Foobar;
+
+    assert_eq!("foobar", Foobar::QUERY_TEXT);
 }
