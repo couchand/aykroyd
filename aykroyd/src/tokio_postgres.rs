@@ -4,8 +4,6 @@ use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
 use crate::query::StaticQueryText;
 use crate::{error, FromRow, Query, QueryOne, Statement};
 
-pub type Error = error::Error<tokio_postgres::Error>;
-
 /// A convenience function which parses a connection string and connects to the database.
 ///
 /// See the documentation for [`tokio_postgres::Config`] for details on the connection string format.
@@ -28,44 +26,13 @@ where
     Ok((client.into(), connection))
 }
 
-impl<T> FromColumnIndexed<Client> for T
-where
-    T: tokio_postgres::types::FromSqlOwned,
-{
-    fn from_column(row: &tokio_postgres::Row, index: usize) -> Result<Self, Error> {
-        row.try_get(index).map_err(Error::from_column)
-    }
-}
-
-impl<T> FromColumnNamed<Client> for T
-where
-    T: tokio_postgres::types::FromSqlOwned,
-{
-    fn from_column(row: &tokio_postgres::Row, name: &str) -> Result<Self, Error> {
-        row.try_get(name).map_err(Error::from_column)
-    }
-}
-
-impl<T> ToParam<Client> for T
-where
-    T: tokio_postgres::types::ToSql + Sync,
-{
-    fn to_param(&self) -> &(dyn tokio_postgres::types::ToSql + Sync) {
-        self
-    }
-}
-
 /// An asynchronous PostgreSQL client.
 pub struct Client {
     client: tokio_postgres::Client,
     statements: std::collections::HashMap<String, tokio_postgres::Statement>,
 }
 
-impl crate::client::Client for Client {
-    type Row<'a> = tokio_postgres::Row;
-    type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
-    type Error = tokio_postgres::Error;
-}
+postgres_client!(Client);
 
 impl AsMut<tokio_postgres::Client> for Client {
     fn as_mut(&mut self) -> &mut tokio_postgres::Client {

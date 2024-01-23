@@ -363,6 +363,9 @@ pub mod rusqlite;
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio-postgres")))]
 pub mod tokio_postgres;
 
+#[cfg(any(feature = "postgres", feature = "tokio-postgres"))]
+mod postgres_common;
+
 #[cfg(test)]
 mod test;
 
