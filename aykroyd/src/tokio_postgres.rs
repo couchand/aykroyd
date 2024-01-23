@@ -566,7 +566,7 @@ mod test {
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_tokio_postgres")]
+    #[aykroyd(text = "DROP TABLE IF EXISTS test_tokio_postgres")]
     struct DropTodos;
 
     #[derive(Statement)]
@@ -593,6 +593,8 @@ mod test {
                 eprintln!("connection error: {e}");
             }
         });
+
+        client.execute(&DropTodos).await.unwrap();
 
         client.execute(&CreateTodos).await.unwrap();
 

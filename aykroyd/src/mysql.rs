@@ -565,7 +565,7 @@ mod test {
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_mysql")]
+    #[aykroyd(text = "DROP TABLE IF EXISTS test_mysql")]
     struct DropTodos;
 
     #[derive(Statement)]
@@ -582,6 +582,8 @@ mod test {
 
         let mut client =
             Client::new("mysql://aykroyd_test:aykroyd_test@localhost:3306/aykroyd_test").unwrap();
+
+        client.execute(&DropTodos).unwrap();
 
         client.execute(&CreateTodos).unwrap();
 

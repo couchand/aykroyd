@@ -532,7 +532,7 @@ mod test {
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_postgres")]
+    #[aykroyd(text = "DROP TABLE IF EXISTS test_postgres")]
     struct DropTodos;
 
     #[derive(Statement)]
@@ -552,6 +552,8 @@ mod test {
             NoTls,
         )
         .unwrap();
+
+        client.execute(&DropTodos).unwrap();
 
         client.execute(&CreateTodos).unwrap();
 

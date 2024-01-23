@@ -643,7 +643,7 @@ mod test {
     struct CreateTodos;
 
     #[derive(Statement)]
-    #[aykroyd(text = "DROP TABLE test_rusqlite")]
+    #[aykroyd(text = "DROP TABLE IF EXISTS test_rusqlite")]
     struct DropTodos;
 
     #[derive(Statement)]
@@ -676,6 +676,8 @@ mod test {
         const TODO_TEXT: &str = "get things done, please!";
 
         let mut client = Client::open("./foobar").unwrap();
+
+        client.execute(&DropTodos).unwrap();
 
         client.execute(&CreateTodos).unwrap();
 
