@@ -1,8 +1,9 @@
 //! A synchronous client for PostgreSQL.
 
 use crate::client::{FromColumnIndexed, FromColumnNamed, ToParam};
+use crate::postgres_common::params_iter;
 use crate::query::StaticQueryText;
-use crate::{error, FromRow, Query, QueryOne, Statement};
+use crate::{error, postgres_client, FromRow, Query, QueryOne, Statement};
 
 /// A synchronous PostgreSQL client.
 pub struct Client {
@@ -141,16 +142,22 @@ impl Client {
     /// # }
     /// ```
     pub fn query<Q: Query<Self>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
-        let params = query.to_params();
-        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        use postgres::fallible_iterator::FallibleIterator;
+
+        let params = params_iter::ParamsIter::from_params(query.to_params());
         let statement = self.prepare_internal(query.query_text())?;
 
-        let rows = self
+        let mut rows = self
             .client
-            .query(&statement, params)
+            .query_raw(&statement, params)
             .map_err(Error::query)?;
 
-        FromRow::from_rows(&rows)
+        let mut res = Vec::with_capacity(rows.size_hint().0);
+        while let Some(row) = rows.next().map_err(Error::query)? {
+            res.push(FromRow::from_row(&row)?);
+        }
+
+        Ok(res)
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -389,13 +396,19 @@ impl<'a> Transaction<'a> {
     /// # }
     /// ```
     pub fn query<Q: Query<Client>>(&mut self, query: &Q) -> Result<Vec<Q::Row>, Error> {
-        let params = query.to_params();
-        let params = params.as_ref().map(AsRef::as_ref).unwrap_or(&[][..]);
+        use postgres::fallible_iterator::FallibleIterator;
+
+        let params = params_iter::ParamsIter::from_params(query.to_params());
         let statement = self.prepare_internal(query.query_text())?;
 
-        let rows = self.txn.query(&statement, params).map_err(Error::query)?;
+        let mut rows = self.txn.query_raw(&statement, params).map_err(Error::query)?;
 
-        FromRow::from_rows(&rows)
+        let mut res = Vec::with_capacity(rows.size_hint().0);
+        while let Some(row) = rows.next().map_err(Error::query)? {
+            res.push(FromRow::from_row(&row)?);
+        }
+
+        Ok(res)
     }
 
     /// Executes a statement which returns a single row, returning it.

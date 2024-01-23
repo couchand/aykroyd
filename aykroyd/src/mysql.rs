@@ -163,10 +163,21 @@ impl Client {
             .prep(query.query_text())
             .map_err(Error::prepare)?;
 
-        let rows: Vec<mysql::Row> =
-            mysql::prelude::Queryable::exec(self.as_mut(), &query, params).map_err(Error::query)?;
-
-        FromRow::from_rows(&rows)
+        mysql::prelude::Queryable::exec_fold(
+            self.as_mut(),
+            &query,
+            params,
+            Ok(vec![]),
+            |prior, row| {
+                match prior {
+                    Err(e) => Err(e),
+                    Ok(mut rows) => {
+                        rows.push(FromRow::from_row(&row)?);
+                        Ok(rows)
+                    }
+                }
+            },
+        ).map_err(Error::query)?
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -412,10 +423,21 @@ impl<'a> Transaction<'a> {
         };
         let query = self.0.prep(query.query_text()).map_err(Error::prepare)?;
 
-        let rows: Vec<mysql::Row> =
-            mysql::prelude::Queryable::exec(&mut self.0, &query, params).map_err(Error::query)?;
-
-        FromRow::from_rows(&rows)
+        mysql::prelude::Queryable::exec_fold(
+            &mut self.0,
+            &query,
+            params,
+            Ok(vec![]),
+            |prior, row| {
+                match prior {
+                    Err(e) => Err(e),
+                    Ok(mut rows) => {
+                        rows.push(FromRow::from_row(&row)?);
+                        Ok(rows)
+                    }
+                }
+            },
+        ).map_err(Error::query)?
     }
 
     /// Executes a statement which returns a single row, returning it.

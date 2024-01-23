@@ -153,10 +153,6 @@ struct GetPets;
 /// for more details.
 pub trait FromRow<C: Client>: Sized {
     fn from_row(row: &C::Row<'_>) -> Result<Self, Error<C::Error>>;
-
-    fn from_rows(rows: &[C::Row<'_>]) -> Result<Vec<Self>, Error<C::Error>> {
-        rows.iter().map(|row| FromRow::from_row(row)).collect()
-    }
 }
 
 macro_rules! impl_tuple_from_row {
