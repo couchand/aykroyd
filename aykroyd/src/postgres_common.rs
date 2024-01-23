@@ -67,7 +67,7 @@ macro_rules! postgres_client {
             }
         }
 
-        impl crate::client::Client for $client {
+        impl $crate::client::Client for $client {
             type Row<'a> = tokio_postgres::Row;
             type Param<'a> = &'a (dyn tokio_postgres::types::ToSql + Sync);
             type Error = tokio_postgres::Error;

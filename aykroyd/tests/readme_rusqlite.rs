@@ -1,3 +1,6 @@
+#![cfg(feature = "rusqlite")]
+#![allow(dead_code)]
+
 use aykroyd::rusqlite::{Client, Error};
 use aykroyd::{FromRow, Query, Statement};
 

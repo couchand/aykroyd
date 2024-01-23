@@ -1,3 +1,6 @@
+#![cfg(feature = "mysql")]
+#![allow(dead_code)]
+
 use aykroyd::mysql::{Client, Error};
 use aykroyd::{FromRow, Query, Statement};
 

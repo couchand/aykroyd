@@ -1,7 +1,8 @@
 #![cfg(feature = "tokio-postgres")]
+#![allow(dead_code)]
 
 use tokio_postgres::NoTls;
-use aykroyd::tokio_postgres::{connect, Client, Error};
+use aykroyd::tokio_postgres::{connect, Error};
 use aykroyd::{FromRow, Query, Statement};
 
 #[derive(Statement)]

@@ -1,4 +1,5 @@
-#[cfg(feature = "postgres")]
+#![cfg(feature = "postgres")]
+#![allow(dead_code)]
 
 use postgres::NoTls;
 use aykroyd::postgres::{Client, Error};

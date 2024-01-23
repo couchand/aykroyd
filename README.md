@@ -111,7 +111,7 @@ with crate feature `tokio-postgres`.
 
 ```rust
 use tokio_postgres::NoTls;
-use aykroyd::tokio_postgres::{connect, Client};
+use aykroyd::tokio_postgres::connect;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
