@@ -1,9 +1,9 @@
 #![cfg(feature = "postgres")]
 #![allow(dead_code)]
 
-use postgres::NoTls;
 use aykroyd::postgres::{Client, Error};
 use aykroyd::{FromRow, Query, Statement};
+use postgres::NoTls;
 
 #[derive(Statement)]
 #[aykroyd(text = "
@@ -22,15 +22,17 @@ struct Pet {
 }
 
 #[derive(Query)]
-#[aykroyd(row(Pet), text = "
+#[aykroyd(
+    row(Pet),
+    text = "
     SELECT id, name, species FROM pets
-")]
+"
+)]
 struct GetAllPets;
 
 fn main() -> Result<(), Error> {
     // Connect to the database
-    let mut client =
-        Client::connect("host=localhost user=postgres", NoTls)?;
+    let mut client = Client::connect("host=localhost user=postgres", NoTls)?;
 
     // Execute a statement, returning the number of rows modified.
     let insert_count = client.execute(&InsertPet {

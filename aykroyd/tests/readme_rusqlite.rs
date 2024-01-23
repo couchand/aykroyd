@@ -21,9 +21,12 @@ struct Pet {
 }
 
 #[derive(Query)]
-#[aykroyd(row(Pet), text = "
+#[aykroyd(
+    row(Pet),
+    text = "
     SELECT id, name, species FROM pets
-")]
+"
+)]
 struct GetAllPets;
 
 fn main() -> Result<(), Error> {

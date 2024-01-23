@@ -401,7 +401,10 @@ impl<'a> Transaction<'a> {
         let params = params_iter::ParamsIter::from_params(query.to_params());
         let statement = self.prepare_internal(query.query_text())?;
 
-        let mut rows = self.txn.query_raw(&statement, params).map_err(Error::query)?;
+        let mut rows = self
+            .txn
+            .query_raw(&statement, params)
+            .map_err(Error::query)?;
 
         let mut res = Vec::with_capacity(rows.size_hint().0);
         while let Some(row) = rows.next().map_err(Error::query)? {

@@ -28,8 +28,7 @@ pub mod params_iter {
         }
     }
 
-    impl<'a> std::iter::ExactSizeIterator for ParamsIter<'a> {
-    }
+    impl<'a> std::iter::ExactSizeIterator for ParamsIter<'a> {}
 }
 
 #[macro_export]

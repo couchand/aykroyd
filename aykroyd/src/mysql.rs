@@ -168,16 +168,15 @@ impl Client {
             &query,
             params,
             Ok(vec![]),
-            |prior, row| {
-                match prior {
-                    Err(e) => Err(e),
-                    Ok(mut rows) => {
-                        rows.push(FromRow::from_row(&row)?);
-                        Ok(rows)
-                    }
+            |prior, row| match prior {
+                Err(e) => Err(e),
+                Ok(mut rows) => {
+                    rows.push(FromRow::from_row(&row)?);
+                    Ok(rows)
                 }
             },
-        ).map_err(Error::query)?
+        )
+        .map_err(Error::query)?
     }
 
     /// Executes a statement which returns a single row, returning it.
@@ -428,16 +427,15 @@ impl<'a> Transaction<'a> {
             &query,
             params,
             Ok(vec![]),
-            |prior, row| {
-                match prior {
-                    Err(e) => Err(e),
-                    Ok(mut rows) => {
-                        rows.push(FromRow::from_row(&row)?);
-                        Ok(rows)
-                    }
+            |prior, row| match prior {
+                Err(e) => Err(e),
+                Ok(mut rows) => {
+                    rows.push(FromRow::from_row(&row)?);
+                    Ok(rows)
                 }
             },
-        ).map_err(Error::query)?
+        )
+        .map_err(Error::query)?
     }
 
     /// Executes a statement which returns a single row, returning it.

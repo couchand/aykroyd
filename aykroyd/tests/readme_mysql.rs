@@ -21,15 +21,17 @@ struct Pet {
 }
 
 #[derive(Query)]
-#[aykroyd(row(Pet), text = "
+#[aykroyd(
+    row(Pet),
+    text = "
     SELECT id, name, species FROM pets
-")]
+"
+)]
 struct GetAllPets;
 
 fn main() -> Result<(), Error> {
     // Connect to the database
-    let mut client =
-        Client::new("mysql://user:password@locahost:3307/db_name")?;
+    let mut client = Client::new("mysql://user:password@locahost:3307/db_name")?;
 
     // Execute a statement, returning the number of rows modified.
     let insert_count = client.execute(&InsertPet {

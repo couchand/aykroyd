@@ -1,9 +1,9 @@
 #![cfg(feature = "tokio-postgres")]
 #![allow(dead_code)]
 
-use tokio_postgres::NoTls;
 use aykroyd::tokio_postgres::{connect, Error};
 use aykroyd::{FromRow, Query, Statement};
+use tokio_postgres::NoTls;
 
 #[derive(Statement)]
 #[aykroyd(text = "
@@ -22,16 +22,18 @@ struct Pet {
 }
 
 #[derive(Query)]
-#[aykroyd(row(Pet), text = "
+#[aykroyd(
+    row(Pet),
+    text = "
     SELECT id, name, species FROM pets
-")]
+"
+)]
 struct GetAllPets;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // Connect to the database
-    let (mut client, conn) =
-        connect("host=localhost user=postgres", NoTls).await?;
+    let (mut client, conn) = connect("host=localhost user=postgres", NoTls).await?;
 
     // As with tokio_postgres, you need to spawn a task for the connection.
     tokio::spawn(async move {
@@ -41,10 +43,12 @@ async fn main() -> Result<(), Error> {
     });
 
     // Execute a statement, returning the number of rows modified.
-    let insert_count = client.execute(&InsertPet {
-        name: "Dan",
-        species: "Felis asynchronous",
-    }).await?;
+    let insert_count = client
+        .execute(&InsertPet {
+            name: "Dan",
+            species: "Felis asynchronous",
+        })
+        .await?;
     assert_eq!(insert_count, 1);
 
     // Run a query and map the result objects.

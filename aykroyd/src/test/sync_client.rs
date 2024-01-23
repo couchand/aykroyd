@@ -176,7 +176,8 @@ impl TestClient {
             .unwrap_or_else(|| Ok(vec![]))
             .and_then(|rows| {
                 let statement = TestStatement::new(self);
-                statement.execute(rows)
+                statement
+                    .execute(rows)
                     .into_iter()
                     .map(|row| FromRow::from_row(&row))
                     .collect()
