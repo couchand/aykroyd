@@ -5,9 +5,9 @@ pub use aykroyd;
 pub use postgres;
 pub use r2d2;
 
-use aykroyd::postgres::Client;
+use aykroyd::postgres::{Client, Error};
 use postgres::tls::{MakeTlsConnect, TlsConnect};
-use postgres::{Config, Error, Socket};
+use postgres::{Config, Socket};
 use r2d2::ManageConnection;
 
 /// An `r2d2::ManageConnection` for `aykroyd::postgres::Client`s.
@@ -39,8 +39,8 @@ use r2d2::ManageConnection;
 ///         });
 ///     }
 /// }
-#[derive(Debug)]
 /// ```
+#[derive(Debug)]
 pub struct AykroydConnectionManager<Tls> {
     inner: r2d2_postgres::PostgresConnectionManager<Tls>,
 }
@@ -70,12 +70,12 @@ where
     type Error = Error;
 
     fn connect(&self) -> Result<Client, Error> {
-        let client = self.inner.connect()?;
+        let client = self.inner.connect().map_err(Error::connect)?;
         Ok(Client::new(client))
     }
 
     fn is_valid(&self, client: &mut Client) -> Result<(), Error> {
-        self.inner.is_valid(client.as_mut())
+        self.inner.is_valid(client.as_mut()).map_err(Error::query)
     }
 
     fn has_broken(&self, client: &mut Client) -> bool {
