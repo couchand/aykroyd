@@ -1,4 +1,44 @@
 //! Aykroyd support for the `r2d2` connection pool.
+//!
+//! Example
+//! -------
+#![cfg_attr(
+    feature = "postgres",
+    doc = r##"
+
+An example of the `postgres` client.
+
+```no_run
+use std::thread;
+use postgres::NoTls;
+use r2d2_aykroyd::postgres::AykroydConnectionManager;
+
+#[derive(aykroyd::QueryOne)]
+#[aykroyd(row(Row), text = "SELECT 1 + $1")]
+struct AddOneTo(i32);
+
+#[derive(aykroyd::FromRow)]
+struct Row(i32);
+
+fn main() {
+    let manager = AykroydConnectionManager::new(
+        "host=localhost user=postgres".parse().unwrap(),
+        NoTls,
+    );
+    let pool = r2d2::Pool::new(manager).unwrap();
+
+    for i in 0..10i32 {
+        let pool = pool.clone();
+        thread::spawn(move || {
+            let mut client = pool.get().unwrap();
+            let row = client.query_one(&AddOneTo(i)).unwrap();
+            let value = row.0;
+            assert_eq!(value, i + 1);
+        });
+    }
+}
+```
+"##)]
 #![deny(missing_docs, missing_debug_implementations)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

@@ -11,7 +11,7 @@ Example
 ```rust
 use std::thread;
 use postgres::NoTls;
-use r2d2_aykroyd::AykroydConnectionManager;
+use r2d2_aykroyd::postgres::AykroydConnectionManager;
 
 #[derive(aykroyd::QueryOne)]
 #[query(row(Row), text = "SELECT 1 + $1")]
