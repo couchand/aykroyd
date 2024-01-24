@@ -50,7 +50,7 @@ use std::thread;
 use r2d2_aykroyd::mysql::AykroydConnectionManager;
 
 #[derive(aykroyd::QueryOne)]
-#[aykroyd(row(Row), text = "SELECT 1 + $1")]
+#[aykroyd(row(Row), text = "SELECT 1 + ?")]
 struct AddOneTo(i32);
 
 #[derive(aykroyd::FromRow)]

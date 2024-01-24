@@ -18,7 +18,7 @@ use r2d2::ManageConnection;
 /// use aykroyd::Statement;
 ///
 /// #[derive(Statement)]
-/// #[aykroyd(text = "INSERT INTO foo(bar) VALUES ($1)")]
+/// #[aykroyd(text = "INSERT INTO foo(bar) VALUES (?)")]
 /// struct InsertFoo(i32);
 ///
 /// fn main() {
