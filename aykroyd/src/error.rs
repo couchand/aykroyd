@@ -107,6 +107,12 @@ impl<ClientError: std::fmt::Display> Error<ClientError> {
     }
 }
 
+impl<ClientError: std::error::Error + 'static> std::error::Error for Error<ClientError> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.as_ref().map(|err| err as &(dyn std::error::Error + 'static))
+    }
+}
+
 /// What operation prompted the error?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
