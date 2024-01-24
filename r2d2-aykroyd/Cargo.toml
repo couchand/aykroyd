@@ -12,11 +12,14 @@ documentation = "https://docs.rs/r2d2-aykroyd/latest/r2d2_aykroyd/"
 [features]
 default = []
 
+mysql = ["aykroyd/mysql", "dep:mysql", "dep:r2d2_mysql"]
 postgres = ["aykroyd/postgres", "dep:postgres", "dep:r2d2_postgres"]
 
 [dependencies]
 aykroyd = { version = "0.3.0-rc.1", path = "../aykroyd" }
+mysql = { version = "24", optional = true }
 r2d2 = "0.8"
+r2d2_mysql = { version = "24", optional = true }
 r2d2_postgres = { version = "0.18", optional = true }
 postgres = { version = "0.19", optional = true }
 
