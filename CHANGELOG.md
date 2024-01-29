@@ -9,6 +9,10 @@ Like most crates in the Rust ecosystem this project adheres to
 
 ## [Unreleased]
 
+- *nothing yet*
+
+## [v0.3.0] - 2024-01-29 ([Log][v0.3.0-log])
+
 - Support for the MySQL and SQLite databases, in addition to
   PostgreSQL.
 - `FromRow` for nested structs using `FromColumnsIndexed` or

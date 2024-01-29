@@ -16,7 +16,7 @@ tokio-postgres = ["aykroyd/tokio-postgres", "dep:deadpool-postgres", "dep:tokio-
 
 [dependencies]
 async-trait = "0.1"
-aykroyd = { version = "0.3.0-rc.1", path = "../aykroyd" }
+aykroyd = { version = "0.3.0", path = "../aykroyd" }
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", optional = true }
 tokio = "1"

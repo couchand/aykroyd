@@ -17,7 +17,7 @@ postgres = ["aykroyd/postgres", "dep:postgres", "dep:r2d2_postgres"]
 rusqlite = ["aykroyd/rusqlite", "dep:rusqlite", "dep:r2d2_sqlite"]
 
 [dependencies]
-aykroyd = { version = "0.3.0-rc.1", path = "../aykroyd" }
+aykroyd = { version = "0.3.0", path = "../aykroyd" }
 mysql = { version = "24", optional = true }
 r2d2 = "0.8"
 r2d2_mysql = { version = "24", optional = true }
@@ -27,4 +27,4 @@ rusqlite = { version = "0.30", optional = true }
 postgres = { version = "0.19", optional = true }
 
 [dev-dependencies]
-aykroyd = { version = "0.3.0-rc.1", path = "../aykroyd", features = ["derive"] }
+aykroyd = { version = "0.3.0", path = "../aykroyd", features = ["derive"] }
